@@ -1,0 +1,372 @@
+// ==================== textures.js ====================
+
+import * as THREE from 'three';
+import { BlockInfo, BlockTypes } from './config.js';
+import { hash2D } from './world.js';
+
+// ==================== 纹理生成 ====================
+export const textureCache = new Map();
+
+export function createTexture(width, height, drawFn) {
+    const cnv = document.createElement('canvas');
+    cnv.width = width;
+    cnv.height = height;
+    const ctx = cnv.getContext('2d');
+    drawFn(ctx, width, height);
+    const tex = new THREE.CanvasTexture(cnv);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+}
+
+// ==================== 纹理图集 ====================
+export const atlasSize = 5;
+
+// 5x4 图集（加了火把/花/TNT）
+export const tileSize = 16;
+
+export const atlasCanvas = document.createElement('canvas');
+
+atlasCanvas.width = atlasSize * tileSize;
+
+atlasCanvas.height = atlasSize * tileSize;
+
+export const atlasCtx = atlasCanvas.getContext('2d');
+
+export const blockUVs = {};
+
+export const tileMap = {};
+
+export function generateAllTextures() {
+    const tiles = [
+        { type: BlockTypes.GRASS, top: 0, side: 1, bottom: 2, name: 'grass_top' },
+        { type: BlockTypes.DIRT, top: 2, side: 2, bottom: 2, name: 'dirt' },
+        { type: BlockTypes.STONE, top: 3, side: 3, bottom: 3, name: 'stone' },
+        { type: BlockTypes.WOOD, top: 4, side: 5, bottom: 4, name: 'wood_side' },
+        { type: BlockTypes.LEAVES, top: 6, side: 6, bottom: 6, name: 'leaves' },
+        { type: BlockTypes.SAND, top: 7, side: 7, bottom: 7, name: 'sand' },
+        { type: BlockTypes.WATER, top: 8, side: 8, bottom: 8, name: 'water' },
+        { type: BlockTypes.BEDROCK, top: 9, side: 9, bottom: 9, name: 'bedrock' },
+        { type: BlockTypes.BRICK, top: 10, side: 10, bottom: 10, name: 'brick' },
+        { type: BlockTypes.GLASS, top: 11, side: 11, bottom: 11, name: 'glass' },
+        { type: BlockTypes.PLANKS, top: 12, side: 12, bottom: 12, name: 'planks' },
+        { type: BlockTypes.COBBLESTONE, top: 13, side: 13, bottom: 13, name: 'cobblestone' },
+        { type: BlockTypes.GRAVEL, top: 14, side: 14, bottom: 14, name: 'gravel' },
+        { type: BlockTypes.SNOW, top: 15, side: 15, bottom: 15, name: 'snow' },
+        { type: BlockTypes.LOG, top: 4, side: 5, bottom: 4, name: 'log' },
+        { type: BlockTypes.TORCH, top: 16, side: 16, bottom: 16, name: 'torch' },
+        { type: BlockTypes.FLOWER, top: 17, side: 17, bottom: 17, name: 'flower' },
+        { type: BlockTypes.TNT, top: 19, side: 18, bottom: 19, name: 'tnt' },
+    ];
+
+    const drawFunctions = {
+        0: (ctx, x, y, s) => { // 草顶部
+            ctx.fillStyle = '#5a9e3d';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 30; i++) {
+                const px = x + Math.floor(hash2D(i, 1, 5) * s);
+                const py = y + Math.floor(hash2D(i, 2, 5) * s);
+                ctx.fillStyle = hash2D(i, 3, 5) > 0.5 ? '#6aae4d' : '#4a8e2d';
+                ctx.fillRect(px, py, 1 + Math.floor(hash2D(i, 4, 5) * 3), 1 + Math.floor(hash2D(i, 5, 5) *
+                3));
+            }
+        },
+        1: (ctx, x, y, s) => { // 草侧面
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 20; i++) {
+                const px = x + Math.floor(hash2D(i, 6, 1) * s);
+                const py = y + Math.floor(hash2D(i, 7, 1) * s);
+                ctx.fillStyle = hash2D(i, 8, 1) > 0.5 ? '#7a4a1b' : '#9b6a3b';
+                ctx.fillRect(px, py, 1, 1);
+            }
+            ctx.fillStyle = '#5a9e3d';
+            ctx.fillRect(x, y, s, 4);
+            for (let i = 0; i < 8; i++) {
+                ctx.fillStyle = i % 2 === 0 ? '#6aae4d' : '#4a8e2d';
+                ctx.fillRect(x + Math.floor(hash2D(i, 9, 1) * s), y + Math.floor(hash2D(i, 10, 1) * 3), 2,
+                    2);
+            }
+        },
+        2: (ctx, x, y, s) => { // 泥土
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 25; i++) {
+                const px = x + Math.floor(hash2D(i, 11, 2) * s);
+                const py = y + Math.floor(hash2D(i, 12, 2) * s);
+                ctx.fillStyle = hash2D(i, 13, 2) > 0.5 ? '#7a4a1b' : '#9b6a3b';
+                ctx.fillRect(px, py, 1 + Math.floor(hash2D(i, 14, 2) * 2), 1);
+            }
+        },
+        3: (ctx, x, y, s) => { // 石头
+            ctx.fillStyle = '#7a7a7a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 20; i++) {
+                const px = x + Math.floor(hash2D(i, 15, 3) * s);
+                const py = y + Math.floor(hash2D(i, 16, 3) * s);
+                ctx.fillStyle = hash2D(i, 17, 3) > 0.5 ? '#8a8a8a' : '#6a6a6a';
+                ctx.fillRect(px, py, 2, 2);
+            }
+        },
+        4: (ctx, x, y, s) => { // 木头顶部
+            ctx.fillStyle = '#8a6a3a';
+            ctx.fillRect(x, y, s, s);
+            ctx.strokeStyle = '#6a4a2a';
+            ctx.lineWidth = 1;
+            for (let r = 2; r < s / 2; r += 3) {
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        },
+        5: (ctx, x, y, s) => { // 木头侧面
+            ctx.fillStyle = '#6b4423';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < s; i += 2) {
+                ctx.fillStyle = i % 4 === 0 ? '#5a3a1a' : '#7b5433';
+                ctx.fillRect(x + i, y, 2, s);
+            }
+        },
+        6: (ctx, x, y, s) => { // 树叶
+            ctx.fillStyle = '#3d7a2a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 35; i++) {
+                const px = x + Math.floor(hash2D(i, 18, 6) * s);
+                const py = y + Math.floor(hash2D(i, 19, 6) * s);
+                const shade = hash2D(i, 20, 6);
+                ctx.fillStyle = shade > 0.6 ? '#4d8a3a' : shade > 0.3 ? '#3d7a2a' : '#2d6a1a';
+                ctx.fillRect(px, py, 2, 2);
+            }
+        },
+        7: (ctx, x, y, s) => { // 沙子
+            ctx.fillStyle = '#dbc47a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 20; i++) {
+                const px = x + Math.floor(hash2D(i, 21, 7) * s);
+                const py = y + Math.floor(hash2D(i, 22, 7) * s);
+                ctx.fillStyle = hash2D(i, 23, 7) > 0.5 ? '#cbb46a' : '#ebd48a';
+                ctx.fillRect(px, py, 1, 1);
+            }
+        },
+        8: (ctx, x, y, s) => { // 水
+            ctx.fillStyle = '#3a6ea5';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 15; i++) {
+                const px = x + Math.floor(hash2D(i, 24, 8) * s);
+                const py = y + Math.floor(hash2D(i, 25, 8) * s);
+                ctx.fillStyle = hash2D(i, 26, 8) > 0.5 ? '#4a7eb5' : '#2a5e95';
+                ctx.fillRect(px, py, 2, 1);
+            }
+        },
+        9: (ctx, x, y, s) => { // 基岩
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 30; i++) {
+                const px = x + Math.floor(hash2D(i, 27, 9) * s);
+                const py = y + Math.floor(hash2D(i, 28, 9) * s);
+                ctx.fillStyle = hash2D(i, 29, 9) > 0.5 ? '#4a4a4a' : '#2a2a2a';
+                ctx.fillRect(px, py, 2, 2);
+            }
+        },
+        10: (ctx, x, y, s) => { // 砖块
+            ctx.fillStyle = '#a0522d';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#c8c8c8';
+            const bh = Math.floor(s / 4);
+            for (let row = 0; row < 4; row++) {
+                const offset = row % 2 === 0 ? 0 : Math.floor(s / 4);
+                ctx.fillRect(x + offset, y + row * bh, s / 2, 1);
+            }
+            for (let col = 0; col < 4; col++) {
+                ctx.fillRect(x + col * Math.floor(s / 2), y, 1, bh);
+            }
+        },
+        11: (ctx, x, y, s) => { // 玻璃
+            ctx.fillStyle = 'rgba(200,216,232,0.6)';
+            ctx.fillRect(x, y, s, s);
+            ctx.strokeStyle = 'rgba(220,235,245,0.9)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, s, s);
+            ctx.beginPath();
+            ctx.moveTo(x + 1, y + s - 2);
+            ctx.lineTo(x + 4, y + 3);
+            ctx.lineTo(x + s - 1, y + 3);
+            ctx.stroke();
+        },
+        12: (ctx, x, y, s) => { // 木板
+            ctx.fillStyle = '#c8a050';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < s; i += 2) {
+                ctx.fillStyle = i % 4 === 0 ? '#b89040' : '#d8b060';
+                ctx.fillRect(x + i, y, 1, s);
+            }
+            for (let j = 0; j < s; j += 4) {
+                ctx.fillStyle = '#a08030';
+                ctx.fillRect(x, y + j, s, 1);
+            }
+        },
+        13: (ctx, x, y, s) => { // 圆石
+            ctx.fillStyle = '#6a6a6a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 15; i++) {
+                const px = x + Math.floor(hash2D(i, 30, 13) * s);
+                const py = y + Math.floor(hash2D(i, 31, 13) * s);
+                const r = 1 + Math.floor(hash2D(i, 32, 13) * 3);
+                ctx.fillStyle = hash2D(i, 33, 13) > 0.5 ? '#7a7a7a' : '#5a5a5a';
+                ctx.beginPath();
+                ctx.arc(px, py, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        14: (ctx, x, y, s) => { // 沙砾
+            ctx.fillStyle = '#9a8a7a';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 25; i++) {
+                const px = x + Math.floor(hash2D(i, 34, 14) * s);
+                const py = y + Math.floor(hash2D(i, 35, 14) * s);
+                ctx.fillStyle = hash2D(i, 36, 14) > 0.5 ? '#aa9a8a' : '#8a7a6a';
+                ctx.fillRect(px, py, 2, 2);
+            }
+        },
+        15: (ctx, x, y, s) => { // 雪
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 15; i++) {
+                const px = x + Math.floor(hash2D(i, 37, 15) * s);
+                const py = y + Math.floor(hash2D(i, 38, 15) * s);
+                ctx.fillStyle = hash2D(i, 39, 15) > 0.5 ? '#ffffff' : '#e0e0e0';
+                ctx.fillRect(px, py, 1, 1);
+            }
+        },
+        16: (ctx, x, y, s) => { // 火把（图标用，实际游戏里是3D道具）
+            ctx.fillStyle = '#2a2a3a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#8a5a2a';
+            ctx.fillRect(x + s / 2 - 1, y + s / 2 - 1, 3, s / 2);
+            ctx.fillStyle = '#f8c040';
+            ctx.fillRect(x + s / 2 - 2, y + 2, 5, 6);
+            ctx.fillStyle = '#ffe890';
+            ctx.fillRect(x + s / 2 - 1, y + 1, 3, 4);
+        },
+        17: (ctx, x, y, s) => { // 花
+            ctx.fillStyle = '#2a3a2a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#3d7a2a';
+            ctx.fillRect(x + s / 2 - 1, y + s / 2, 2, s / 2 - 1);
+            ctx.fillStyle = '#e04a5a';
+            ctx.fillRect(x + s / 2 - 3, y + 2, 3, 3);
+            ctx.fillRect(x + s / 2 + 1, y + 2, 3, 3);
+            ctx.fillRect(x + s / 2 - 3, y + 5, 3, 3);
+            ctx.fillRect(x + s / 2 + 1, y + 5, 3, 3);
+            ctx.fillStyle = '#f8d840';
+            ctx.fillRect(x + s / 2 - 1, y + 4, 3, 3);
+        },
+        18: (ctx, x, y, s) => { // TNT侧面
+            ctx.fillStyle = '#c03020';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 15; i++) {
+                const px = x + Math.floor(hash2D(i, 40, 18) * s);
+                const py = y + Math.floor(hash2D(i, 41, 18) * s);
+                ctx.fillStyle = hash2D(i, 42, 18) > 0.5 ? '#d04030' : '#a82818';
+                ctx.fillRect(px, py, 2, 2);
+            }
+            ctx.fillStyle = '#f0e0c0';
+            ctx.fillRect(x, y + s / 2 - 3, s, 6);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.font = 'bold 6px monospace';
+            ctx.fillText('TNT', x + 3, y + s / 2 + 2);
+        },
+        19: (ctx, x, y, s) => { // TNT顶/底
+            ctx.fillStyle = '#a82818';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 4);
+            ctx.fillStyle = '#d04030';
+            ctx.fillRect(x, y, s, 2);
+            ctx.fillRect(x, y + s - 2, s, 2);
+            ctx.fillRect(x, y, 2, s);
+            ctx.fillRect(x + s - 2, y, 2, s);
+        },
+    };
+
+    for (const tile of tiles) {
+        const tx = (tile.top % atlasSize) * tileSize;
+        const ty = Math.floor(tile.top / atlasSize) * tileSize;
+        if (!tileMap[tile.name]) {
+            if (drawFunctions[tile.top]) {
+                drawFunctions[tile.top](atlasCtx, tx, ty, tileSize);
+            } else {
+                atlasCtx.fillStyle = BlockInfo[tile.type].color;
+                atlasCtx.fillRect(tx, ty, tileSize, tileSize);
+            }
+            tileMap[tile.name] = { x: tile.top % atlasSize, y: Math.floor(tile.top / atlasSize) };
+        }
+        if (!tileMap[`${tile.name}_side`] && tile.side !== tile.top) {
+            const sx = (tile.side % atlasSize) * tileSize;
+            const sy = Math.floor(tile.side / atlasSize) * tileSize;
+            if (drawFunctions[tile.side]) {
+                drawFunctions[tile.side](atlasCtx, sx, sy, tileSize);
+            } else {
+                atlasCtx.fillStyle = BlockInfo[tile.type].color;
+                atlasCtx.fillRect(sx, sy, tileSize, tileSize);
+            }
+            tileMap[`${tile.name}_side`] = { x: tile.side % atlasSize, y: Math.floor(tile.side / atlasSize) };
+        }
+        if (!tileMap[`${tile.name}_bottom`] && tile.bottom !== tile.top && tile.bottom !== tile.side) {
+            const bx = (tile.bottom % atlasSize) * tileSize;
+            const by = Math.floor(tile.bottom / atlasSize) * tileSize;
+            if (drawFunctions[tile.bottom]) {
+                drawFunctions[tile.bottom](atlasCtx, bx, by, tileSize);
+            } else {
+                atlasCtx.fillStyle = BlockInfo[tile.type].color;
+                atlasCtx.fillRect(bx, by, tileSize, tileSize);
+            }
+            tileMap[`${tile.name}_bottom`] = { x: tile.bottom % atlasSize, y: Math.floor(tile.bottom /
+                atlasSize) };
+        }
+        blockUVs[tile.type] = {
+            top: tileMap[tile.name] || { x: 0, y: 0 },
+            side: tileMap[`${tile.name}_side`] || tileMap[tile.name] || { x: 0, y: 0 },
+            bottom: tileMap[`${tile.name}_bottom`] || tileMap[`${tile.name}_side`] || tileMap[tile.name] || { x: 0,
+                y: 0 },
+        };
+    }
+
+    // 水单独处理为透明
+    if (!tileMap['water']) {
+        const wx = 8 % atlasSize;
+        const wy = Math.floor(8 / atlasSize);
+        drawFunctions[8](atlasCtx, wx * tileSize, wy * tileSize, tileSize);
+        tileMap['water'] = { x: wx, y: wy };
+    }
+    blockUVs[BlockTypes.WATER] = {
+        top: tileMap['water'],
+        side: tileMap['water'],
+        bottom: tileMap['water'],
+    };
+
+    const atlasTexture = new THREE.CanvasTexture(atlasCanvas);
+    atlasTexture.magFilter = THREE.NearestFilter;
+    atlasTexture.minFilter = THREE.NearestFilter;
+    atlasTexture.generateMipmaps = false;
+    atlasTexture.colorSpace = THREE.SRGBColorSpace;
+    return atlasTexture;
+}
+
+export const atlasTexture = generateAllTextures();
+
+export function getUVForFace(blockType, face) {
+    const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
+    let tile;
+    if (face === 'top') tile = uv.top;
+    else if (face === 'bottom') tile = uv.bottom;
+    else tile = uv.side;
+    if (!tile) tile = { x: 0, y: 0 };
+    const u0 = (tile.x / atlasSize);
+    const v0 = 1 - ((tile.y + 1) / atlasSize);
+    const u1 = ((tile.x + 1) / atlasSize);
+    const v1 = 1 - (tile.y / atlasSize);
+    return { u0, v0, u1, v1 };
+}

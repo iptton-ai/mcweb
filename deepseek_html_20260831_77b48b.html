@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的世界 - 网页复刻版</title>
+    <style>
+        :root {
+            --mc-dark: #1a1a2e;
+            --mc-panel: #2d2d44;
+            --mc-border: #4a4a6a;
+            --mc-hover: #5a5a8a;
+            --mc-accent: #7ec850;
+            --mc-text: #e0e0e0;
+            --mc-slot: #3d3d5c;
+            --mc-slot-border: #5a5a7a;
+            --mc-selected: #ffdd55;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: default;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas#gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* 准星 */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #fff;
+        }
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            top: -10px;
+            left: -1px;
+        }
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: -1px;
+            left: -10px;
+        }
+
+        /* 物品栏 */
+        #hotbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 4px;
+            background: rgba(30, 30, 50, 0.85);
+            border: 3px solid #4a4a6a;
+            border-radius: 8px;
+            padding: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+        .hotbar-slot {
+            width: 52px;
+            height: 52px;
+            background: var(--mc-slot);
+            border: 2px solid var(--mc-slot-border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .hotbar-slot:hover {
+            background: var(--mc-hover);
+            border-color: #7a7aaa;
+        }
+        .hotbar-slot.selected {
+            border-color: var(--mc-selected);
+            box-shadow: 0 0 12px rgba(255, 221, 85, 0.6);
+            background: #4a4a6a;
+        }
+        .hotbar-slot canvas {
+            width: 40px;
+            height: 40px;
+            image-rendering: pixelated;
+            border-radius: 2px;
+        }
+        .hotbar-slot .slot-number {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        .hotbar-slot .block-name {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 调试信息 */
+        #debug-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 15;
+            color: #fff;
+            font-size: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+        #debug-info span {
+            color: #7ec850;
+        }
+
+        /* 提示信息 */
+        #tooltip {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 50px);
+            z-index: 15;
+            color: #fff;
+            font-size: 16px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+        /* 开始界面 */
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: opacity 0.5s;
+        }
+        #start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #start-screen h1 {
+            color: #fff;
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(126, 200, 80, 0.6);
+            letter-spacing: 4px;
+        }
+        #start-screen .subtitle {
+            color: #aaa;
+            font-size: 18px;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+        #start-screen .controls-info {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 2;
+            text-align: center;
+            background: rgba(30, 30, 50, 0.8);
+            padding: 20px 30px;
+            border-radius: 12px;
+            border: 2px solid #4a4a6a;
+        }
+        #start-screen .controls-info kbd {
+            background: #3d3d5c;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #5a5a7a;
+            font-family: 'Consolas', monospace;
+            color: #7ec850;
+        }
+        #start-screen .click-hint {
+            color: #7ec850;
+            font-size: 20px;
+            margin-top: 25px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* 物品栏面板 */
+        #inventory-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+            background: rgba(20, 20, 35, 0.95);
+            border: 4px solid #4a4a6a;
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #inventory-panel.open {
+            display: block;
+        }
+        #inventory-panel h2 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 20px;
+            letter-spacing: 2px;
+        }
+        #inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            gap: 6px;
+            justify-content: center;
+        }
+        .inv-slot {
+            width: 60px;
+            height: 60px;
+            background: #3d3d5c;
+            border: 2px solid #5a5a7a;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            position: relative;
+        }
+        .inv-slot:hover {
+            background: #5a5a8a;
+            border-color: #7ec850;
+            transform: scale(1.05);
+        }
+        .inv-slot canvas {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            border-radius: 2px;
+        }
+        .inv-slot .inv-name {
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #ccc;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        #inventory-close-hint {
+            color: #888;
+            text-align: center;
+            margin-top: 25px;
+            font-size: 13px;
+        }
+
+        /* 生命值红心 */
+        #health-bar {
+            position: fixed;
+            bottom: 86px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none;
+            gap: 2px;
+            font-size: 18px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+        #health-bar.visible {
+            display: flex;
+        }
+
+        /* 模式标识 */
+        #mode-badge {
+            position: fixed;
+            bottom: 108px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 19;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.75);
+            background: rgba(0, 0, 0, 0.45);
+            padding: 3px 12px;
+            border-radius: 10px;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 受伤红闪 */
+        #damage-flash {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+            background: rgba(255, 0, 0, 0.35);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #damage-flash.hit {
+            opacity: 1;
+            transition: opacity 0.05s;
+        }
+
+        /* 死亡界面 */
+        #death-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            background: rgba(80, 0, 0, 0.55);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        #death-screen.visible {
+            display: flex;
+        }
+        #death-screen h1 {
+            color: #fff;
+            font-size: 52px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            margin-bottom: 12px;
+        }
+        #death-screen p {
+            color: #ffdcdc;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        #respawn-btn {
+            background: #7ec850;
+            color: #12300a;
+            border: none;
+            padding: 12px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        }
+        #respawn-btn:hover {
+            background: #8fd860;
+        }
+
+        /* 游戏模式选择 */
+        #mode-select {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .mode-btn {
+            background: rgba(40, 40, 66, 0.9);
+            color: #fff;
+            border: 2px solid #5a5a7a;
+            padding: 14px 28px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 17px;
+            min-width: 200px;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .mode-btn:hover {
+            border-color: #7ec850;
+            background: rgba(60, 70, 90, 0.95);
+            transform: translateY(-2px);
+        }
+        .mode-btn .mode-icon {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .mode-btn .mode-desc {
+            font-size: 12px;
+            color: #aaa;
+            display: block;
+            margin-top: 5px;
+        }
+        .mode-btn.creative:hover {
+            border-color: #7ec850;
+        }
+        .mode-btn.survival:hover {
+            border-color: #ff6b5a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 开始界面 -->
+    <div id="start-screen">
+        <h1>⛏ 我的世界</h1>
+        <div class="subtitle">网页复刻版</div>
+        <div id="mode-select">
+            <button class="mode-btn creative" id="btn-creative">
+                <span class="mode-icon">🏗️</span>建造模式
+                <span class="mode-desc">无限方块 · 按 F 自由飞行 · 不会受伤</span>
+            </button>
+            <button class="mode-btn survival" id="btn-survival">
+                <span class="mode-icon">⚔️</span>生存模式
+                <span class="mode-desc">有生命值 · 夜晚会刷出怪物袭击</span>
+            </button>
+        </div>
+        <div class="controls-info">
+            <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃 &nbsp;|&nbsp; <kbd>Shift</kbd> 潜行<br>
+            <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置方块<br>
+            <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换方块 &nbsp;|&nbsp; <kbd>E</kbd> 打开物品栏<br>
+            <kbd>F</kbd> 切换飞行（建造模式）&nbsp;|&nbsp; <kbd>M</kbd> 切换游戏模式 &nbsp;|&nbsp; <kbd>Esc</kbd> 释放鼠标<br>
+            <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角：第一人称 → 第三人称(背后) → 第三人称(正面)
+        </div>
+        <div class="click-hint">🖱 点击空白处可直接进入（默认建造模式）</div>
+    </div>
+
+    <!-- 准星 -->
+    <div id="crosshair"></div>
+
+    <!-- 调试信息 -->
+    <div id="debug-info">
+        <div>XYZ: <span id="dbg-pos">0, 0, 0</span></div>
+        <div>区块: <span id="dbg-chunk">0, 0</span></div>
+        <div>FPS: <span id="dbg-fps">60</span></div>
+        <div>时间: <span id="dbg-time">06:00</span></div>
+        <div>方向: <span id="dbg-dir">N</span></div>
+        <div>选中: <span id="dbg-selected">-</span></div>
+        <div>怪物: <span id="dbg-mobs">0</span></div>
+        <div>视角: <span id="dbg-view">第一人称</span></div>
+    </div>
+
+    <!-- 提示 -->
+    <div id="tooltip"></div>
+
+    <!-- 生命值（生存模式显示） -->
+    <div id="health-bar"></div>
+    <div id="mode-badge"></div>
+    <div id="damage-flash"></div>
+
+    <!-- 死亡界面 -->
+    <div id="death-screen">
+        <h1>☠ 你死了！</h1>
+        <p>被黑暗中的怪物击败了……</p>
+        <button id="respawn-btn">🔥 重生</button>
+    </div>
+
+    <!-- 物品栏 -->
+    <div id="hotbar"></div>
+
+    <!-- 方块选择面板 -->
+    <div id="inventory-panel">
+        <h2>🎒 方块选择</h2>
+        <div id="inventory-grid"></div>
+        <div id="inventory-close-hint">按 <kbd>E</kbd> 或 <kbd>Esc</kbd> 关闭</div>
+    </div>
+
+    <!-- 游戏画布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>
