@@ -57,7 +57,9 @@ export function createPlayerMesh() {
     return group;
 }
 
-export function createZombieMesh() {
+let zombieProto = null; // 僵尸模型原型：几何体/材质全局共享，每只怪 clone() 复用（见 createZombieMesh）
+
+function buildZombieProto() {
     const group = new THREE.Group();
     const skin = new THREE.MeshLambertMaterial({ color: 0x2e8b57 });
     const shirt = new THREE.MeshLambertMaterial({ color: 0x2a6a8a });
@@ -82,10 +84,23 @@ export function createZombieMesh() {
     legL.position.set(-0.14, 0.28, 0);
     const legR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.55, 0.22), pants);
     legR.position.set(0.14, 0.28, 0);
+    // 子节点固定顺序：头/左眼/右眼/躯干/左臂/右臂/左腿/右腿（clone 后按下标找回四肢）
     group.add(head, eyeL, eyeR, body, armL, armR, legL, legR);
     group.traverse((c) => { c.castShadow = true; });
-    group.userData.limbs = { armL, armR, legL, legR };
     return group;
+}
+
+export function createZombieMesh() {
+    // 原型只构建一次，之后 clone()：克隆共享几何体与材质（与 chunk.js 道具网格同思路），
+    // 击杀只需 scene.remove，不再产生需要 dispose 的 GPU 资源（防刷怪泄漏）。
+    // clone 会对原型 userData 做 JSON 序列化，引用不能存原型里；四肢在克隆体上按下标补挂。
+    if (!zombieProto) zombieProto = buildZombieProto();
+    const mesh = zombieProto.clone();
+    mesh.userData.limbs = {
+        armL: mesh.children[4], armR: mesh.children[5],
+        legL: mesh.children[6], legR: mesh.children[7],
+    };
+    return mesh;
 }
 
 export function spawnEnemy(x, y, z) {

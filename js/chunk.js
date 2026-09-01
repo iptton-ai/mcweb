@@ -539,7 +539,9 @@ export function disposeChunk(cx, cz) {
         existing.traverse((child) => {
             if (child.geometry) child.geometry.dispose();
             if (child.material) {
-                if (child.material.map) child.material.map.dispose();
+                // 材质是区块私有的，正常释放；map 是全局共享的图集纹理（atlasTexture），
+                // dispose 它只会逼渲染器下次渲染重新上传整张图集，不属于本区块的资源
+                if (child.material.map && child.material.map !== atlasTexture) child.material.map.dispose();
                 child.material.dispose();
             }
         });

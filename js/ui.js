@@ -189,6 +189,8 @@ let buildEls = null;     // 控件 DOM 引用
 let wasActive = false;   // 上一帧是否有施工任务（用于完成后延迟隐藏）
 let rec = null;          // MediaRecorder 实例（null = 未在录；stop 即置空，收尾在闭包里）
 let recStartAt = 0;
+let recAutoStopTimer = null; // 录像时长上限计时器
+const REC_MAX_SEC = 600;     // 录像数据块全攒在内存（约 60MB/分钟），超 10 分钟自动停录防内存失控
 
 export function initBuildWidget() {
     if (buildEls) return;
@@ -278,6 +280,8 @@ export function toggleBuildRecording() {
         // 收尾（打包下载）用下方闭包捕获的实例，不依赖 rec
         const stopped = rec;
         rec = null;
+        clearTimeout(recAutoStopTimer);
+        recAutoStopTimer = null;
         if (stopped.state !== 'inactive') stopped.stop();
         return;
     }
@@ -294,6 +298,7 @@ export function toggleBuildRecording() {
     mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     mr.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
+        chunks.length = 0; // 释放录像数据块（blob 已持有数据，数组别再占着）
         const a = document.createElement('a');
         const d = new Date();
         const pad = (n) => String(n).padStart(2, '0');
@@ -301,12 +306,19 @@ export function toggleBuildRecording() {
         a.download = `建造录像-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.webm`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        // 停掉捕获轨道：MediaRecorder 停止后 track 仍是 live，不断开会一直占着画布捕获管线（泄漏）
+        stream.getTracks().forEach((t) => t.stop());
         showTooltip('🎥 录像已保存（webm）');
     };
     rec = mr;
     recStartAt = Date.now();
+    recAutoStopTimer = setTimeout(() => {
+        if (rec !== mr) return; // 已被手动停止
+        showTooltip(`⏺ 录像已达 ${REC_MAX_SEC / 60} 分钟上限，自动停止并保存`);
+        toggleBuildRecording();
+    }, REC_MAX_SEC * 1000);
     mr.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
-    showTooltip('🎥 开始录制游戏画面…（R 停止）');
+    showTooltip(`🎥 开始录制游戏画面…（R 停止，最多 ${REC_MAX_SEC / 60} 分钟）`);
 }
 
 // 每帧刷新控件（main.js gameLoop 调用）：有任务或录像中常显，任务结束后停留 3 秒

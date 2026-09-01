@@ -9,6 +9,24 @@
 
 const STORE_KEY = 'mcAssistant.sessions.v1';
 
+// 持久化时截短超长文本：工具结果单条可达 3 万字符、思考文本同理，多会话长期积累会把
+// localStorage 与每次 persist 的全量 JSON.stringify 撑大。内存里的消息保持完整
+// （发给 LLM 的截断在 agent.js toApiMessage），只有落盘副本被截短。
+const PERSIST_TEXT_MAX = 8000;
+
+function slimMessageForPersist(m) {
+    let content = m.content;
+    if (typeof content === 'string' && content.length > PERSIST_TEXT_MAX) {
+        content = content.slice(0, PERSIST_TEXT_MAX) + `…（已截短，原长 ${content.length} 字符）`;
+    }
+    let reasoning = m.reasoning;
+    if (typeof reasoning === 'string' && reasoning.length > PERSIST_TEXT_MAX) {
+        reasoning = reasoning.slice(0, PERSIST_TEXT_MAX) + `…（已截短，原长 ${reasoning.length} 字符）`;
+    }
+    if (content === m.content && reasoning === m.reasoning) return m;
+    return { ...m, content, reasoning };
+}
+
 let store = null;
 
 function loadStore() {
@@ -32,7 +50,7 @@ function loadStore() {
 
 function persist() {
     try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(store));
+        localStorage.setItem(STORE_KEY, JSON.stringify(slimStoreForPersist()));
     } catch {
         // 超出 localStorage 配额：丢弃最旧会话的消息后重试
         const sorted = [...store.sessions].sort((a, b) => a.updatedAt - b.updatedAt);
@@ -41,9 +59,14 @@ function persist() {
             s.messages = [];
         }
         try {
-            localStorage.setItem(STORE_KEY, JSON.stringify(store));
+            localStorage.setItem(STORE_KEY, JSON.stringify(slimStoreForPersist()));
         } catch { /* 仍失败则放弃持久化，内存中可用 */ }
     }
+}
+
+// 落盘用的瘦身副本：截短超长工具结果/思考文本（原对象不动，内存与 LLM 侧不受影响）
+function slimStoreForPersist() {
+    return { ...store, sessions: store.sessions.map((s) => ({ ...s, messages: s.messages.map(slimMessageForPersist) })) };
 }
 
 function newId() {
