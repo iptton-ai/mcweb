@@ -2,7 +2,7 @@
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
 
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, WATER, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
 
 function blockPalette() {
@@ -47,7 +47,7 @@ function blockPalette() {
     // 动力组折叠：轴类 ID=基址+axis(0=东西X 1=上下Y 2=南北Z)，机械锯 ID=基址+facing(0上1下2北3东4南5西)
     parts.push(`${SHAFT_BASE}..${SHAFT_BASE + SHAFT_COUNT - 1}=传动轴（ID=基址+axis；同轴相邻 1:1 传速，转轴自动旋转）`);
     parts.push(`${COGWHEEL_BASE}..${COGWHEEL_BASE + COGWHEEL_COUNT - 1}=齿轮（ID=基址+axis；与垂直轴的相邻齿轮啮合=换向反转，平行并排不连接）`);
-    parts.push(`${WATERWHEEL_BASE}..${WATERWHEEL_BASE + WATERWHEEL_COUNT - 1}=水车（ID=基址+axis；顶面接触水（${WATER}）=动力源，8 RPM + 64 SU 应力容量/台）`);
+    parts.push(`${WATERWHEEL_BASE}..${WATERWHEEL_BASE + WATERWHEEL_COUNT - 1}=水车（ID=基址+axis；顶面接触水（${BlockTypes.WATER}）=动力源，8 RPM + 64 SU 应力容量/台）`);
     parts.push(`${CRUSHER_BASE}..${CRUSHER_BASE + CRUSHER_COUNT - 1}=粉碎轮（ID=基址+axis；水平相邻两轮同轴配对，正上方格=投料口，1.2s 碾碎：石头→圆石→沙砾→沙、玻璃→沙、原木→木板×4）`);
     parts.push(`${SAW_BASE}..${SAW_BASE + SAW_COUNT - 1}=机械锯（ID=基址+facing，朝向格=被锯目标；原木→木板×4、石头→圆石，负载数据见 kinetic.js）`);
     return parts.join('，');

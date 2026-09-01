@@ -418,10 +418,15 @@ export function isPistonGroupId(id) {
 //   粉碎轮   ID = CRUSHER_BASE + axis（3；水平相邻两轮同轴配对工作，上方格 = 投料口）
 //   机械锯   ID = SAW_BASE + facing(0..5)（朝向 = 被锯方块方向，复用 FACING_NORMALS）
 export const SHAFT_BASE = 148;
+export const SHAFT_COUNT = 3;
 export const COGWHEEL_BASE = 152;
+export const COGWHEEL_COUNT = 3;
 export const WATERWHEEL_BASE = 156;
+export const WATERWHEEL_COUNT = 3;
 export const CRUSHER_BASE = 160;
+export const CRUSHER_COUNT = 3;
 export const SAW_BASE = 164;
+export const SAW_COUNT = 6;
 export const SHAFT_ITEM_ID = SHAFT_BASE; // 物品栏「传动轴」用 X 轴变体代表
 export const COGWHEEL_ITEM_ID = COGWHEEL_BASE;
 export const WATERWHEEL_ITEM_ID = WATERWHEEL_BASE;
@@ -516,10 +521,11 @@ export function isKineticId(id) {
 }
 
 // 动力方块的传动轴：轴类方块取编码轴，机械锯取朝向法线所在轴
+// （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 export function kineticAxisOf(id) {
     if (isSawId(id)) {
         const f = sawFacing(id);
-        return f <= 1 ? AXIS_Y : (f === 2 || f === 5) ? AXIS_Z : AXIS_X;
+        return f <= 1 ? AXIS_Y : (f === 2 || f === 4) ? AXIS_Z : AXIS_X;
     }
     if (isShaftId(id)) return shaftAxis(id);
     if (isCogId(id)) return cogAxis(id);

@@ -42,7 +42,9 @@ import {
     WORLD_HEIGHT,
     WORLD_WIDTH,
     cogAxis,
+    cogId,
     crusherAxis,
+    crusherId,
     isCogId,
     isCrusherId,
     isKineticId,
@@ -52,8 +54,11 @@ import {
     kineticAxisOf,
     kineticItemId,
     sawFacing,
+    sawId,
     shaftAxis,
+    shaftId,
     waterwheelAxis,
+    waterwheelId,
 } from './config.js';
 import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
@@ -185,7 +190,7 @@ export function updateKineticNetwork() {
         while (queue.length > 0) {
             const c = queue.pop();
             members.push(c);
-            for (const other of neighborsOf(c, byKey)) {
+            for (const { other } of neighborsOf(c, byKey)) {
                 const k = keyOf(other.x, other.y, other.z);
                 if (visited.has(k)) continue;
                 visited.add(k);
@@ -210,7 +215,8 @@ export function updateKineticNetwork() {
         }
 
         // 3) 转向传播：从第一台有水的水车出发（多水车不加速、方向以它为准），
-        //    同轴传向不变、啮合翻转；同一格被相反转向到达 = 卡死（整网停转）
+        //    同轴传向不变、啮合翻转；同一格被相反转向到达，或有水水车被反向到达
+        //    （水车的转向由水固定，两路传动冲突）= 卡死，整网停转
         let jammed = false;
         const dirMap = new Map();
         const src = members.find((c) => c.powered);
@@ -227,6 +233,7 @@ export function updateKineticNetwork() {
                     if (prev === undefined) {
                         dirMap.set(k, nd);
                         dq.push({ c: other, dir: nd });
+                        if (other.powered && nd !== 1) jammed = true; // 水车被反向驱动
                     } else if (prev !== nd) {
                         jammed = true;
                     }
@@ -248,7 +255,8 @@ export function updateKineticNetwork() {
     components = comps;
 }
 
-// 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合。
+// 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
+// 粉碎轮配对（成对两轮本身就是一对啮合的轮：单驱任意一只，两只都反转着碾）。
 // yield { other, mesh }：mesh = true 表示这是啮合边（转向翻转）。
 function* neighborsOf(c, byKey) {
     for (const dir of [-1, 1]) {
@@ -270,12 +278,22 @@ function* neighborsOf(c, byKey) {
         if (other.axis === c.axis) yield { other, mesh: false };
     }
     // 齿轮啮合：相邻格是齿轮、两轴垂直、连线方向沿两者之一的轴（一以轮面贴、一以轮齿咬）
-    if (!isCogId(c.id)) return;
-    for (const [fx, fy, fz] of FACING_NORMALS) {
-        const other = byKey.get(keyOf(c.x + fx, c.y + fy, c.z + fz));
-        if (!other || !isCogId(other.id) || other.axis === c.axis) continue;
-        const dirAxis = fx !== 0 ? AXIS_X : fy !== 0 ? AXIS_Y : AXIS_Z;
-        if (dirAxis === c.axis || dirAxis === other.axis) yield { other, mesh: true };
+    if (isCogId(c.id)) {
+        for (const [fx, fy, fz] of FACING_NORMALS) {
+            const other = byKey.get(keyOf(c.x + fx, c.y + fy, c.z + fz));
+            if (!other || !isCogId(other.id) || other.axis === c.axis) continue;
+            const dirAxis = fx !== 0 ? AXIS_X : fy !== 0 ? AXIS_Y : AXIS_Z;
+            if (dirAxis === c.axis || dirAxis === other.axis) yield { other, mesh: true };
+        }
+        return;
+    }
+    // 粉碎轮配对边：水平相邻、同轴、连线垂直于轴（与 updateKineticNetwork 的配对判定同规则）
+    if (isCrusherId(c.id)) {
+        for (const [dx, dz] of HORIZ_DIRS) {
+            if ((dx !== 0 ? AXIS_X : AXIS_Z) === c.axis) continue; // 连线沿轴 = 普通同轴传动，上面已处理
+            const other = byKey.get(keyOf(c.x + dx, c.y, c.z + dz));
+            if (other && isCrusherId(other.id) && other.axis === c.axis) yield { other, mesh: true };
+        }
     }
 }
 
