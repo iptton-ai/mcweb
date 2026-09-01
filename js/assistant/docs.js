@@ -2,7 +2,7 @@
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
 
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, WATER, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
 
 function blockPalette() {
@@ -44,6 +44,12 @@ function blockPalette() {
     parts.push(`${LAMP_BASE}..${LAMP_BASE + 1}=红石灯（ID=基址+lit；6 邻有激活红石粉或激活源时点亮）`);
     // 工具（P2：物品而非方块，ID 100..103，不在 BlockTypes 里，不能用于建造放置）
     parts.push(`工具（物品非方块，不可放置/建造）：100=铁镐（玩家挖掘用；石头需镐才有掉落） 101=铁斧 102=铁锹 103=铁剑（攻击 6 伤害）`);
+    // 动力组折叠：轴类 ID=基址+axis(0=东西X 1=上下Y 2=南北Z)，机械锯 ID=基址+facing(0上1下2北3东4南5西)
+    parts.push(`${SHAFT_BASE}..${SHAFT_BASE + SHAFT_COUNT - 1}=传动轴（ID=基址+axis；同轴相邻 1:1 传速，转轴自动旋转）`);
+    parts.push(`${COGWHEEL_BASE}..${COGWHEEL_BASE + COGWHEEL_COUNT - 1}=齿轮（ID=基址+axis；与垂直轴的相邻齿轮啮合=换向反转，平行并排不连接）`);
+    parts.push(`${WATERWHEEL_BASE}..${WATERWHEEL_BASE + WATERWHEEL_COUNT - 1}=水车（ID=基址+axis；顶面接触水（${WATER}）=动力源，8 RPM + 64 SU 应力容量/台）`);
+    parts.push(`${CRUSHER_BASE}..${CRUSHER_BASE + CRUSHER_COUNT - 1}=粉碎轮（ID=基址+axis；水平相邻两轮同轴配对，正上方格=投料口，1.2s 碾碎：石头→圆石→沙砾→沙、玻璃→沙、原木→木板×4）`);
+    parts.push(`${SAW_BASE}..${SAW_BASE + SAW_COUNT - 1}=机械锯（ID=基址+facing，朝向格=被锯目标；原木→木板×4、石头→圆石，负载数据见 kinetic.js）`);
     return parts.join('，');
 }
 
@@ -90,7 +96,8 @@ ${gameStateJson()}
 - 建筑外观可用多种方块搭配（原木框架+木板墙+圆石基座等）；
 - 坐标越界自动忽略；把大型建筑拆成多次调用，出错时用 clear_area 重来。
 - 想加红石自动化（路灯/自动门/陷阱/闪烁灯）：拉杆或按钮=信号源，红石粉沿实心顶面走线（每格 -1 级），红石灯/门/TNT 是负载；红石火把挂在被充能的方块上会熄灭=反相器，火把+粉环=时钟。
-run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
+- 想搭动力产线（Create 风格）：水车顶面泡水（轴 Y 的水车正上方放 WATER）=动力源 → 传动轴同轴串联 → 齿轮垂直换向 → 粉碎轮成对（水平相邻同轴）自动碾碎上方投料 / 机械锯朝向方块自动锯切；产出掉落物自动磁吸入包。应力预算：每台水车 64，配对粉碎轮每只 32、锯 24，超载整网停转。
+run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS；动力组 BT.SHAFT/COGWHEEL/WATERWHEEL/CRUSHER/SAW 与 *_BASE 基址也有，轴类 ID=基址+axis(0东西X/1上下Y/2南北Z)、锯=基址+facing(0上1下2北3东4南5西)）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
 
 ═══ 工作流 B：修改游戏源码（支持热重载）═══
 游戏为原生 ES Modules（无打包器），入口 HTML 加载 js/main.js。工具：list_game_files / read_game_file / write_game_file / reload_game / get_runtime_errors。
@@ -100,10 +107,13 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 - world.js：地形生成 generateWorld/generateTerrainHeight，getBlock/setBlockSafe/getBlockIndex
 - door.js：有状态方块「橡木门」（ID 编码见 config.js 的 DOOR_BASE 注释）：放置 tryPlaceDoor、右键开关 toggleDoorAt、破坏 breakDoorAt、门板几何 doorSlabTransform
 - redstone.js：有状态方块「红石组」（红石粉/红石火把/按钮/压力板/拉杆/红石灯，ID 编码见 config.js 的 DUST_BASE 注释）：信号源(15级)→红石粉布线(每格-1)→负载（红石灯/门/TNT）；红石火把=反相器（挂靠方块被充能则熄灭，延迟 0.1s 可做时钟）；放置 placeRedstone、网络重算 updateRedstoneNetwork、每帧 updateRedstoneTick（按钮/火把/压力板）
+- piston.js：有状态方块「活塞组」（活塞/粘性活塞/活塞头/观察者，ID 编码见 config.js 的 PISTON_BASE 注释）：放置 placePiston、破坏 breakPistonGroupAt、0.15s 延迟动作队列（推 ≤12 格/粘液拖动/收回拉回）、观察者每帧侦测
+- kinetic.js：有状态方块「动力组」（水车/传动轴/齿轮/粉碎轮/机械锯，ID 编码见 config.js 的 SHAFT_BASE 注释）：动力网络求解 updateKineticNetwork（同轴传速/齿轮啮合反转/水车顶面泡水供电/应力过载与转向冲突停转）、每帧 updateKineticTick（旋转动画 + 粉碎/锯切机器计时）、放置 placeKinetic、状态查询 kineticStatusAt
+- items.js：物品实体（机器产出的掉落物）：spawnItemDrop/updateItemDrops（重力/磁吸/拾取/120s 寿命），存于 state.itemDrops（不进存档）
 - chunk.js：区块网格 rebuildChunk(cx,cz)/updateChunkMeshes()，isSolid/isTransparent/isCustomMesh，火把光源，火把/花/门的独立道具网格 getPropMesh，单格道具刷新 refreshPropAt
 - buildQueue.js：AI 施工队列（建造渐进放置，速度档/暂停在 state.buildSpeedIdx、state.buildPaused；每帧分摊网格重建；HUD 进度条与 [ ] P R 键见 ui.js/input.js）
 - saveGame.js：游戏存档（localStorage 多槽：每槽 key mcweb.save.v1.slotN + 轻量索引 mcweb.save.index，槽数 config.SAVE_SLOTS，当前槽 state.saveSlot，旧单槽 mcweb.save.v1 自动迁入槽 0）：每槽一个独立世界（方块 RLE 压缩 base64，enc:'rle'/'raw'，字段对齐本目录 snapshot.js）+ 玩家/模式/时间/出生点；main.js 启动时 initSaves→loadGame 优先于生成新世界，自动存档 30s+页面隐藏兜底写当前槽；改存档字段需同步 SAVE_VERSION 版本号
-- textures.js：Canvas 程序化纹理。tiles 表（type→top/side/bottom 的 tile 索引）+ drawFunctions（按索引绘制）+ blockUVs；图集 atlasSize=5（5×5=25 格、每格 16px），tile 索引 0..19 已占用，20..24 空闲
+- textures.js：Canvas 程序化纹理。tiles 表（type→top/side/bottom 的 tile 索引）+ drawFunctions（按索引绘制）+ blockUVs；图集 atlasSize=8（8×8=64 格、每格 16px），tile 索引 0..44 已占用，45..63 空闲
 - interaction.js：breakBlock/placeBlock/raycastBlocks（破坏/放置/射线拾取）
 - playerPhysics.js：移动、碰撞、相机；playerLife.js：生命、死亡重生、掉落物
 - entities.js：僵尸生成与 AI、玩家第三人称模型；tnt.js：TNT；particles.js：粒子；daynight.js：昼夜光照；highlight.js：选中框；audio.js：WebAudio 音效
@@ -113,7 +123,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 
 配方① 新增一种方块（可开关的「门」已实现，参考 js/door.js + config.js 的 DOOR_BASE 编码 + textures.js 的 tile 20/21 与 TILE_OVERRIDES）：
 1) config.js：BlockTypes 加 ID（下一个可用整数）、BlockInfo 加 {name, solid, transparent, color, 按需 customMesh:true}、按需加入 HotbarBlocks（物品栏自动渲染）；
-2) textures.js：tiles 数组加 {type, top, side, bottom, name}，drawFunctions 加对应 tile 索引的绘制函数（优先用空闲索引 20..24；若必须扩 atlasSize 注意所有 tile 索引按 atlasSize 换行，会整体平移 UV，务必同步检查）；
+2) textures.js：tiles 数组加 {type, top, side, bottom, name}，drawFunctions 加对应 tile 索引的绘制函数（优先用空闲索引 45..63；若必须扩 atlasSize 注意所有 tile 索引按 atlasSize 换行，会整体平移 UV，务必同步检查）；
 3) chunk.js：非标准立方体（如门）设 BlockInfo.customMesh=true 并在 getPropMesh 加网格分支（参考 TORCH/FLOWER）；状态切换（开/关）用两个 BlockType 或修改场景对象后 rebuildChunk；
 4) 交互（右键开关）：input.js 或 interaction.js 加逻辑；若新键位，注意用 isPlaying() 门控。
 配方② 新增按键/交互：input.js keydown 中加 e.code 分支（参考 KeyF 飞行开关）。

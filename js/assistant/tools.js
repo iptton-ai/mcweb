@@ -6,7 +6,7 @@
 // 建造类工具经 buildQueue 渐进放置（可调速/暂停，便于录制延时摄影），
 // 工具会等施工任务全部应用完才返回结果，LLM 的「放置→校验」流程不受影响。
 
-import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, HotbarBlocks, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
 import { getBlock } from '../world.js';
 import { isSolid } from '../chunk.js';
@@ -185,7 +185,14 @@ async function toolRunBuildScript({ code } = {}) {
     const ops = [];
     let opsCount = 0;
     const OPS_LIMIT = 40000;
-    const BT = { ...BlockTypes };
+    // 动力组不在 BlockTypes 里（状态编码方块，同红石/活塞组惯例），
+    // 暴露基址 + 各向变体：轴类 +axis(0..2)，机械锯 +facing(0..5)
+    const BT = {
+        ...BlockTypes,
+        SHAFT: SHAFT_ITEM_ID, COGWHEEL: COGWHEEL_ITEM_ID, WATERWHEEL: WATERWHEEL_ITEM_ID,
+        CRUSHER: CRUSHER_ITEM_ID, SAW: SAW_ITEM_ID,
+        SHAFT_BASE, COGWHEEL_BASE, WATERWHEEL_BASE, CRUSHER_BASE, SAW_BASE,
+    };
 
     function guard() {
         if (++opsCount > OPS_LIMIT) throw new Error(`超出单次写入上限 ${OPS_LIMIT} 格，请拆分多次调用`);

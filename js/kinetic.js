@@ -32,6 +32,7 @@ import {
     KINETIC_RECIPES,
     KINETIC_SPIN_VIS,
     SAW_ITEM_ID,
+    SAW_SPEED,
     SAW_SU_LOAD,
     SHAFT_ITEM_ID,
     WATERWHEEL_ITEM_ID,
@@ -57,9 +58,9 @@ import {
 import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
 import { refreshPropAt, rebuildChunk } from './chunk.js';
-import { popUnsupportedRedstone } from './redstone.js';
+import { popUnsupportedRedstone, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
-import { playCrushSound } from './audio.js';
+import { playBlockSound, playCrushSound, playSawSound } from './audio.js';
 import { spawnItemDrop } from './items.js';
 
 const keyOf = (x, y, z) => `${x},${y},${z}`;
@@ -371,10 +372,92 @@ function componentAt(k) {
     return entry ? components[entry.compId] : null;
 }
 
-// ==================== 终端机器 B：机械锯（阶段二 Commit C 落地） ====================
+// ==================== 终端机器 B：机械锯 ====================
+// 朝向格（SAW 的 facing 邻格）有可锯方块且网络正常 → 按挖掘公式推进：
+// 耗时 = hardness × 1.5 ÷ SAW_SPEED（等效铁镐，不吃玩家的水中/悬空惩罚）。
+// 完成 → 方块消失 + 掉落映射照原版（石头→圆石）；原木/树干特例 → 木板×4（锯切转换）。
+// 朝向格变化（被挖/被推/变空气）→ 进度重置；挖完不自动寻找下一个目标；
+// 进度表现用粒子+音效节拍（玩家的裂纹 overlay 绑定准星，不复用）。
 const sawProgress = new Map(); // 机械锯 key -> { target, t, fx }
 
-function updateSaws(dt) { void dt; }
+function updateSaws(dt) {
+    for (const c of sawCells) {
+        const k = keyOf(c.x, c.y, c.z);
+        const comp = componentAt(k);
+        const [fx, fy, fz] = FACING_NORMALS[sawFacing(c.id)];
+        const tx = c.x + fx, ty = c.y + fy, tz = c.z + fz; // 锯切目标 = 朝向邻格
+        const target = getBlock(tx, ty, tz);
+        const pr = sawProgress.get(k);
+        if (!comp?.running || !isSawable(target)) {
+            if (pr && pr.target !== target) sawProgress.delete(k); // 换目标作废；停机冻结
+            continue;
+        }
+        let e = pr;
+        if (!e || e.target !== target) {
+            e = { target, t: 0, fx: 0 };
+            sawProgress.set(k, e);
+        }
+        e.t += dt;
+        e.fx += dt;
+        if (e.fx > 0.45) {
+            e.fx = 0;
+            spawnBreakParticles(tx, ty, tz, target); // 锯切木屑
+            playSawSound();
+        }
+        if (e.t < sawSeconds(target)) continue;
+        sawProgress.delete(k);
+        finishSaw(tx, ty, tz, target);
+    }
+}
+
+// 可锯目标：普通实心立方体（customMesh 的门/红石/活塞/动力道具走各自破坏逻辑，锯不动），
+// 硬度 < 0（基岩）不可锯
+function isSawable(id) {
+    if (id === BlockTypes.AIR || id === BlockTypes.WATER) return false;
+    const info = BlockInfo[id];
+    if (!info) return false;
+    if (info.customMesh) return false;
+    return (info.hardness ?? 0) >= 0;
+}
+
+function sawSeconds(id) {
+    return Math.max(0.05, (BlockInfo[id]?.hardness ?? 0) * 1.5 / SAW_SPEED);
+}
+
+// 锯完一格：清格、掉落（原版映射 + 原木特例）、支撑上的红石元件连锁脱落、网络刷新
+function finishSaw(tx, ty, tz, target) {
+    setBlockSafe(tx, ty, tz, BlockTypes.AIR);
+    rebuildAroundLocal(tx, tz);
+    for (const cc of popUnsupportedRedstone(tx, ty, tz)) {
+        spawnBreakParticles(cc.x, cc.y, cc.z, cc.id);
+        rebuildAroundLocal(cc.x, cc.z);
+    }
+    let item, count;
+    if (target === BlockTypes.WOOD || target === BlockTypes.LOG) {
+        item = BlockTypes.PLANKS;
+        count = 4; // 锯切转换：原木/树干 → 木板×4
+    } else {
+        const info = BlockInfo[target];
+        item = info.drop === null ? null : (info.drop ?? target); // 玻璃/树叶无掉落（原版规则）
+        count = 1;
+    }
+    if (item !== null) spawnItemDrop(tx + 0.5, ty + 0.3, tz + 0.5, item, count);
+    spawnBreakParticles(tx, ty, tz, target);
+    playBlockSound(false);
+    updateRedstoneNetwork(); // 目标方块可能是红石挂靠位，电平基线刷新
+    updateKineticNetwork();  // 也可能是动力方块的支撑格（拓扑不变也幂等，图个安心）
+}
+
+// 重建 (x,z) 所在区块及贴边相邻区块（锯切清格用）
+function rebuildAroundLocal(x, z) {
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    rebuildChunk(cx, cz);
+    if (x % CHUNK_SIZE === 0 && cx > 0) rebuildChunk(cx - 1, cz);
+    if (x % CHUNK_SIZE === CHUNK_SIZE - 1 && cx < Math.ceil(WORLD_WIDTH / CHUNK_SIZE) - 1) rebuildChunk(cx + 1, cz);
+    if (z % CHUNK_SIZE === 0 && cz > 0) rebuildChunk(cx, cz - 1);
+    if (z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < Math.ceil(WORLD_DEPTH / CHUNK_SIZE) - 1) rebuildChunk(cx, cz + 1);
+}
 
 // ==================== 外部兜底 ====================
 // 该格机器进度作废（方块被破坏/换格时；由 breakKineticAt 调用）
