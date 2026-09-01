@@ -49,7 +49,9 @@ import {
     isDustId,
     isLampId,
     isLeverId,
+    isObserverId,
     isPlateId,
+    isPistonId,
     isRTorchId,
     isRedstoneId,
     lampId,
@@ -57,6 +59,8 @@ import {
     leverFacing,
     leverId,
     leverOn,
+    observerFacing,
+    observerPowered,
     plateId,
     platePressed,
     rtorchFacing,
@@ -68,6 +72,7 @@ import { getBlock, getBlockIndex, setBlockSafe } from './world.js';
 import { isSolid, rebuildChunk, refreshPropAt, removeTorchLightAt } from './chunk.js';
 import { playDoorSound, playLeverSound } from './audio.js';
 import { spawnTntEntity } from './tnt.js';
+import { enqueuePistonAction, resetPistons, syncObserverRegistry, updatePistonTick } from './piston.js';
 
 // 水平四向（红石粉布线/充能都用它），与 FACING_NORMALS 的 2..5 独立
 const HORIZ_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -85,6 +90,7 @@ let torchQueue = []; // {x,y,z,lit,t}
 let plateRegistry = []; // 压力板位置缓存：updateRedstoneTick 每帧踩踏检测用
 let doorPoweredPrev = new Map(); // 门位置 -> 上轮信号电平（边沿检测）
 let tntPoweredPrev = new Map(); // TNT 位置 -> 上轮信号电平（边沿检测）
+let pistonPoweredPrev = new Map(); // 活塞位置 -> 上轮信号电平（边沿检测，动作经 piston.js 延迟队列）
 
 export function facingFromNormal(dx, dy, dz) {
     if (dy > 0) return 0;
@@ -111,8 +117,12 @@ function mountedFacing(id) {
     if (isRTorchId(id)) return rtorchFacing(id);
     if (isButtonId(id)) return buttonFacing(id);
     if (isLeverId(id)) return leverFacing(id);
+    if (isObserverId(id)) return OBS_OUT_FACING[observerFacing(id)]; // 观察者从背面输出（facing 的反面）
     return 0;
 }
+
+// facing 反面查表（0上↔1下 2北↔5西 3东↔4南）
+const OBS_OUT_FACING = [1, 0, 5, 4, 3, 2];
 
 function isSupportedBy(id, sx, sy, sz, x, y, z) {
     const [nx, ny, nz] = FACING_NORMALS[mountedFacing(id)];
@@ -279,6 +289,9 @@ export function updateRedstoneTick(dt) {
     }
 
     if (dirty) updateRedstoneNetwork();
+
+    // 活塞组：消费 0.15s 动作队列（伸出/收回）+ 观察者每帧侦测（js/piston.js）
+    updatePistonTick(dt);
 }
 
 // ==================== 供能网络重算 ====================
@@ -291,7 +304,7 @@ export function updateRedstoneNetwork() {
     const blocks = state.blocks;
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
-    const doors = [], tnts = [];
+    const doors = [], tnts = [], pistons = [], observers = [];
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -308,15 +321,22 @@ export function updateRedstoneNetwork() {
                     doors.push({ x, y, z, id });
                 } else if (id === BlockTypes.TNT) {
                     tnts.push({ x, y, z });
+                } else if (isPistonId(id)) {
+                    pistons.push({ x, y, z, id });
+                } else if (isObserverId(id)) {
+                    observers.push({ x, y, z, id });
                 }
             }
         }
     }
     plateRegistry = plates;
+    syncObserverRegistry(observers); // 活塞组：观察者注册进每帧侦测表（piston.js）
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
-        plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0) {
+        plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
+        pistons.length === 0 && observers.length === 0) {
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
+        pistonPoweredPrev = new Map();
         return;
     }
 
@@ -326,6 +346,7 @@ export function updateRedstoneNetwork() {
     for (const bt of buttons) if (buttonPressed(bt.id) === 1) activeSources.push(bt);
     for (const pl of plates) if (platePressed(pl.id) === 1) activeSources.push(pl);
     for (const tc of torches) if (rtorchLit(tc.id) === 1) activeSources.push(tc);
+    for (const ob of observers) if (observerPowered(ob.id) === 1) activeSources.push(ob); // 观察者脉冲
     const activeSourceKeys = new Set(activeSources.map((s) => keyOf(s.x, s.y, s.z)));
 
     // ---- 红石粉强度 BFS：源 15 级直接送进邻粉，粉与粉每格 -1 ----
@@ -440,6 +461,17 @@ export function updateRedstoneNetwork() {
         }
     }
     tntPoweredPrev = tntPrev;
+
+    // 活塞：信号上升沿入队「伸出」、下降沿入队「收回」——动作在 piston.js 的
+    // 0.15s 延迟队列里执行（对齐原版 3 游戏刻，也防飞行机器递归重算）
+    const pistonPrev = new Map();
+    for (const pi of pistons) {
+        const k = keyOf(pi.x, pi.y, pi.z);
+        const powered = isCellActive(pi.x, pi.y, pi.z);
+        pistonPrev.set(k, powered);
+        if (powered !== (pistonPoweredPrev.get(k) ?? false)) enqueuePistonAction(pi.x, pi.y, pi.z, powered);
+    }
+    pistonPoweredPrev = pistonPrev;
 }
 
 // 火把翻转入队：同格旧目标作废（后到覆盖），节拍重置为 RTORCH_DELAY
@@ -464,11 +496,13 @@ function applyDoorPower(x, y, z, open) {
     playDoorSound(open);
 }
 
-// 读档/开新世界后调用：清瞬时队列并重算一遍（恢复红石粉/红石灯派生态与门/TNT 边沿基线）
+// 读档/开新世界后调用：清瞬时队列并重算一遍（恢复红石粉/红石灯派生态与门/TNT/活塞边沿基线）
 export function initRedstone() {
     buttonTimers.length = 0;
     torchQueue = [];
     doorPoweredPrev = new Map();
     tntPoweredPrev = new Map();
+    pistonPoweredPrev = new Map();
+    resetPistons();
     updateRedstoneNetwork();
 }

@@ -144,6 +144,7 @@ export const BlockTypes = {
     TORCH: 16,
     FLOWER: 17,
     TNT: 18,
+    SLIME: 97, // 粘液块（普通实心立方体，ID 排在红石组之后；活塞组的基础组件）
 };
 
 // ==================== 有状态方块：门 ====================
@@ -333,6 +334,77 @@ export const FACING_NORMALS = [
     [0, 1, 0], [0, -1, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0],
 ];
 
+// ==================== 有状态方块：活塞组（活塞/粘性活塞/活塞头/观察者）====================
+// 参考 Minecraft Wiki（Piston/BS、Observer/BS），照红石组惯例把状态直接编码进方块 ID：
+//   活塞底座 ID = PISTON_BASE / STICKY_PISTON_BASE + facing*2 + extended（各 12 个变体）
+//   活塞头   ID = PISTON_HEAD_BASE + facing（6 个；是否粘头由身后底座是否粘性决定，渲染时现查）
+//   观察者   ID = OBSERVER_BASE + facing*2 + powered（12 个；正前方方块变化→脉冲信号源）
+// facing 复用上方 FACING_NORMALS（0上 1下 2北 3东 4南 5西）。ID 区间避开 63..82 空洞与
+// 100..103 工具。高层逻辑（放置/破坏/推动拉动/动作队列/观察者侦测）见 js/piston.js。
+// 与原版的简化差异：无准连通性(QC)；推动撞玩家/怪=整体位移 1 格；粘液拉动=连通集合
+// 整体移或全不动；伸出态活塞不可被推；粘液块渲染为不透明。
+export const PISTON_BASE = 104; // 活塞（普通）
+export const STICKY_PISTON_BASE = 116; // 粘性活塞
+export const PISTON_HEAD_BASE = 128; // 伸出的活塞头（占据底座前方一格）
+export const OBSERVER_BASE = 135; // 观察者
+export const PISTON_ITEM_ID = PISTON_BASE; // 物品栏「活塞」用 朝上·收回 变体代表
+export const STICKY_PISTON_ITEM_ID = STICKY_PISTON_BASE; // 物品栏「粘性活塞」
+export const OBSERVER_ITEM_ID = OBSERVER_BASE; // 物品栏「观察者」
+
+export const PISTON_PUSH_LIMIT = 12; // 推动上限（原版 12 格：超出整个动作失败）
+export const PISTON_DELAY = 0.15; // 活塞动作延迟（原版 3 游戏刻；也防飞行机器递归风暴）
+export const OBSERVER_PULSE_SEC = 0.2; // 观察者侦测到变化后的脉冲时长（原版 2gt=0.1s，放宽更顺手）
+
+// 活塞组 ID 编解码（纯函数，供 chunk.js / interaction.js / piston.js 共用）
+export function pistonId(sticky, facing, extended) {
+    return (sticky ? STICKY_PISTON_BASE : PISTON_BASE) + facing * 2 + extended;
+}
+
+export function isPistonId(id) {
+    return id >= PISTON_BASE && id < STICKY_PISTON_BASE + 12;
+}
+
+export function pistonSticky(id) {
+    return id >= STICKY_PISTON_BASE;
+}
+
+export function pistonFacing(id) {
+    return (id - (pistonSticky(id) ? STICKY_PISTON_BASE : PISTON_BASE)) >> 1;
+}
+
+export function pistonExtended(id) {
+    return (id - (pistonSticky(id) ? STICKY_PISTON_BASE : PISTON_BASE)) & 1;
+}
+
+export function pistonHeadId(facing) {
+    return PISTON_HEAD_BASE + facing;
+}
+
+export function isPistonHeadId(id) {
+    return id >= PISTON_HEAD_BASE && id < PISTON_HEAD_BASE + 6;
+}
+
+export function observerId(facing, powered) {
+    return OBSERVER_BASE + facing * 2 + powered;
+}
+
+export function isObserverId(id) {
+    return id >= OBSERVER_BASE && id < OBSERVER_BASE + 12;
+}
+
+export function observerFacing(id) {
+    return (id - OBSERVER_BASE) >> 1;
+}
+
+export function observerPowered(id) {
+    return (id - OBSERVER_BASE) & 1;
+}
+
+// 活塞组物品（放置路由用；活塞头不是物品，无放置入口）
+export function isPistonGroupId(id) {
+    return isPistonId(id) || isObserverId(id);
+}
+
 // ==================== 方块挖掘属性（照搬原版 hardness/工具类别/掉落）====================
 // hardness：原版硬度值；-1 = 不可破坏（基岩）。tool：原版「最佳工具」类别（镐/斧/锹，徒手=无）。
 // needsTool：true = 必须用对应类别工具挖才有掉落（原版石质方块的规则，如石头手挖 7.5s 还不掉落）。
@@ -358,6 +430,7 @@ export const BlockInfo = {
     [BlockTypes.TORCH]: { name: '火把', solid: false, transparent: true, customMesh: true, color: '#e8a030', hardness: 0 },
     [BlockTypes.FLOWER]: { name: '花', solid: false, transparent: true, customMesh: true, color: '#e04a5a', hardness: 0 },
     [BlockTypes.TNT]: { name: 'TNT', solid: true, transparent: false, tnt: true, color: '#c03020', hardness: 0 },
+    [BlockTypes.SLIME]: { name: '粘液块', solid: true, transparent: false, color: '#6ec84e', hardness: 0 }, // 原版粘液块硬度 0（空手秒挖）；可被活塞推拉并拖动附着方块
 };
 
 // 门变体批量注册：solid 随开合变化（关门挡路、开门可通行，近似原版碰撞），
@@ -438,6 +511,10 @@ export const HotbarBlocks = [
     PLATE_ITEM_ID, // 压力板：玩家/怪物踩住时是信号源（自动门/陷阱）
     LEVER_ITEM_ID, // 拉杆：右键开关，稳态信号源
     LAMP_ITEM_ID, // 红石灯：6 邻有信号点亮
+    BlockTypes.SLIME, // 粘液块：被活塞推拉时拖动附着的方块（飞行机器的基础）
+    PISTON_ITEM_ID, // 活塞：信号上升沿伸出、下降沿收回，可推动最多 12 格（见 js/piston.js）
+    STICKY_PISTON_ITEM_ID, // 粘性活塞：收回时把头前方块拉回一格
+    OBSERVER_ITEM_ID, // 观察者：正前方方块变化时发出一次脉冲（活塞时钟/飞行机器）
     ToolTypes.PICKAXE, // 铁镐：石质方块快速挖掘 + 采集掉落（物品，不能放置）
     ToolTypes.AXE, // 铁斧：木质方块快速挖掘
     ToolTypes.SHOVEL, // 铁锹：泥土/沙快速挖掘
@@ -505,3 +582,52 @@ for (let facing = 0; facing < 6; facing++) {
 }
 BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, redstone: true, color: '#6a4a2a', hardness: 0.3 };
 BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, redstone: true, color: '#ffd870', hardness: 0.3 };
+
+// ==================== 活塞组变体批量注册 ====================
+// 活塞底座/活塞头/观察者是 customMesh 道具（伸出的部分不满一格，需独立网格），
+// transparent 使邻方面不被剔除（伸出态/活塞头周围能看到后面的面）。
+// 破坏返还走 piston.js 的 breakPistonGroupAt 特例（打头=拆整只活塞）。
+const PISTON_ORIENT = ['朝上', '朝下', '朝北', '朝东', '朝南', '朝西'];
+for (let sticky = 0; sticky < 2; sticky++) {
+    for (let facing = 0; facing < 6; facing++) {
+        for (let extended = 0; extended < 2; extended++) {
+            BlockInfo[pistonId(!!sticky, facing, extended)] = {
+                name: `${sticky ? '粘性活塞' : '活塞'}（${PISTON_ORIENT[facing]}${extended ? '·伸出' : ''}）`,
+                solid: true,
+                transparent: true,
+                customMesh: true,
+                piston: true,
+                color: '#b08850',
+                hardness: 1.5, // 原版活塞硬度 1.5
+                tool: 'pickaxe',
+            };
+        }
+    }
+}
+for (let facing = 0; facing < 6; facing++) {
+    BlockInfo[pistonHeadId(facing)] = {
+        name: `活塞头（${PISTON_ORIENT[facing]}）`,
+        solid: true,
+        transparent: true,
+        customMesh: true,
+        piston: true,
+        color: '#c8a468',
+        hardness: 1.5,
+        tool: 'pickaxe',
+        drop: null, // 打掉活塞头=拆整只活塞（返还走 breakPistonGroupAt），无独立掉落
+    };
+}
+for (let facing = 0; facing < 6; facing++) {
+    for (let powered = 0; powered < 2; powered++) {
+        BlockInfo[observerId(facing, powered)] = {
+            name: `观察者（${PISTON_ORIENT[facing]}${powered ? '·脉冲中' : ''}）`,
+            solid: true,
+            transparent: true,
+            customMesh: true,
+            color: '#6a6a6a',
+            hardness: 3.0, // 原版观察者硬度 3，需镐采集
+            tool: 'pickaxe',
+            needsTool: true,
+        };
+    }
+}

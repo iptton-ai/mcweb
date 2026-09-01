@@ -1,10 +1,10 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, doorHalf, dustLit, isButtonId, isDoorId, isDustId, isLampLitId, isLeverId, isPlateId, isRTorchId, isRedstoneId, isRTorchLitId, leverFacing, leverOn, platePressed, rtorchFacing, rtorchLit } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, doorHalf, dustLit, isButtonId, isDoorId, isDustId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
-import { atlasTexture, getUVForFace, getDoorTileTexture } from './textures.js';
+import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
 import { doorSlabTransform } from './door.js';
 import { getBlock } from './world.js';
 
@@ -109,7 +109,12 @@ export function getPropMesh(blockType) {
         mesh = buildPlateMesh(blockType);
     } else if (isLeverId(blockType)) {
         mesh = buildLeverMesh(blockType);
+    } else if (isPistonId(blockType)) {
+        mesh = buildPistonBaseMesh(blockType);
+    } else if (isObserverId(blockType)) {
+        mesh = buildObserverMesh(blockType);
     }
+    // 活塞头不在缓存里：是否粘头取决于身后底座，逐格现算（addPropAt 特判）
     if (mesh) propMeshCache.set(blockType, mesh);
     return mesh ? mesh.clone() : null;
 }
@@ -260,6 +265,139 @@ function buildLeverMesh(blockType) {
     orientMounted(mounted, leverFacing(blockType), 0.12);
     const root = new THREE.Group();
     root.add(mounted);
+    return root;
+}
+
+// ==================== 活塞组道具网格 ====================
+// 用图集 tile 名给 BoxGeometry 六面铺 UV（面序 +x,-x,+y,-y,+z,-z，同 buildHeldBlockMesh 的 UV 摆法）
+function makeTexturedBoxGeo(w, h, d, tiles) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const uvAttr = geo.attributes.uv;
+    const faces = [tiles.px, tiles.nx, tiles.py, tiles.ny, tiles.pz, tiles.nz];
+    for (let f = 0; f < 6; f++) {
+        const t = tileMap[faces[f]] || tileMap['piston'];
+        const u0 = t.x / atlasSize;
+        const v0 = 1 - (t.y + 1) / atlasSize;
+        const u1 = (t.x + 1) / atlasSize;
+        const v1 = 1 - t.y / atlasSize;
+        const i = f * 4;
+        uvAttr.setXY(i, u0, v1);
+        uvAttr.setXY(i + 1, u1, v1);
+        uvAttr.setXY(i + 2, u0, v0);
+        uvAttr.setXY(i + 3, u1, v0);
+    }
+    uvAttr.needsUpdate = true;
+    return geo;
+}
+
+const pistonAtlasMat = new THREE.MeshLambertMaterial({ map: atlasTexture });
+const pistonArmMat = new THREE.MeshLambertMaterial({ color: 0x8a6a3a }); // 中央推杆（木质，不走图集）
+
+// 把「朝上构建」的整格道具组摆到 facing 朝向：绕格中心旋转（局部原点 = 格底面中心）
+function orientCellBox(g, facing) {
+    const [nx, ny, nz] = FACING_NORMALS[facing];
+    if (ny === 1) return; // 朝上：无需旋转
+    if (ny === -1) {
+        g.rotation.x = Math.PI;
+        g.position.y = 1; // 绕格中心 (0,0.5,0) 翻转
+        return;
+    }
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(nx, ny, nz));
+    g.position.set(-nx * 0.5, 0.5, -nz * 0.5); // 平移补偿绕中心的旋转
+}
+
+// 活塞底座：收回 = 整格立方（局部 +Y 面 = 推出面，粘性活塞的推出面盖粘液贴图）；
+// 伸出 = 后 1/4 底板 + 中央推杆（前格的活塞头网格补全视觉，两格拼起来是完整活塞）
+function buildPistonBaseMesh(blockType) {
+    const facing = pistonFacing(blockType);
+    const extended = pistonExtended(blockType) === 1;
+    const sticky = pistonSticky(blockType);
+    const g = new THREE.Group();
+    if (!extended) {
+        const cube = new THREE.Mesh(
+            makeTexturedBoxGeo(1, 1, 1, {
+                py: sticky ? 'slime' : 'piston',
+                ny: 'piston_bottom',
+                px: 'piston_side', nx: 'piston_side', pz: 'piston_side', nz: 'piston_side',
+            }),
+            pistonAtlasMat,
+        );
+        cube.position.y = 0.5;
+        g.add(cube);
+    } else {
+        const plate = new THREE.Mesh(
+            makeTexturedBoxGeo(1, 0.25, 1, {
+                py: 'piston_inner',
+                ny: 'piston_bottom',
+                px: 'piston_side', nx: 'piston_side', pz: 'piston_side', nz: 'piston_side',
+            }),
+            pistonAtlasMat,
+        );
+        plate.position.y = 0.125;
+        g.add(plate);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.75, 0.25), pistonArmMat);
+        arm.position.y = 0.625;
+        g.add(arm);
+    }
+    const root = new THREE.Group();
+    root.add(g);
+    orientCellBox(g, facing);
+    return root;
+}
+
+// 活塞头：远端 1/4 推板 + 连回底座的推杆。粘头与否看身后底座（逐格现算，不入缓存）：
+// 粘性推板外层是粘液贴图，普通是活塞推出面。
+function buildPistonHeadMesh(blockType, x, y, z) {
+    const facing = blockType - PISTON_HEAD_BASE;
+    const [nx, ny, nz] = FACING_NORMALS[facing];
+    const baseId = getBlock(x - nx, y - ny, z - nz);
+    const sticky = isPistonId(baseId) && pistonSticky(baseId);
+    const g = new THREE.Group();
+    const plate = new THREE.Mesh(
+        makeTexturedBoxGeo(1, 0.25, 1, {
+            py: sticky ? 'slime' : 'piston',
+            ny: 'piston_inner',
+            px: 'piston_side', nx: 'piston_side', pz: 'piston_side', nz: 'piston_side',
+        }),
+        pistonAtlasMat,
+    );
+    plate.position.y = 0.875;
+    g.add(plate);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.75, 0.25), pistonArmMat);
+    arm.position.y = 0.375;
+    g.add(arm);
+    const root = new THREE.Group();
+    root.add(g);
+    orientCellBox(g, facing);
+    return root;
+}
+
+// 观察者：整格立方，局部 +Y 面 = 「眼睛」侦测面；脉冲中（powered）时背面亮红点
+function buildObserverMesh(blockType) {
+    const facing = observerFacing(blockType);
+    const powered = observerPowered(blockType) === 1;
+    const g = new THREE.Group();
+    const cube = new THREE.Mesh(
+        makeTexturedBoxGeo(1, 1, 1, {
+            py: 'observer',
+            ny: 'observer_side',
+            px: 'observer_side', nx: 'observer_side', pz: 'observer_side', nz: 'observer_side',
+        }),
+        pistonAtlasMat,
+    );
+    cube.position.y = 0.5;
+    g.add(cube);
+    if (powered) {
+        const dot = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3, 0.02, 0.3),
+            new THREE.MeshLambertMaterial({ color: 0xff4030, emissive: 0xd02010, emissiveIntensity: 1.2 }),
+        );
+        dot.position.y = -0.01; // 背面（局部 -Y）微凸，背面是空气时可见
+        g.add(dot);
+    }
+    const root = new THREE.Group();
+    root.add(g);
+    orientCellBox(g, facing);
     return root;
 }
 
@@ -509,10 +647,11 @@ export function updateChunkMeshes() {
     }
 }
 
-// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件）
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组）
 function isPropBlock(bt) {
     return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
-        isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt);
+        isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||
+        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt);
 }
 
 // 在 (x,y,z) 放置该格对应的道具网格（火把/亮灯/亮红石火把含光源），挂入 state.droppedItems
@@ -526,8 +665,13 @@ function addPropAt(bt, x, y, z) {
         // 亮着的红石火把：暗红微光（近似原版 7 级光照）
         addTorchLight(x, y, z, { color: 0xff4020, intensity: 4, dist: 7, height: 0.6 });
     }
-    // 红石粉形状随邻居变化，不走按方块类型缓存的 getPropMesh，逐格现算
-    const m = isDustId(bt) ? buildDustMesh(x, y, z, dustLit(bt)) : getPropMesh(bt);
+    // 红石粉形状随邻居变化、活塞头粘与否看身后底座，都不走按方块类型缓存的
+    // getPropMesh，逐格现算；其余道具（含活塞底座/观察者）走缓存
+    const m = isDustId(bt)
+        ? buildDustMesh(x, y, z, dustLit(bt))
+        : isPistonHeadId(bt)
+            ? buildPistonHeadMesh(bt, x, y, z)
+            : getPropMesh(bt);
     if (!m) return;
     m.position.set(x + 0.5, y, z + 0.5);
     m.userData.propKey = `${x},${y},${z}`;

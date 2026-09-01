@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, ToolTypes, WORLD_HEIGHT } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WORLD_HEIGHT } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { canvas } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -27,6 +27,11 @@ export function setGameMode(mode) {
             state.player.inventory[ToolTypes.AXE] = 1;
             state.player.inventory[ToolTypes.SHOVEL] = 1;
             state.player.inventory[ToolTypes.SWORD] = 1;
+            // 活塞组套装（同上：无合成系统的补偿，够搭自动门/陷阱/飞行机器玩起来）
+            state.player.inventory[BlockTypes.SLIME] = 16;
+            state.player.inventory[PISTON_ITEM_ID] = 2;
+            state.player.inventory[STICKY_PISTON_ITEM_ID] = 2;
+            state.player.inventory[OBSERVER_ITEM_ID] = 2;
         }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {

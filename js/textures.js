@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, ToolTypes } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -22,9 +22,9 @@ export function createTexture(width, height, drawFn) {
 }
 
 // ==================== 纹理图集 ====================
-export const atlasSize = 6;
+export const atlasSize = 8;
 
-// 6x6 图集（火把/花/TNT/门之后又加了红石组各元件）
+// 8x8 图集（红石组之后又加了活塞组：粘液/活塞三面/机身/观察者，tile 33..38 追加在尾部保序）
 export const tileSize = 16;
 
 export const atlasCanvas = document.createElement('canvas');
@@ -71,6 +71,10 @@ export function generateAllTextures() {
         { type: ToolTypes.AXE, top: 30, side: 30, bottom: 30, name: 'axe' },
         { type: ToolTypes.SHOVEL, top: 31, side: 31, bottom: 31, name: 'shovel' },
         { type: ToolTypes.SWORD, top: 32, side: 32, bottom: 32, name: 'sword' },
+        { type: BlockTypes.SLIME, top: 33, side: 33, bottom: 33, name: 'slime' }, // 粘液块（普通立方体，活塞组基础组件）
+        { type: PISTON_ITEM_ID, top: 35, side: 34, bottom: 36, name: 'piston' }, // 活塞图标露出正面
+        { type: STICKY_PISTON_ITEM_ID, top: 33, side: 34, bottom: 36, name: 'sticky_piston' }, // 粘性活塞图标露出粘液面
+        { type: OBSERVER_ITEM_ID, top: 38, side: 36, bottom: 36, name: 'observer' }, // 观察者图标露出「眼睛」面
     ];
 
     const drawFunctions = {
@@ -481,6 +485,92 @@ export function generateAllTextures() {
             ctx.fillStyle = '#6a4222';
             ctx.fillRect(x + 6, y + 15, 4, 1); // 柄首
         },
+        // 活塞组 tile（33..38）：粘液 / 活塞侧 / 活塞正面 / 机身（活塞底·观察者身）/ 活塞内面 / 观察者正面
+        33: (ctx, x, y, s) => { // 粘液块：外圈深绿 + 内芯亮绿（渲染不透明，靠色差做果冻感）
+            ctx.fillStyle = '#4e9c38';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6ec84e';
+            ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+            for (let i = 0; i < 14; i++) {
+                const px = x + 1 + Math.floor(hash2D(i, 60, 33) * (s - 4));
+                const py = y + 1 + Math.floor(hash2D(i, 61, 33) * (s - 4));
+                ctx.fillStyle = hash2D(i, 62, 33) > 0.5 ? '#8ee06a' : '#5ab03e';
+                ctx.fillRect(px, py, 2, 2);
+            }
+            ctx.fillStyle = '#b8f0a0';
+            ctx.fillRect(x + 3, y + 3, 3, 2); // 高光
+        },
+        34: (ctx, x, y, s) => { // 活塞侧：上端金属段 + 下段木质机身条纹
+            ctx.fillStyle = '#8a8a8a';
+            ctx.fillRect(x, y, s, 4); // 顶部金属带
+            ctx.fillStyle = '#6a6a6a';
+            ctx.fillRect(x, y + 3, s, 1);
+            ctx.fillStyle = '#9c7a48';
+            ctx.fillRect(x, y + 4, s, s - 4); // 木质机身
+            for (let i = 0; i < s; i += 4) {
+                ctx.fillStyle = '#8a6a3a';
+                ctx.fillRect(x + i, y + 4, 1, s - 4);
+            }
+            ctx.fillStyle = '#7a5a2e';
+            ctx.fillRect(x, y + 8, s, 1); // 横向加固线
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + 2, y + 1, 2, 2); // 铆钉
+            ctx.fillRect(x + s - 4, y + 1, 2, 2);
+        },
+        35: (ctx, x, y, s) => { // 活塞正面（推出面）：浅石面 + 中央方形凹孔
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#9a9a9a';
+            ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+            ctx.fillStyle = '#c4c4c4';
+            ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 4); // 中央推杆孔
+            ctx.fillStyle = '#7a7a7a';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y, 1, s);
+        },
+        36: (ctx, x, y, s) => { // 机身（活塞底面 / 观察者身体）：深石板 + 四角铆钉
+            ctx.fillStyle = '#5a5a5a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6a6a6a';
+            ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+            for (let i = 0; i < 10; i++) {
+                const px = x + 1 + Math.floor(hash2D(i, 63, 36) * (s - 3));
+                const py = y + 1 + Math.floor(hash2D(i, 64, 36) * (s - 3));
+                ctx.fillStyle = hash2D(i, 65, 36) > 0.5 ? '#747474' : '#5e5e5e';
+                ctx.fillRect(px, py, 2, 2);
+            }
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + 2, y + 2, 2, 2);
+            ctx.fillRect(x + s - 4, y + 2, 2, 2);
+            ctx.fillRect(x + 2, y + s - 4, 2, 2);
+            ctx.fillRect(x + s - 4, y + s - 4, 2, 2);
+        },
+        37: (ctx, x, y, s) => { // 活塞内面（伸出后底座朝前的一面）：石面 + 中央木质推杆截面
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#9a9a9a';
+            ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+            ctx.fillStyle = '#9c7a48';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 4); // 推杆截面
+            ctx.fillStyle = '#7a5a2e';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 1);
+        },
+        38: (ctx, x, y, s) => { // 观察者正面：深石面 + 居中「眼睛」（暗眶红外圈）
+            ctx.fillStyle = '#5a5a5a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(x + 3, y + 3, s - 6, s - 6); // 眼眶
+            ctx.fillStyle = '#c03020';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 4); // 红外圈
+            ctx.fillStyle = '#ff5040';
+            ctx.fillRect(x + s / 2 - 1, y + s / 2 - 1, 2, 2); // 瞳
+            ctx.fillStyle = '#7a7a7a';
+            ctx.fillRect(x, y, s, 1);
+        },
     };
 
     for (const tile of tiles) {
@@ -551,6 +641,14 @@ export function generateAllTextures() {
     for (let i = 0; i < PLATE_COUNT; i++) blockUVs[PLATE_BASE + i] = blockUVs[PLATE_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
     for (let i = 0; i < LEVER_COUNT; i++) blockUVs[LEVER_BASE + i] = blockUVs[LEVER_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
 
+    // 活塞组全部变体共享物品图标 tile（实际是 3D 道具网格，手模型/物品栏走这里的 UV）
+    for (let i = 0; i < 12; i++) {
+        blockUVs[PISTON_BASE + i] = blockUVs[PISTON_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+        blockUVs[STICKY_PISTON_BASE + i] = blockUVs[STICKY_PISTON_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+        blockUVs[OBSERVER_BASE + i] = blockUVs[OBSERVER_ITEM_ID] || blockUVs[BlockTypes.STONE];
+    }
+    for (let i = 0; i < 6; i++) blockUVs[PISTON_HEAD_BASE + i] = blockUVs[PISTON_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位
     if (!tileMap['door_upper'] && drawFunctions[21]) {
@@ -558,6 +656,15 @@ export function generateAllTextures() {
         const uy = Math.floor(21 / atlasSize) * tileSize;
         drawFunctions[21](atlasCtx, ux, uy, tileSize);
         tileMap['door_upper'] = { x: 21 % atlasSize, y: Math.floor(21 / atlasSize) };
+    }
+
+    // 活塞内面 tile（37）同样没有独立方块 ID（伸出底座朝前的一面 / 活塞头背面专用），
+    // 单独注册进 tileMap 供 chunk.js 的活塞道具网格铺 UV
+    if (!tileMap['piston_inner'] && drawFunctions[37]) {
+        const ix = (37 % atlasSize) * tileSize;
+        const iy = Math.floor(37 / atlasSize) * tileSize;
+        drawFunctions[37](atlasCtx, ix, iy, tileSize);
+        tileMap['piston_inner'] = { x: 37 % atlasSize, y: Math.floor(37 / atlasSize) };
     }
 
     const atlasTexture = new THREE.CanvasTexture(atlasCanvas);

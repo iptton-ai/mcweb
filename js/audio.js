@@ -94,6 +94,41 @@ export function playLeverSound(isOn) {
     } catch (e) {}
 }
 
+// 活塞音：气动「嘶—嗒」，伸出上扬、收回下沉（原版是蒸汽嘶声 + 机械落位）
+export function playPistonSound(isExtend) {
+    if (!audioCtx) return;
+    try {
+        const t0 = audioCtx.currentTime;
+        // 嘶声（短噪声）
+        const bufferSize = Math.floor(audioCtx.sampleRate * 0.06);
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+        }
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.1, t0);
+        ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+        noise.connect(ng);
+        ng.connect(audioCtx.destination);
+        noise.start(t0);
+        // 落位「嗒」
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(isExtend ? 190 : 240, t0 + 0.04);
+        osc.frequency.exponentialRampToValueAtTime(isExtend ? 130 : 110, t0 + 0.1);
+        gain.gain.setValueAtTime(0.14, t0 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+        osc.start(t0 + 0.04);
+        osc.stop(t0 + 0.13);
+    } catch (e) {}
+}
+
 export function playExplosionSound() {
     if (!audioCtx) return;
     try {

@@ -9,6 +9,8 @@ import { playBlockSound, playExplosionSound } from './audio.js';
 import { damageEnemy } from './entities.js';
 import { damagePlayer } from './playerLife.js';
 import { showTooltip } from './ui.js';
+import { fixPistonAround } from './piston.js';
+import { updateRedstoneNetwork } from './redstone.js';
 
 // ==================== TNT 爆炸 ====================
 export function spawnTntEntity(bx, by, bz) {
@@ -51,6 +53,10 @@ export function explode(cx, cy, cz) {
                 if (Math.random() < 0.3) {
                     spawnBreakParticles(x, y, z, bt);
                 }
+                // 爆炸炸掉活塞一半会留下孤儿（伸出底座没了头 / 头没了底座），就地修复
+                for (const fc of fixPistonAround(x, y, z)) {
+                    chunksToRebuild.add(`${Math.floor(fc.x / CHUNK_SIZE)},${Math.floor(fc.z / CHUNK_SIZE)}`);
+                }
             }
         }
     }
@@ -70,6 +76,8 @@ export function explode(cx, cy, cz) {
             rebuildChunk(ccx, ccz);
         }
     }
+    // 爆炸后重算红石网络（方块增删改变供能拓扑；活塞边沿/观察者基线随之刷新）
+    updateRedstoneNetwork();
     // 伤害玩家
     const p = state.player;
     const pd = Math.hypot(p.x - cx - 0.5, p.y - cy - 0.5, p.z - cz - 0.5);
