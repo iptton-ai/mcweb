@@ -4,6 +4,7 @@ import { MAX_HEALTH } from './config.js';
 import { isCreative, state } from './state.js';
 import { scene } from './engine.js';
 import { playHitSound } from './audio.js';
+import { notifyPlayerHit } from './bgm.js';
 import { killEnemySilent } from './entities.js';
 import { updateHotbar } from './ui.js';
 import { setState } from './uiModal.js';
@@ -17,6 +18,7 @@ export function damagePlayer(dmg) {
     p.invulnTimer = 0.5;
     updateHealthUI();
     playHitSound();
+    notifyPlayerHit(); // 喂给 bgm.js：切战斗配乐
     const flash = document.getElementById('damage-flash');
     flash.classList.add('hit');
     setTimeout(() => flash.classList.remove('hit'), 80);

@@ -75,6 +75,48 @@ export function playDoorSound(isOpen) {
     } catch (e) {}
 }
 
+// 拉杆音：干脆的「咔哒」，开高闭低
+export function playLeverSound(isOn) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const t0 = audioCtx.currentTime;
+        osc.frequency.setValueAtTime(isOn ? 520 : 300, t0);
+        osc.frequency.exponentialRampToValueAtTime(isOn ? 760 : 180, t0 + 0.05);
+        gain.gain.setValueAtTime(0.14, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+        osc.start(t0);
+        osc.stop(t0 + 0.09);
+    } catch (e) {}
+}
+
+// 齿轮音：两声金属「咔啦」，启动上扬、停转下沉
+export function playGearSound(isStart) {
+    if (!audioCtx) return;
+    try {
+        for (let i = 0; i < 2; i++) {
+            const t0 = audioCtx.currentTime + i * 0.07;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const f0 = isStart ? 180 : 320;
+            const f1 = isStart ? 300 : 160;
+            osc.frequency.setValueAtTime(f0 + i * 40, t0);
+            osc.frequency.exponentialRampToValueAtTime(f1 + i * 40, t0 + 0.05);
+            gain.gain.setValueAtTime(0.1, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.07);
+            osc.start(t0);
+            osc.stop(t0 + 0.08);
+        }
+    } catch (e) {}
+}
+
 export function playExplosionSound() {
     if (!audioCtx) return;
     try {

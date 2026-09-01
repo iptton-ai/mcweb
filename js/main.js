@@ -8,6 +8,8 @@ import { isSolid, rebuildChunk, updateChunkMeshes } from './chunk.js';
 import { breakBlock, placeBlock } from './interaction.js';
 import { initParticles, updateParticles } from './particles.js';
 import { initAudio } from './audio.js';
+import { initBGM, updateBGM } from './bgm.js';
+import { initMachinery, updateMachinery } from './machinery.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
@@ -96,6 +98,12 @@ function gameLoop(timestamp) {
     updateEnemies(dt);
     updateTnt(dt);
     updateDroppedItems(dt);
+
+    // 机械组（齿轮转动动画）
+    updateMachinery(dt);
+
+    // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
+    updateBGM();
 
     // AI 施工队列（渐进放置 + 分帧重建网格）
     updateBuild(dt);
@@ -232,6 +240,9 @@ function init() {
     // 初始化音频
     initAudio();
 
+    // 动态背景配乐（异步加载 assets/audio，音频上下文随用户手势解锁）
+    initBGM();
+
     // 有存档则恢复世界与玩家，否则生成新世界
     if (!loadGame()) {
         freshWorld();
@@ -239,6 +250,9 @@ function init() {
 
     // 创建玩家模型（第三人称用）：import 绑定是只读的，赋值必须走模块内的 initPlayerMesh
     initPlayerMesh();
+
+    // 机械组（齿轮/拉杆/红石灯）：世界就绪后重算供能网络，恢复派生位与灯光
+    initMachinery();
 
     // UI
     updateHotbar();

@@ -169,6 +169,98 @@ export function doorFacing(id) {
     return (id - DOOR_BASE) & 3;
 }
 
+// ==================== 有状态方块：机械组（齿轮/拉杆/红石灯） ====================
+// 参考门的做法把状态直接编码进方块 ID（省去逐格元数据数组），高层逻辑见 js/machinery.js。
+//   齿轮 ID = GEAR_BASE + facing*8 + powered*4 + jam*2 + manual
+//     facing：0=贴地 1=贴顶 2=贴北墙(-Z) 3=贴东墙(+X) 4=贴南墙(+Z) 5=贴西墙(-X)，
+//             记录的是挂靠面法线方向（放置时由所点击的面决定，背面必须有实心支撑）
+//     powered：被电路供能（开着的拉杆 / 相邻转动齿轮链）——派生位，由 machinery.js 重算
+//     manual：玩家右键手动开启——持久位（随方块 ID 自动存档）
+//     jam：卡死——派生位。相邻齿轮必须反向咬合；两个齿轮面对面共轴（齿对齿顶死）
+//           会锁死整个连通传动组，卡死的齿轮不转、轴心变红
+//     齿轮实际转动 = (powered || manual) && !jam，转向（±1）由 machinery.js 运行时算
+//   拉杆 ID = LEVER_BASE + facing*2 + on（右键开关，开=给 6 邻供能）
+//   红石灯 ID = LAMP_BASE + lit（被相邻开着的拉杆或转动齿轮点亮，亮时发光）
+// 共 48+12+2 = 62 个变体（35..96），齿轮复刻自 Minecraft 早期开发中被砍掉的 Gear 方块。
+export const GEAR_BASE = 35;
+export const GEAR_COUNT = 48;
+export const LEVER_BASE = 83;
+export const LEVER_COUNT = 12;
+export const LAMP_BASE = 95;
+export const LAMP_COUNT = 2;
+export const GEAR_ITEM_ID = GEAR_BASE; // 物品栏「齿轮」用贴地·停转 变体代表
+export const LEVER_ITEM_ID = LEVER_BASE; // 物品栏「拉杆」用贴地·关 变体代表
+export const LAMP_ITEM_ID = LAMP_BASE; // 物品栏「红石灯」用熄灭 变体代表
+export const GEAR_SPIN_SPEED = 0.8; // 齿轮转速（圈/秒）
+
+// 机械 ID 编解码（纯函数，供 chunk.js / interaction.js / machinery.js 共用）
+export function gearId(facing, powered, jam, manual) {
+    return GEAR_BASE + facing * 8 + powered * 4 + jam * 2 + manual;
+}
+
+export function isGearId(id) {
+    return id >= GEAR_BASE && id < GEAR_BASE + GEAR_COUNT;
+}
+
+export function gearFacing(id) {
+    return (id - GEAR_BASE) >> 3;
+}
+
+export function gearPowered(id) {
+    return (id - GEAR_BASE) >> 2 & 1;
+}
+
+export function gearJammed(id) {
+    return (id - GEAR_BASE) >> 1 & 1;
+}
+
+export function gearManual(id) {
+    return (id - GEAR_BASE) & 1;
+}
+
+export function leverId(facing, on) {
+    return LEVER_BASE + facing * 2 + on;
+}
+
+export function isLeverId(id) {
+    return id >= LEVER_BASE && id < LEVER_BASE + LEVER_COUNT;
+}
+
+export function leverFacing(id) {
+    return (id - LEVER_BASE) >> 1;
+}
+
+export function leverOn(id) {
+    return (id - LEVER_BASE) & 1;
+}
+
+export function lampId(lit) {
+    return LAMP_BASE + lit;
+}
+
+export function isLampId(id) {
+    return id >= LAMP_BASE && id < LAMP_BASE + LAMP_COUNT;
+}
+
+export function lampLit(id) {
+    return (id - LAMP_BASE) & 1;
+}
+
+// 是否机械组任一方块（齿轮/拉杆/红石灯统称）
+export function isMachineryId(id) {
+    return isGearId(id) || isLeverId(id) || isLampId(id);
+}
+
+export function isLampLitId(id) {
+    return isLampId(id) && lampLit(id) === 1;
+}
+
+// 挂靠面法线（facing 编码见上）：0贴地 1贴顶 2北墙(-Z) 3东墙(+X) 4南墙(+Z) 5西墙(-X)。
+// config 持有这份纯数据：machinery.js（逻辑）与 chunk.js（网格摆放）共用，避免互相依赖
+export const FACING_NORMALS = [
+    [0, 1, 0], [0, -1, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0],
+];
+
 export const BlockInfo = {
     [BlockTypes.AIR]: { name: '空气', solid: false, transparent: true, color: '#000000' },
     [BlockTypes.GRASS]: { name: '草方块', solid: true, transparent: false, color: '#5a9e3d' },
@@ -230,4 +322,42 @@ export const HotbarBlocks = [
     BlockTypes.FLOWER,
     BlockTypes.TNT,
     DOOR_ITEM_ID, // 橡木门：有状态方块，放置时生成上下两格（见 js/door.js）
+    GEAR_ITEM_ID, // 齿轮：有状态方块，右键手动转/停（见 js/machinery.js）
+    LEVER_ITEM_ID, // 拉杆：右键开关，给相邻齿轮/红石灯供能
+    LAMP_ITEM_ID, // 红石灯：被拉杆/转动齿轮点亮
 ];
+
+// 机械变体批量注册（思路同上门）：齿轮/拉杆是贴墙道具（customMesh，非固体不挡路），
+// 红石灯是实心立方体，亮的变体在 chunk.js 里挂点光源
+const GEAR_ORIENT = ['贴地', '贴顶', '贴北墙', '贴东墙', '贴南墙', '贴西墙'];
+for (let facing = 0; facing < 6; facing++) {
+    for (let powered = 0; powered < 2; powered++) {
+        for (let jam = 0; jam < 2; jam++) {
+            for (let manual = 0; manual < 2; manual++) {
+                const id = gearId(facing, powered, jam, manual);
+                BlockInfo[id] = {
+                    name: `齿轮（${GEAR_ORIENT[facing]}·${jam ? '卡死' : powered || manual ? '转' : '停'}）`,
+                    solid: false,
+                    transparent: true,
+                    customMesh: true,
+                    machinery: true,
+                    color: jam ? '#c05040' : '#9a7a3a',
+                };
+            }
+        }
+    }
+}
+for (let facing = 0; facing < 6; facing++) {
+    for (let on = 0; on < 2; on++) {
+        BlockInfo[leverId(facing, on)] = {
+            name: `拉杆（${GEAR_ORIENT[facing]}·${on ? '开' : '关'}）`,
+            solid: false,
+            transparent: true,
+            customMesh: true,
+            machinery: true,
+            color: '#8a8a8a',
+        };
+    }
+}
+BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, machinery: true, color: '#6a4a2a' };
+BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, machinery: true, color: '#ffd870' };

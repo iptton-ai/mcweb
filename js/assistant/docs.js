@@ -2,7 +2,7 @@
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
 
-import { BlockInfo, BlockTypes, DOOR_BASE, DOOR_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, DOOR_BASE, DOOR_COUNT, GEAR_BASE, GEAR_COUNT, GEAR_ITEM_ID, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
 
 function blockPalette() {
@@ -12,12 +12,23 @@ function blockPalette() {
         [BlockTypes.FLOWER]: '（非固体装饰）',
         [BlockTypes.TNT]: '（仅玩家手工放置会引爆）',
         [BlockTypes.BEDROCK]: '（不可破坏）',
+        [GEAR_ITEM_ID]: '（贴面道具，右键转/停，转动时向相邻齿轮传动）',
+        [LEVER_ITEM_ID]: '（贴面道具，右键开关，开=给 6 邻齿轮/红石灯供能）',
+        [LAMP_ITEM_ID]: '（实心立方体，被相邻开着的拉杆或转动齿轮点亮，亮时发光且照到的格子不刷怪）',
     };
+    const inDoor = (id) => id >= DOOR_BASE && id < DOOR_BASE + DOOR_COUNT;
+    const inMachinery = (id) => (id >= GEAR_BASE && id < GEAR_BASE + GEAR_COUNT) ||
+        (id >= LEVER_BASE && id < LEVER_BASE + LEVER_COUNT) ||
+        (id >= LAMP_BASE && id < LAMP_BASE + LAMP_COUNT);
     const parts = Object.entries(BlockTypes)
-        .filter(([name, id]) => name !== 'AIR' && !(id >= DOOR_BASE && id < DOOR_BASE + DOOR_COUNT))
+        .filter(([name, id]) => name !== 'AIR' && !inDoor(id) && !inMachinery(id))
         .map(([name, id]) => `${id}=${BlockInfo[id]?.name || name}${specials[id] || ''}`);
     // 门是有状态方块：16 个变体共用一个物品，合并为一行并说明编码
     parts.push(`${DOOR_BASE}..${DOOR_BASE + DOOR_COUNT - 1}=橡木门（有状态：ID=基址+half*8+open*4+facing，facing 0北/1东/2南/3西；放置必须上下两格同 facing，上格=下格+8；关门挡路、开门可通行；右键开关）`);
+    // 机械组同理折叠：物品栏物品用基址变体代表，放置由游戏按所点击的面自动选朝向
+    parts.push(`${GEAR_BASE}..${GEAR_BASE + GEAR_COUNT - 1}=齿轮（有状态：ID=基址+facing*8+powered*4+jam*2+manual；facing 0贴地/1贴顶/2北墙/3东墙/4南墙/5西墙，背面须实心；powered=被供能、manual=手动开启，jam=卡死；转动=(powered||manual)&&!jam；相邻齿轮反向咬合、共轴同向，面对面顶死会卡死锁死整个传动组件，powered/jam 由游戏自动重算，摆放时不用写）`);
+    parts.push(`${LEVER_BASE}..${LEVER_BASE + LEVER_COUNT - 1}=拉杆（有状态：ID=基址+facing*2+on；背面须实心；右键开关，开=向 6 邻供能）`);
+    parts.push(`${LAMP_BASE}..${LAMP_BASE + 1}=红石灯（有状态：ID=基址+lit；lit=1 需相邻有开着的拉杆或转动中的齿轮）`);
     return parts.join('，');
 }
 

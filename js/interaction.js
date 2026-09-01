@@ -1,12 +1,13 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_DISTANCE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isDoorId } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_DISTANCE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isDoorId, isGearId, isLeverId, isMachineryId } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
 import { breakDoorAt, toggleDoorAt, tryPlaceDoor } from './door.js';
+import { breakMachineryAt, placeMachinery, popUnsupportedMachinery, toggleGearAt, toggleLeverAt, updatePowerNetwork } from './machinery.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
 import { damageEnemy } from './entities.js';
@@ -124,6 +125,18 @@ export function breakBlock() {
     }
     const hit = raycastBlocks();
     if (hit && hit.block !== BlockTypes.BEDROCK) {
+        // 机械组（齿轮/拉杆/红石灯）：破坏返还物品，失去支撑的相邻机械连锁脱落
+        if (isMachineryId(hit.block)) {
+            const cells = breakMachineryAt(hit.x, hit.y, hit.z);
+            updatePowerNetwork();
+            for (const c of cells) {
+                spawnBreakParticles(c.x, c.y, c.z, c.id);
+                rebuildAround(c.x, c.z);
+            }
+            playBlockSound(false);
+            if (!isCreative()) updateHotbar();
+            return;
+        }
         // 门：打掉任意半扇，整扇消失，生存模式返还一个门物品
         if (isDoorId(hit.block)) {
             const cells = breakDoorAt(hit.x, hit.y, hit.z);
@@ -141,6 +154,11 @@ export function breakBlock() {
         if (!isCreative()) {
             state.player.inventory[hit.block] = (state.player.inventory[hit.block] || 0) + 1;
             updateHotbar();
+        }
+        // 支撑被拆：贴在这个面上的齿轮/拉杆随之脱落
+        for (const c of popUnsupportedMachinery(hit.x, hit.y, hit.z)) {
+            spawnBreakParticles(c.x, c.y, c.z, c.id);
+            rebuildAround(c.x, c.z);
         }
         spawnBreakParticles(hit.x, hit.y, hit.z, hit.block);
         playBlockSound(false);
@@ -163,6 +181,15 @@ export function placeBlock() {
     // 右键门 = 开/关整扇门（原版交互），不放置方块
     if (hit && isDoorId(hit.block)) {
         toggleDoorAt(hit.x, hit.y, hit.z);
+        return;
+    }
+    // 右键齿轮/拉杆 = 手动开关（红石灯没有手动开关，右键照常放置）
+    if (hit && isGearId(hit.block)) {
+        toggleGearAt(hit.x, hit.y, hit.z);
+        return;
+    }
+    if (hit && isLeverId(hit.block)) {
+        toggleLeverAt(hit.x, hit.y, hit.z);
         return;
     }
     if (hit && hit.face) {
@@ -195,6 +222,20 @@ export function placeBlock() {
             }
             playBlockSound(true);
             rebuildAround(bx, bz);
+            return;
+        }
+        // 机械组（齿轮/拉杆/红石灯）：按所点击的面贴靠放置（见 js/machinery.js）
+        if (isMachineryId(selectedType)) {
+            const err = placeMachinery(bx, by, bz, selectedType, hit.face);
+            if (err) {
+                showTooltip(err);
+                return;
+            }
+            if (!isCreative()) {
+                state.player.inventory[selectedType]--;
+                updateHotbar();
+            }
+            playBlockSound(true);
             return;
         }
         state.blocks[getBlockIndex(bx, by, bz)] = selectedType;
