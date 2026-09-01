@@ -8,3 +8,6 @@ server-rust/target/
 # 历史备份不入库（AGENTS.md：非源码，勿引用）
 *.bak
 *.bak.html
+
+# ZCode 会话目录（AI 工具本地文件）
+.zcode/
