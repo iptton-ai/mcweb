@@ -12,6 +12,7 @@ import { initParticles, updateParticles } from './particles.js';
 import { initAudio } from './audio.js';
 import { initBGM, updateBGM } from './bgm.js';
 import { initRedstone, updateRedstoneTick } from './redstone.js';
+import { initKinetic, updateKineticTick } from './kinetic.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
@@ -96,6 +97,9 @@ function gameLoop(timestamp) {
     // 红石组（按钮计时/火把延迟/压力板踩踏，状态变化时重算电路）
     updateRedstoneTick(dt);
 
+    // 动力组（旋转动画 + 粉碎轮/机械锯计时，见 js/kinetic.js）
+    updateKineticTick(dt);
+
     // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
     updateBGM();
 
@@ -172,9 +176,11 @@ function freshWorld() {
 
     // 红石组：清按钮/火把延迟队列与门/TNT 边沿基线（新世界不该残留旧世界电平）
     initRedstone();
+    // 动力组：清机器进度并重算动力网络
+    initKinetic();
 }
 
-// 清掉只存在于内存的瞬时实体（怪物/掉落物/点燃的TNT），切世界（读档/重开）时调用
+// 清掉只存在于内存的瞬时实体（怪物/掉落物/点燃的TNT/机器产出的物品实体），切世界（读档/重开）时调用
 function clearTransientEntities() {
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
     for (const it of state.droppedItems) scene.remove(it.mesh);
@@ -212,6 +218,7 @@ function loadSlot(slot) {
         return;
     }
     initRedstone(); // 重算供能网络与门/TNT 边沿基线（loadGame 不做红石恢复）
+    initKinetic(); // 动力网络同为派生态，读档后重算
     setState('playing');
     showTooltip(`📂 已切换到世界 ${slot + 1}`);
 }
@@ -321,6 +328,7 @@ function confirmDeleteSlot(i, row) {
             clearTransientEntities();
             if (next >= 0 && loadGame(next)) {
                 initRedstone();
+                initKinetic();
             } else {
                 freshWorld(); // 内部已重置红石基线；空槽当前化，首次保存时落槽
                 state.saveSlot = i;
@@ -365,6 +373,9 @@ function init() {
 
     // 红石组：世界就绪后重算供能网络，恢复红石粉/红石灯派生态与门/TNT 边沿基线
     initRedstone();
+
+    // 动力组：世界就绪后重算动力网络（水车转速/应力派生态），见 js/kinetic.js
+    initKinetic();
 
     // UI
     updateHotbar();

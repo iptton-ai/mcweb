@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, doorHalf, dustLit, isButtonId, isDoorId, isDustId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, cogAxis, crusherAxis, doorHalf, dustLit, isButtonId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -113,6 +113,8 @@ export function getPropMesh(blockType) {
         mesh = buildPistonBaseMesh(blockType);
     } else if (isObserverId(blockType)) {
         mesh = buildObserverMesh(blockType);
+    } else if (isKineticId(blockType)) {
+        mesh = buildKineticMesh(blockType);
     }
     // 活塞头不在缓存里：是否粘头取决于身后底座，逐格现算（addPropAt 特判）
     if (mesh) propMeshCache.set(blockType, mesh);
@@ -401,6 +403,133 @@ function buildObserverMesh(blockType) {
     return root;
 }
 
+// ==================== 动力组道具网格 ====================
+// 层级结构：root（addPropAt 摆到格底面中心）→ orient（局部 +Y 旋到方块轴向/锯朝向）→
+// spinner（旋转动画只累加它的 rotation.y，js/kinetic.js 每帧驱动）。
+// 【约定】spinner 永远是 orient 的第一个子节点（kinetic.js 按 children[0].children[0] 定位），
+// 机械锯的固定机身挂在 orient 的后续子节点上（随机身转的件才进 spinner）。
+// userData 只存纯数据（kinetic: true），Object3D.clone 的 userData 浅复制安全。
+const AXIS_TO_NORMAL = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+
+function buildKineticMesh(blockType) {
+    const spinner = new THREE.Group(); // 几何一律沿局部 +Y 构建（= 旋转轴）
+    const orient = new THREE.Group();
+    orient.add(spinner); // spinner 必须是第一个子节点（见上方约定）
+    orient.position.set(0, 0.5, 0); // 旋转中心 = 格中心
+    const root = new THREE.Group();
+    root.add(orient);
+    root.userData.kinetic = true;
+
+    let axisNormal;
+    if (isSawId(blockType)) {
+        axisNormal = FACING_NORMALS[sawFacing(blockType)];
+        buildSawMesh(spinner, orient); // 圆锯片进 spinner，固定机身挂 orient
+    } else {
+        const axis = isShaftId(blockType) ? shaftAxis(blockType)
+            : isCogId(blockType) ? cogAxis(blockType)
+                : isWaterwheelId(blockType) ? waterwheelAxis(blockType)
+                    : crusherAxis(blockType);
+        axisNormal = AXIS_TO_NORMAL[axis];
+        if (isShaftId(blockType)) buildShaftMesh(spinner);
+        else if (isCogId(blockType)) buildCogMesh(spinner);
+        else if (isWaterwheelId(blockType)) buildWaterwheelMesh(spinner);
+        else buildCrusherMesh(spinner);
+    }
+    orient.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...axisNormal));
+    return root;
+}
+
+// 传动轴：0.35 见方的木杆，贴图走图集（端面年轮 / 侧面木纹）
+function buildShaftMesh(spinner) {
+    const rod = new THREE.Mesh(
+        makeTexturedBoxGeo(0.35, 1, 0.35, {
+            py: 'shaft', ny: 'shaft',
+            px: 'shaft_side', nx: 'shaft_side', pz: 'shaft_side', nz: 'shaft_side',
+        }),
+        pistonAtlasMat,
+    );
+    spinner.add(rod);
+}
+
+// 齿轮：木质轮盘 + 8 根方齿（啮合时齿对齿反转）
+function buildCogMesh(spinner) {
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 16), new THREE.MeshLambertMaterial({ color: 0x8f6c3a }));
+    spinner.add(body);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.42, 8), new THREE.MeshLambertMaterial({ color: 0x5a4222 }));
+    spinner.add(hub);
+    const toothGeo = new THREE.BoxGeometry(0.18, 0.34, 0.12);
+    const toothMat = new THREE.MeshLambertMaterial({ color: 0x93703c });
+    for (let i = 0; i < 8; i++) {
+        const ang = i / 8 * Math.PI * 2;
+        const tooth = new THREE.Mesh(toothGeo, toothMat);
+        tooth.position.set(Math.cos(ang) * 0.46, 0, Math.sin(ang) * 0.46);
+        tooth.rotation.y = -ang; // 齿长轴指向半径方向
+        spinner.add(tooth);
+    }
+}
+
+// 水车：双轮缘 + 三根通长辐条（六向）+ 周圈八片桨叶，视觉放大到 1.56 格直径（允许越界）
+function buildWaterwheelMesh(spinner) {
+    const rimMat = new THREE.MeshLambertMaterial({ color: 0x8a6a3a });
+    for (const oy of [-0.15, 0.15]) {
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 6, 18), rimMat);
+        rim.rotation.x = Math.PI / 2; // 圆环面躺进 X-Z 平面（轴 = 局部 Y）
+        rim.position.y = oy;
+        spinner.add(rim);
+    }
+    const spokeMat = new THREE.MeshLambertMaterial({ color: 0x9c7a48 });
+    for (let i = 0; i < 3; i++) {
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(1.44, 0.07, 0.09), spokeMat);
+        spoke.rotation.y = i * Math.PI / 3;
+        spinner.add(spoke);
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.5, 8), new THREE.MeshLambertMaterial({ color: 0x5a4222 }));
+    spinner.add(hub);
+    const paddleMat = new THREE.MeshLambertMaterial({ color: 0x7a5a30 });
+    for (let i = 0; i < 8; i++) {
+        const ang = i / 8 * Math.PI * 2;
+        const paddle = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.08), paddleMat);
+        paddle.position.set(Math.cos(ang) * 0.62, 0, Math.sin(ang) * 0.62);
+        paddle.rotation.y = -ang; // 桨叶面沿半径方向（水轮式）
+        spinner.add(paddle);
+    }
+}
+
+// 粉碎轮：厚重石盘（0.8 厚）+ 四道碾碎凹槽 + 深色轴套
+function buildCrusherMesh(spinner) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.8, 18), new THREE.MeshLambertMaterial({ color: 0x9a9a9a }));
+    spinner.add(wheel);
+    const grooveGeo = new THREE.BoxGeometry(0.24, 0.82, 0.12);
+    const grooveMat = new THREE.MeshLambertMaterial({ color: 0x5a5a5a });
+    for (let i = 0; i < 4; i++) {
+        const ang = i / 4 * Math.PI * 2;
+        const groove = new THREE.Mesh(grooveGeo, grooveMat);
+        groove.position.set(Math.cos(ang) * 0.38, 0, Math.sin(ang) * 0.38);
+        groove.rotation.y = -ang;
+        spinner.add(groove);
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.86, 8), new THREE.MeshLambertMaterial({ color: 0x3a3a3a }));
+    spinner.add(hub);
+}
+
+// 机械锯：圆锯片（进 spinner 随机旋转）+ 背面固定机身（挂 orient 不转）
+function buildSawMesh(spinner, orient) {
+    const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 20), new THREE.MeshLambertMaterial({ color: 0xb8bcc4 }));
+    spinner.add(blade);
+    const toothGeo = new THREE.BoxGeometry(0.1, 0.08, 0.05);
+    const toothMat = new THREE.MeshLambertMaterial({ color: 0x989ca6 });
+    for (let i = 0; i < 8; i++) {
+        const ang = i / 8 * Math.PI * 2;
+        const tooth = new THREE.Mesh(toothGeo, toothMat);
+        tooth.position.set(Math.cos(ang) * 0.47, 0, Math.sin(ang) * 0.47);
+        tooth.rotation.y = -ang;
+        spinner.add(tooth);
+    }
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), new THREE.MeshLambertMaterial({ color: 0x6a5a3a }));
+    body.position.set(0, -0.42, 0); // 机身在朝向的反侧（orient 的 +Y 指向被锯方块）
+    orient.add(body);
+}
+
 // ==================== 火把光源 ====================
 // opts 供红石灯复用（亮灯色温/距离略有差异），默认即火把参数
 export function addTorchLight(x, y, z, opts = {}) {
@@ -647,11 +776,11 @@ export function updateChunkMeshes() {
     }
 }
 
-// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组）
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组）
 function isPropBlock(bt) {
     return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
         isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||
-        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt);
+        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) || isKineticId(bt);
 }
 
 // 在 (x,y,z) 放置该格对应的道具网格（火把/亮灯/亮红石火把含光源），挂入 state.droppedItems

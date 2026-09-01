@@ -17,6 +17,7 @@ import { state } from './state.js';
 import { isSolid, rebuildChunk } from './chunk.js';
 import { getBlock, setBlockSafe } from './world.js';
 import { updateRedstoneNetwork } from './redstone.js';
+import { updateKineticNetwork } from './kinetic.js';
 
 const CX_COUNT = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
 const CZ_COUNT = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
@@ -122,6 +123,8 @@ export function updateBuild(dt) {
         finishedAt = performance.now();
         // 施工可能放置/拆除红石元件与门、TNT：完成后重算一遍电路（灯亮、门开合、TNT 引爆）
         updateRedstoneNetwork();
+        // 动力方块同理：施工可能增删轴/齿轮/水车，完成后重算动力拓扑
+        updateKineticNetwork();
         job.resolve({
             label: job.label,
             total: job.total,

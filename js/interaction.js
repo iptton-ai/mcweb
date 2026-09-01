@@ -1,13 +1,14 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isRedstoneId, isToolId } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isKineticId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isRedstoneId, isToolId } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
 import { breakDoorAt, toggleDoorAt, tryPlaceDoor } from './door.js';
 import { breakPistonGroupAt, placePiston } from './piston.js';
+import { breakKineticAt, placeKinetic, updateKineticNetwork } from './kinetic.js';
 import { breakRedstoneAt, placeRedstone, popUnsupportedRedstone, pressButtonAt, toggleLeverAt, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
@@ -177,6 +178,21 @@ export function breakBlockAt(hit) {
         if (!isCreative()) updateHotbar();
         return;
     }
+    // 动力组（轴/齿轮/水车/粉碎轮/锯）：清格返还物品并重算动力网络（见 js/kinetic.js）
+    if (isKineticId(hit.block)) {
+        const cells = breakKineticAt(hit.x, hit.y, hit.z);
+        for (const c of cells) {
+            spawnBreakParticles(c.x, c.y, c.z, c.id);
+            rebuildAround(c.x, c.z);
+        }
+        for (const c of popUnsupportedRedstone(hit.x, hit.y, hit.z)) {
+            spawnBreakParticles(c.x, c.y, c.z, c.id);
+            rebuildAround(c.x, c.z);
+        }
+        playBlockSound(false);
+        if (!isCreative()) updateHotbar();
+        return;
+    }
     const idx = getBlockIndex(hit.x, hit.y, hit.z);
     state.blocks[idx] = BlockTypes.AIR;
     // 生存模式按掉落映射采集（null=无掉落，缺省=自身；石头→圆石、草方块→泥土等原版规则）。
@@ -298,6 +314,20 @@ export function placeBlock() {
             playBlockSound(true);
             return;
         }
+        // 动力组（轴/齿轮/水车/粉碎轮/锯）：轴向 = 所点击面的法线方向（见 js/kinetic.js）
+        if (isKineticId(selectedType)) {
+            const err = placeKinetic(bx, by, bz, selectedType, hit.face);
+            if (err) {
+                showTooltip(err);
+                return;
+            }
+            if (!isCreative()) {
+                state.player.inventory[selectedType]--;
+                updateHotbar();
+            }
+            playBlockSound(true);
+            return;
+        }
         state.blocks[getBlockIndex(bx, by, bz)] = selectedType;
         // 生存模式：消耗一个
         if (!isCreative()) {
@@ -307,6 +337,10 @@ export function placeBlock() {
         if (selectedType === BlockTypes.TNT) {
             // TNT 放置为惰性：右键点燃或红石信号引爆（配合压力板/拉杆可做陷阱）
             showTooltip('💣 TNT 已放置：右键点燃，或用红石信号引爆');
+        }
+        if (selectedType === BlockTypes.WATER) {
+            // 放水可能给下方水车供电（顶面接触水判定），重算动力网络
+            updateKineticNetwork();
         }
         spawnBreakParticles(bx, by, bz, selectedType);
         playBlockSound(true);

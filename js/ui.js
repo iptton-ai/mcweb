@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WORLD_HEIGHT } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { canvas } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -32,6 +32,12 @@ export function setGameMode(mode) {
             state.player.inventory[PISTON_ITEM_ID] = 2;
             state.player.inventory[STICKY_PISTON_ITEM_ID] = 2;
             state.player.inventory[OBSERVER_ITEM_ID] = 2;
+            // 动力组套装（同上：水车→轴/齿轮→粉碎轮/机械锯的自动化产线入门，见 js/kinetic.js）
+            state.player.inventory[WATERWHEEL_ITEM_ID] = 2;
+            state.player.inventory[SHAFT_ITEM_ID] = 16;
+            state.player.inventory[COGWHEEL_ITEM_ID] = 8;
+            state.player.inventory[CRUSHER_ITEM_ID] = 2;
+            state.player.inventory[SAW_ITEM_ID] = 1;
         }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {

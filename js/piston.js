@@ -51,6 +51,7 @@ import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
 import { isCustomMesh, refreshPropAt, removeDroppedItemAt, removeTorchLightAt, rebuildChunk } from './chunk.js';
 import { breakRedstoneAt, facingFromNormal, popUnsupportedRedstone, updateRedstoneNetwork } from './redstone.js';
+import { updateKineticNetwork } from './kinetic.js';
 import { breakDoorAt } from './door.js';
 import { spawnBreakParticles } from './particles.js';
 import { playPistonSound } from './audio.js';
@@ -308,6 +309,7 @@ function doExtend(x, y, z) {
     flushChunks(chunks);
     playPistonSound(true);
     updateRedstoneNetwork();
+    updateKineticNetwork(); // 被推的可能是轴/齿轮/水车：位置变了，动力拓扑重算
     return true;
 }
 
@@ -411,6 +413,7 @@ function doRetract(x, y, z) {
     flushChunks(chunks);
     playPistonSound(false);
     updateRedstoneNetwork();
+    updateKineticNetwork(); // 被拉的方块里可能有动力元件，拓扑重算
     return true;
 }
 

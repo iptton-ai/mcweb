@@ -11,6 +11,7 @@ import { damagePlayer } from './playerLife.js';
 import { showTooltip } from './ui.js';
 import { fixPistonAround } from './piston.js';
 import { updateRedstoneNetwork } from './redstone.js';
+import { updateKineticNetwork } from './kinetic.js';
 
 // ==================== TNT 爆炸 ====================
 export function spawnTntEntity(bx, by, bz) {
@@ -78,6 +79,8 @@ export function explode(cx, cy, cz) {
     }
     // 爆炸后重算红石网络（方块增删改变供能拓扑；活塞边沿/观察者基线随之刷新）
     updateRedstoneNetwork();
+    // 动力组同理：炸掉的轴/齿轮/水车改变动力拓扑，重算
+    updateKineticNetwork();
     // 伤害玩家
     const p = state.player;
     const pd = Math.hypot(p.x - cx - 0.5, p.y - cy - 0.5, p.z - cz - 0.5);

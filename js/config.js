@@ -405,6 +405,148 @@ export function isPistonGroupId(id) {
     return isPistonId(id) || isObserverId(id);
 }
 
+// ==================== 有状态方块：动力组（传动轴/齿轮/水车/粉碎轮/机械锯）====================
+// 参考 Create 模组「旋转动力」的离散版（方案见 docs/create-lite-plan.md 阶段二），与红石组并行的
+// 第二条自动化科技线：水车泡水（顶面接触静态水）产出 8 RPM 旋转 + 64 SU 应力容量 →
+// 传动轴同轴直线布线（1:1 传速）→ 齿轮垂直轴啮合换向（反转）/分流 → 终端机器加工产出。
+// 传动只用 3 轴（区别于红石组的 6 向挂靠面）：AXIS_X=0(东西) AXIS_Y=1(上下) AXIS_Z=2(南北)，
+// 轴向/朝向直接编码进方块 ID；转速/转向/应力/机器进度全是派生态——js/kinetic.js 事件触发的
+// 全量求解（照 updateRedstoneNetwork 骨架）写进运行时 Map，不占 ID、存档零改动。
+//   传动轴 ID = SHAFT_BASE + axis（3 变体）
+//   齿轮     ID = COGWHEEL_BASE + axis（3；垂直轴相邻的两齿轮啮合反转，平行轴并排不连接）
+//   水车     ID = WATERWHEEL_BASE + axis（3；顶面接触水 = 动力源，多水车不叠 RPM 只叠容量）
+//   粉碎轮   ID = CRUSHER_BASE + axis（3；水平相邻两轮同轴配对工作，上方格 = 投料口）
+//   机械锯   ID = SAW_BASE + facing(0..5)（朝向 = 被锯方块方向，复用 FACING_NORMALS）
+export const SHAFT_BASE = 148;
+export const COGWHEEL_BASE = 152;
+export const WATERWHEEL_BASE = 156;
+export const CRUSHER_BASE = 160;
+export const SAW_BASE = 164;
+export const SHAFT_ITEM_ID = SHAFT_BASE; // 物品栏「传动轴」用 X 轴变体代表
+export const COGWHEEL_ITEM_ID = COGWHEEL_BASE;
+export const WATERWHEEL_ITEM_ID = WATERWHEEL_BASE;
+export const CRUSHER_ITEM_ID = CRUSHER_BASE;
+export const SAW_ITEM_ID = SAW_BASE;
+
+// 三轴编码与轴法线表（chunk.js 网格朝向与 kinetic.js 邻接判定共用）
+export const AXIS_X = 0; // 东西（±X）
+export const AXIS_Y = 1; // 上下（±Y）
+export const AXIS_Z = 2; // 南北（±Z）
+export const AXIS_NAMES = ['东西', '上下', '南北'];
+export const AXIS_DIRS = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+
+// 数值常量（集中此处便于调平；对齐 Create 的直觉而非精确数值）
+export const WHEEL_RPM = 8; // 全网转速（多水车不加速，对齐 Create）
+export const WHEEL_SU_CAPACITY = 64; // 每台水车的应力容量（SU）
+export const CRUSHER_SU_LOAD = 32; // 每只配对粉碎轮的应力负载（单只不成对 = 无功能不计负载）
+export const SAW_SU_LOAD = 24; // 每台机械锯的应力负载
+export const CRUSH_SEC = 1.2; // 粉碎轮处理一格投料的秒数
+export const SAW_SPEED = 6; // 机械锯等效挖掘速度（喂给 hardness×1.5÷速度 公式，≈铁质工具）
+export const KINETIC_SPIN_VIS = 2.0; // 旋转视觉放大系数（8 RPM 原速 7.5s/圈偏慢，×2 观感舒适）
+
+// 物品实体（js/items.js）：机器产出的真掉落物，寿命/磁吸/拾取半径
+export const ITEM_LIFETIME_SEC = 120;
+export const ITEM_PICKUP_DIST = 1.5;
+export const ITEM_MAGNET_DIST = 4.0;
+
+// 动力组 ID 编解码（纯函数，供 chunk.js / interaction.js / kinetic.js 共用）
+export function shaftId(axis) {
+    return SHAFT_BASE + axis;
+}
+
+export function isShaftId(id) {
+    return id >= SHAFT_BASE && id < SHAFT_BASE + 3;
+}
+
+export function shaftAxis(id) {
+    return id - SHAFT_BASE;
+}
+
+export function cogId(axis) {
+    return COGWHEEL_BASE + axis;
+}
+
+export function isCogId(id) {
+    return id >= COGWHEEL_BASE && id < COGWHEEL_BASE + 3;
+}
+
+export function cogAxis(id) {
+    return id - COGWHEEL_BASE;
+}
+
+export function waterwheelId(axis) {
+    return WATERWHEEL_BASE + axis;
+}
+
+export function isWaterwheelId(id) {
+    return id >= WATERWHEEL_BASE && id < WATERWHEEL_BASE + 3;
+}
+
+export function waterwheelAxis(id) {
+    return id - WATERWHEEL_BASE;
+}
+
+export function crusherId(axis) {
+    return CRUSHER_BASE + axis;
+}
+
+export function isCrusherId(id) {
+    return id >= CRUSHER_BASE && id < CRUSHER_BASE + 3;
+}
+
+export function crusherAxis(id) {
+    return id - CRUSHER_BASE;
+}
+
+export function sawId(facing) {
+    return SAW_BASE + facing;
+}
+
+export function isSawId(id) {
+    return id >= SAW_BASE && id < SAW_BASE + 6;
+}
+
+export function sawFacing(id) {
+    return id - SAW_BASE;
+}
+
+// 是否动力组任一方块（ID 区间 148..169 连续，可直接范围判断）
+export function isKineticId(id) {
+    return id >= SHAFT_BASE && id < SAW_BASE + 6;
+}
+
+// 动力方块的传动轴：轴类方块取编码轴，机械锯取朝向法线所在轴
+export function kineticAxisOf(id) {
+    if (isSawId(id)) {
+        const f = sawFacing(id);
+        return f <= 1 ? AXIS_Y : (f === 2 || f === 5) ? AXIS_Z : AXIS_X;
+    }
+    if (isShaftId(id)) return shaftAxis(id);
+    if (isCogId(id)) return cogAxis(id);
+    if (isWaterwheelId(id)) return waterwheelAxis(id);
+    return crusherAxis(id);
+}
+
+// 动力组物品（破坏返还/放置路由用）
+export function kineticItemId(id) {
+    if (isShaftId(id)) return SHAFT_ITEM_ID;
+    if (isCogId(id)) return COGWHEEL_ITEM_ID;
+    if (isWaterwheelId(id)) return WATERWHEEL_ITEM_ID;
+    if (isCrusherId(id)) return CRUSHER_ITEM_ID;
+    return SAW_ITEM_ID;
+}
+
+// 粉碎配方表（纯数据：投料口里的方块 → 产出物品与数量；四级粉碎链是核心乐趣）
+// 不在表内的方块投不进配对粉碎轮（放置时 toast 提示，见 interaction.js）
+export const KINETIC_RECIPES = {
+    [BlockTypes.STONE]: { item: BlockTypes.COBBLESTONE, count: 1 }, // 石头 → 圆石
+    [BlockTypes.COBBLESTONE]: { item: BlockTypes.GRAVEL, count: 1 }, // 圆石 → 沙砾
+    [BlockTypes.GRAVEL]: { item: BlockTypes.SAND, count: 1 }, // 沙砾 → 沙子
+    [BlockTypes.GLASS]: { item: BlockTypes.SAND, count: 1 }, // 玻璃 → 沙子
+    [BlockTypes.WOOD]: { item: BlockTypes.PLANKS, count: 4 }, // 原木 → 木板×4
+    [BlockTypes.LOG]: { item: BlockTypes.PLANKS, count: 4 }, // 树干 → 木板×4
+};
+
 // ==================== 方块挖掘属性（照搬原版 hardness/工具类别/掉落）====================
 // hardness：原版硬度值；-1 = 不可破坏（基岩）。tool：原版「最佳工具」类别（镐/斧/锹，徒手=无）。
 // needsTool：true = 必须用对应类别工具挖才有掉落（原版石质方块的规则，如石头手挖 7.5s 还不掉落）。
@@ -515,6 +657,12 @@ export const HotbarBlocks = [
     PISTON_ITEM_ID, // 活塞：信号上升沿伸出、下降沿收回，可推动最多 12 格（见 js/piston.js）
     STICKY_PISTON_ITEM_ID, // 粘性活塞：收回时把头前方块拉回一格
     OBSERVER_ITEM_ID, // 观察者：正前方方块变化时发出一次脉冲（活塞时钟/飞行机器）
+    WATERWHEEL_ITEM_ID, // 水车：顶面接触水 = 8 RPM 动力源（+64 应力容量），见 js/kinetic.js
+    SHAFT_ITEM_ID, // 传动轴：同轴直线布线（1:1 传速）
+    COGWHEEL_ITEM_ID, // 齿轮：垂直轴相邻啮合 = 换向反转/分流；平行并排不连接
+    CRUSHER_ITEM_ID, // 粉碎轮：水平相邻两轮同轴配对，上方格投料碾碎（石头→圆石→沙砾→沙）
+    SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
+    BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
     ToolTypes.PICKAXE, // 铁镐：石质方块快速挖掘 + 采集掉落（物品，不能放置）
     ToolTypes.AXE, // 铁斧：木质方块快速挖掘
     ToolTypes.SHOVEL, // 铁锹：泥土/沙快速挖掘
@@ -630,4 +778,38 @@ for (let facing = 0; facing < 6; facing++) {
             needsTool: true,
         };
     }
+}
+
+// ==================== 动力组变体批量注册 ====================
+// 全部是 customMesh 道具（3D 轮盘/杆件网格，chunk.js 构建、kinetic.js 每帧旋转动画）；
+// solid 参与物理碰撞（轴/齿轮能站上去），transparent 使邻方面不被剔除（网格不满格）。
+// 破坏返还走 interaction.js 的动力组分支（掉物品 = kineticItemId，网络重算见 js/kinetic.js）。
+for (let axis = 0; axis < 3; axis++) {
+    BlockInfo[shaftId(axis)] = {
+        name: `传动轴（${AXIS_NAMES[axis]}向）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#9c7a48', hardness: 0.8, tool: 'axe',
+    };
+    BlockInfo[cogId(axis)] = {
+        name: `齿轮（${AXIS_NAMES[axis]}向）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#7a5a30', hardness: 1.0, tool: 'axe',
+    };
+    BlockInfo[waterwheelId(axis)] = {
+        name: `水车（${AXIS_NAMES[axis]}向）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#8a6a3a', hardness: 2.0, tool: 'axe',
+    };
+    BlockInfo[crusherId(axis)] = {
+        name: `粉碎轮（${AXIS_NAMES[axis]}向）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#8a8a8a', hardness: 2.0, tool: 'pickaxe',
+    };
+}
+for (let facing = 0; facing < 6; facing++) {
+    BlockInfo[sawId(facing)] = {
+        name: `机械锯（${PISTON_ORIENT[facing]}）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#b8bcc4', hardness: 1.5, tool: 'pickaxe',
+    };
 }

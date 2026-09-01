@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -75,6 +75,11 @@ export function generateAllTextures() {
         { type: PISTON_ITEM_ID, top: 35, side: 34, bottom: 36, name: 'piston' }, // 活塞图标露出正面
         { type: STICKY_PISTON_ITEM_ID, top: 33, side: 34, bottom: 36, name: 'sticky_piston' }, // 粘性活塞图标露出粘液面
         { type: OBSERVER_ITEM_ID, top: 38, side: 36, bottom: 36, name: 'observer' }, // 观察者图标露出「眼睛」面
+        { type: SHAFT_ITEM_ID, top: 40, side: 39, bottom: 40, name: 'shaft' }, // 传动轴：端面年轮 + 侧面木纹
+        { type: COGWHEEL_ITEM_ID, top: 41, side: 41, bottom: 41, name: 'cog' }, // 齿轮（实际是 3D 轮盘道具）
+        { type: WATERWHEEL_ITEM_ID, top: 42, side: 42, bottom: 42, name: 'waterwheel' }, // 水车（实际是 3D 大轮盘）
+        { type: CRUSHER_ITEM_ID, top: 43, side: 43, bottom: 43, name: 'crusher' }, // 粉碎轮（实际是 3D 轮盘）
+        { type: SAW_ITEM_ID, top: 44, side: 44, bottom: 44, name: 'saw' }, // 机械锯（实际是 3D 圆锯片）
     ];
 
     const drawFunctions = {
@@ -571,6 +576,138 @@ export function generateAllTextures() {
             ctx.fillStyle = '#7a7a7a';
             ctx.fillRect(x, y, s, 1);
         },
+        // 动力组 tile（39..44）：轴侧面 / 轴端面 / 齿轮 / 水车 / 粉碎轮 / 锯片
+        39: (ctx, x, y, s) => { // 轴侧面：纵向木纹条 + 加固箍
+            ctx.fillStyle = '#9c7a48';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < s; i += 3) {
+                ctx.fillStyle = i % 6 === 0 ? '#8a6a3a' : '#ac8a58';
+                ctx.fillRect(x + i, y, 2, s);
+            }
+            ctx.fillStyle = '#6a4a26';
+            ctx.fillRect(x, y + 2, s, 1);
+            ctx.fillRect(x, y + s - 3, s, 1); // 两道加固箍
+        },
+        40: (ctx, x, y, s) => { // 轴端面：年轮圆环 + 中心方榫
+            ctx.fillStyle = '#9c7a48';
+            ctx.fillRect(x, y, s, s);
+            ctx.strokeStyle = '#7a5a30';
+            ctx.lineWidth = 1;
+            for (let r = 2; r < s / 2; r += 2) {
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#6a4a26';
+            ctx.fillRect(x + s / 2 - 2, y + s / 2 - 2, 4, 4); // 方榫（与齿轮轴孔咬合）
+        },
+        41: (ctx, x, y, s) => { // 齿轮面：木质轮盘 + 周圈齿 + 中心轴孔
+            const c = s / 2;
+            ctx.fillStyle = '#7a5a30';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#8f6c3a';
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#a07c44';
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            // 周圈 8 齿（方块齿，像素风）
+            ctx.fillStyle = '#93703c';
+            for (let i = 0; i < 8; i++) {
+                const ang = i / 8 * Math.PI * 2;
+                const px = x + c + Math.cos(ang) * 6.2;
+                const py = y + c + Math.sin(ang) * 6.2;
+                ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+            }
+            ctx.fillStyle = '#4a3418';
+            ctx.fillRect(x + c - 1, y + c - 1, 2, 2); // 轴孔
+            ctx.strokeStyle = '#6a4a26';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) { // 四根辐条
+                const ang = i / 4 * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(x + c, y + c);
+                ctx.lineTo(x + c + Math.cos(ang) * 5, y + c + Math.sin(ang) * 5);
+                ctx.stroke();
+            }
+        },
+        42: (ctx, x, y, s) => { // 水车轮面：外圈轮缘 + 辐条 + 叶片刻痕 + 轴心
+            const c = s / 2;
+            ctx.fillStyle = '#6a4a26';
+            ctx.fillRect(x, y, s, s);
+            ctx.strokeStyle = '#8a6a3a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 6.5, 0, Math.PI * 2);
+            ctx.stroke(); // 轮缘
+            ctx.strokeStyle = '#9c7a48';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 6; i++) { // 六根辐条
+                const ang = i / 6 * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(x + c, y + c);
+                ctx.lineTo(x + c + Math.cos(ang) * 6.5, y + c + Math.sin(ang) * 6.5);
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#7a5a30';
+            for (let i = 0; i < 8; i++) { // 周圈叶片
+                const ang = i / 8 * Math.PI * 2;
+                const px = x + c + Math.cos(ang) * 5.2;
+                const py = y + c + Math.sin(ang) * 5.2;
+                ctx.fillRect(px - 1, py - 1, 2, 2);
+            }
+            ctx.fillStyle = '#4a3418';
+            ctx.fillRect(x + c - 1.5, y + c - 1.5, 3, 3); // 轴心
+        },
+        43: (ctx, x, y, s) => { // 粉碎轮面：厚重石盘 + 放射凹槽（碾碎纹）
+            const c = s / 2;
+            ctx.fillStyle = '#8a8a8a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#9a9a9a';
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 6.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#5a5a5a';
+            for (let i = 0; i < 6; i++) { // 放射状碾碎凹槽
+                const ang = i / 6 * Math.PI * 2;
+                ctx.save();
+                ctx.translate(x + c, y + c);
+                ctx.rotate(ang);
+                ctx.fillRect(1, -1, 5, 2);
+                ctx.restore();
+            }
+            ctx.strokeStyle = '#6a6a6a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(x + c - 1.5, y + c - 1.5, 3, 3); // 轴孔
+        },
+        44: (ctx, x, y, s) => { // 锯片：金属圆盘 + 周圈锯齿 + 中心孔
+            const c = s / 2;
+            ctx.fillStyle = '#6a6e78';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#b8bcc4';
+            ctx.beginPath();
+            ctx.arc(x + c, y + c, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#d0d4dc';
+            ctx.beginPath();
+            ctx.arc(x + c, y + c - 1, 4.5, 0, Math.PI * 2);
+            ctx.fill(); // 高光
+            ctx.fillStyle = '#989ca6';
+            for (let i = 0; i < 12; i++) { // 周圈细齿
+                const ang = i / 12 * Math.PI * 2;
+                const px = x + c + Math.cos(ang) * 6.8;
+                const py = y + c + Math.sin(ang) * 6.8;
+                ctx.fillRect(px - 0.5, py - 0.5, 1, 1);
+            }
+            ctx.fillStyle = '#3a3e48';
+            ctx.fillRect(x + c - 1, y + c - 1, 2, 2); // 中心孔
+        },
     };
 
     for (const tile of tiles) {
@@ -648,6 +785,15 @@ export function generateAllTextures() {
         blockUVs[OBSERVER_BASE + i] = blockUVs[OBSERVER_ITEM_ID] || blockUVs[BlockTypes.STONE];
     }
     for (let i = 0; i < 6; i++) blockUVs[PISTON_HEAD_BASE + i] = blockUVs[PISTON_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+
+    // 动力组全部变体共享物品图标 tile（实际是 3D 轮盘/杆件网格，手模型/物品栏/掉落物走这里的 UV）
+    for (let i = 0; i < 3; i++) {
+        blockUVs[SHAFT_BASE + i] = blockUVs[SHAFT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+        blockUVs[COGWHEEL_BASE + i] = blockUVs[COGWHEEL_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+        blockUVs[WATERWHEEL_BASE + i] = blockUVs[WATERWHEEL_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+        blockUVs[CRUSHER_BASE + i] = blockUVs[CRUSHER_ITEM_ID] || blockUVs[BlockTypes.STONE];
+    }
+    for (let i = 0; i < 6; i++) blockUVs[SAW_BASE + i] = blockUVs[SAW_ITEM_ID] || blockUVs[BlockTypes.STONE];
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位
