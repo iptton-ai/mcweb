@@ -2,7 +2,7 @@
 // 世界快照：热重载前保存世界与玩家状态到 sessionStorage，页面刷新后完整恢复，
 // 让「改游戏代码」对玩家无感（建筑、背包、位置都不丢）。
 
-import { CHUNK_SIZE, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_WIDTH } from '../config.js';
+import { CHUNK_SIZE, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_WIDTH, migrateLegacyGears } from '../config.js';
 import { state } from '../state.js';
 import { buildChunkProps, updateChunkMeshes } from '../chunk.js';
 import { updateHotbar } from '../ui.js';
@@ -32,6 +32,7 @@ export function saveSnapshotForReload() {
     try {
         const p = state.player;
         const snap = {
+            v: 2, // 热重载快照版本：无 v 的旧快照含已移除的齿轮 ID，恢复时迁移
             savedAt: Date.now(),
             blocks: u8ToBase64(state.blocks),
             player: {
@@ -71,6 +72,7 @@ export function restoreSnapshotIfAny() {
     // 覆盖世界数据并重建全部区块网格
     const u8 = base64ToU8(snap.blocks);
     if (state.blocks && u8.length === state.blocks.length) {
+        if (!snap.v) migrateLegacyGears(u8); // 旧快照：齿轮 ID 区间已改作红石组，清为空气
         state.blocks.set(u8);
     } else {
         console.error('世界快照尺寸不匹配，放弃恢复');

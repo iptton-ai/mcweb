@@ -9,7 +9,7 @@ import { breakBlock, placeBlock } from './interaction.js';
 import { initParticles, updateParticles } from './particles.js';
 import { initAudio } from './audio.js';
 import { initBGM, updateBGM } from './bgm.js';
-import { initMachinery, updateMachinery } from './machinery.js';
+import { initRedstone, updateRedstoneTick } from './redstone.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
@@ -99,8 +99,8 @@ function gameLoop(timestamp) {
     updateTnt(dt);
     updateDroppedItems(dt);
 
-    // 机械组（齿轮转动动画）
-    updateMachinery(dt);
+    // 红石组（按钮计时/火把延迟/压力板踩踏，状态变化时重算电路）
+    updateRedstoneTick(dt);
 
     // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
     updateBGM();
@@ -174,6 +174,9 @@ function freshWorld() {
     p.flying = false;
     p.selectedSlot = 0;
     p.inventory = {};
+
+    // 红石组：清按钮/火把延迟队列与门/TNT 边沿基线（新世界不该残留旧世界电平）
+    initRedstone();
 }
 
 // 放弃当前世界与存档，按所选模式开新世界
@@ -251,8 +254,8 @@ function init() {
     // 创建玩家模型（第三人称用）：import 绑定是只读的，赋值必须走模块内的 initPlayerMesh
     initPlayerMesh();
 
-    // 机械组（齿轮/拉杆/红石灯）：世界就绪后重算供能网络，恢复派生位与灯光
-    initMachinery();
+    // 红石组：世界就绪后重算供能网络，恢复红石粉/红石灯派生态与门/TNT 边沿基线
+    initRedstone();
 
     // UI
     updateHotbar();

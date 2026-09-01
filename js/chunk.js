@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, doorHalf, gearFacing, gearJammed, gearManual, gearPowered, isDoorId, isGearId, isLampLitId, isLeverId, leverFacing, leverOn } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, doorHalf, dustLit, isButtonId, isDoorId, isDustId, isLampLitId, isLeverId, isPlateId, isRTorchId, isRedstoneId, isRTorchLitId, leverFacing, leverOn, platePressed, rtorchFacing, rtorchLit } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasTexture, getUVForFace, getDoorTileTexture } from './textures.js';
@@ -101,8 +101,12 @@ export function getPropMesh(blockType) {
         const group = new THREE.Group();
         group.add(slab);
         mesh = group;
-    } else if (isGearId(blockType)) {
-        mesh = buildGearMesh(blockType);
+    } else if (isRTorchId(blockType)) {
+        mesh = buildRedstoneTorchMesh(blockType);
+    } else if (isButtonId(blockType)) {
+        mesh = buildButtonMesh(blockType);
+    } else if (isPlateId(blockType)) {
+        mesh = buildPlateMesh(blockType);
     } else if (isLeverId(blockType)) {
         mesh = buildLeverMesh(blockType);
     }
@@ -129,48 +133,104 @@ function orientMounted(mounted, facing, t) {
     }
 }
 
-// 齿轮：轮体 + 8 齿 + 轴心。转动中轴心泛橙光；卡死（与相邻齿轮面对面顶死）
-// 轴心变红且不转。转向（±1）由 machinery.js 的转向表驱动，见 updateMachinery
-function buildGearMesh(blockType) {
-    const jammed = gearJammed(blockType) === 1;
-    const powered = (gearPowered(blockType) || gearManual(blockType)) === 1;
-    const spinning = powered && !jammed;
-    const spinner = new THREE.Group();
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.34, 0.34, 0.16, 12),
-        new THREE.MeshLambertMaterial({ color: jammed ? 0x8a5a40 : 0x9a7a3a }),
+// 红石火把：细木杆 + 红色辉光头（亮时），熄灭则头变暗红。
+// 贴地（facing 0）原点即格底；贴墙（facing 2..5）把 +Y 旋到墙法线，杆底摆在墙面格心
+function buildRedstoneTorchMesh(blockType) {
+    const lit = rtorchLit(blockType) === 1;
+    const group = new THREE.Group();
+    const stick = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), new THREE.MeshLambertMaterial({ color: 0x6a4a2a }));
+    stick.position.y = 0.25;
+    group.add(stick);
+    const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.16, 0.16),
+        new THREE.MeshLambertMaterial(lit
+            ? { color: 0xff4020, emissive: 0xd02010, emissiveIntensity: 1.2 }
+            : { color: 0x701812 }),
     );
-    spinner.add(body);
-    for (let i = 0; i < 8; i++) {
-        const a = i * Math.PI / 4;
-        const tooth = new THREE.Mesh(
-            new THREE.BoxGeometry(0.16, 0.16, 0.14),
-            new THREE.MeshLambertMaterial({ color: jammed ? 0x6a4430 : 0x7a5a28 }),
-        );
-        tooth.position.set(Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4);
-        tooth.rotation.y = -a;
-        spinner.add(tooth);
+    head.position.y = 0.56;
+    group.add(head);
+    const root = new THREE.Group();
+    const facing = rtorchFacing(blockType);
+    if (facing === 0) {
+        root.add(group);
+    } else {
+        const [nx, , nz] = FACING_NORMALS[facing];
+        group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(nx, 0, nz));
+        group.position.set(0.5 + nx * 0.5, 0.5, 0.5 + nz * 0.5); // 杆底贴墙面格心
+        root.add(group);
     }
-    const hub = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.1, 0.1, 0.2, 8),
-        new THREE.MeshLambertMaterial(jammed
-            ? { color: 0xc05040, emissive: 0xaa2010, emissiveIntensity: 0.9 }
-            : powered
-                ? { color: 0x8a8a8a, emissive: 0xcc6620, emissiveIntensity: 0.7 }
-                : { color: 0x6a6a6a }),
-    );
-    spinner.add(hub);
+    return root;
+}
 
+// 按钮：石质小方块，按下时变薄缩进（视觉反馈）
+function buildButtonMesh(blockType) {
+    const pressed = buttonPressed(blockType) === 1;
+    const t = pressed ? 0.05 : 0.1;
     const mounted = new THREE.Group();
-    mounted.add(spinner);
-    orientMounted(mounted, gearFacing(blockType), 0.16);
+    const btn = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, t, 0.25),
+        new THREE.MeshLambertMaterial({ color: pressed ? 0x6a6a6a : 0x8a8a8a }),
+    );
+    btn.position.y = t / 2;
+    mounted.add(btn);
+    orientMounted(mounted, buttonFacing(blockType), t);
     const root = new THREE.Group();
     root.add(mounted);
-    // userData 只放纯数据：propMeshCache 返回 mesh.clone()，而 three 的 clone 对 userData
-    // 做 JSON 序列化，存 Object3D 引用（循环结构）会直接抛错。spinner 按固定层级找。
-    root.userData.spinning = spinning;
-    root.userData.jammed = jammed;
     return root;
+}
+
+// 压力板：贴地的扁平石板，被踩时更薄更低
+function buildPlateMesh(blockType) {
+    const pressed = platePressed(blockType) === 1;
+    const h = pressed ? 0.03 : 0.07;
+    const group = new THREE.Group();
+    const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, h, 0.8),
+        new THREE.MeshLambertMaterial({ color: pressed ? 0x6a6a6a : 0x8a8a8a }),
+    );
+    plate.position.y = h / 2;
+    group.add(plate);
+    return group; // 原点在格底面中心，贴地即可
+}
+
+// 红石粉：中心粉堆 + 按邻接伸出的四条臂。形状随邻居现算，不走 propMeshCache；
+// 几何体与材质模块级共享，逐格只组装 Group，不产生需要 dispose 的逐格 GPU 资源。
+const dustArmGeo = {
+    px: new THREE.BoxGeometry(0.35, 0.05, 0.16), nx: new THREE.BoxGeometry(0.35, 0.05, 0.16),
+    pz: new THREE.BoxGeometry(0.16, 0.05, 0.35), nz: new THREE.BoxGeometry(0.16, 0.05, 0.35),
+};
+const dustCenterGeo = new THREE.BoxGeometry(0.3, 0.05, 0.3);
+const dustMats = [
+    new THREE.MeshLambertMaterial({ color: 0x5a1010 }), // 灭
+    new THREE.MeshLambertMaterial({ color: 0xff3820, emissive: 0xc02010, emissiveIntensity: 0.6 }), // 亮
+];
+
+// 四向是否伸出粉臂：邻格是红石粉（含斜上/斜下一格，与传导规则一致）或任意红石元件。
+// 孤立粉四臂全伸（原版孤立粉显示为十字）。
+function dustConnections(x, y, z) {
+    const conn = { px: 0, nx: 0, pz: 0, nz: 0 };
+    for (const [dx, dz, k] of [[1, 0, 'px'], [-1, 0, 'nx'], [0, 1, 'pz'], [0, -1, 'nz']]) {
+        if (isDustId(getBlock(x + dx, y, z + dz)) || isDustId(getBlock(x + dx, y + 1, z + dz)) ||
+            isDustId(getBlock(x + dx, y - 1, z + dz)) || isRedstoneId(getBlock(x + dx, y, z + dz))) conn[k] = 1;
+    }
+    if (!conn.px && !conn.nx && !conn.pz && !conn.nz) return { px: 1, nx: 1, pz: 1, nz: 1 };
+    return conn;
+}
+
+export function buildDustMesh(x, y, z, lit) {
+    const group = new THREE.Group();
+    const mat = dustMats[lit ? 1 : 0];
+    const center = new THREE.Mesh(dustCenterGeo, mat);
+    center.position.y = 0.03;
+    group.add(center);
+    const conn = dustConnections(x, y, z);
+    for (const [k, ox, oz] of [['px', 0.25, 0], ['nx', -0.25, 0], ['pz', 0, 0.25], ['nz', 0, -0.25]]) {
+        if (!conn[k]) continue;
+        const arm = new THREE.Mesh(dustArmGeo[k], mat);
+        arm.position.set(ox, 0.03, oz);
+        group.add(arm);
+    }
+    return group;
 }
 
 // 拉杆：圆石底座 + 斜置木杆（开时尖端泛红光）
@@ -449,21 +509,25 @@ export function updateChunkMeshes() {
     }
 }
 
-// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/齿轮/拉杆）
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件）
 function isPropBlock(bt) {
     return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
-        isGearId(bt) || isLeverId(bt);
+        isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt);
 }
 
-// 在 (x,y,z) 放置该格对应的道具网格（火把/亮灯含光源），挂入 state.droppedItems
+// 在 (x,y,z) 放置该格对应的道具网格（火把/亮灯/亮红石火把含光源），挂入 state.droppedItems
 function addPropAt(bt, x, y, z) {
     if (bt === BlockTypes.TORCH) {
         addTorchLight(x, y, z);
     } else if (isLampLitId(bt)) {
         // 亮着的红石灯：挂暖黄点光（无独立网格，立方体本体走区块几何）
         addTorchLight(x, y, z, { color: 0xffd070, intensity: 13, dist: 12, height: 0.5 });
+    } else if (isRTorchLitId(bt)) {
+        // 亮着的红石火把：暗红微光（近似原版 7 级光照）
+        addTorchLight(x, y, z, { color: 0xff4020, intensity: 4, dist: 7, height: 0.6 });
     }
-    const m = getPropMesh(bt);
+    // 红石粉形状随邻居变化，不走按方块类型缓存的 getPropMesh，逐格现算
+    const m = isDustId(bt) ? buildDustMesh(x, y, z, dustLit(bt)) : getPropMesh(bt);
     if (!m) return;
     m.position.set(x + 0.5, y, z + 0.5);
     m.userData.propKey = `${x},${y},${z}`;
@@ -477,14 +541,14 @@ export function disposeChunkProps(chunkX, chunkZ) {
     const startZ = chunkZ * CHUNK_SIZE;
     const endX = Math.min(startX + CHUNK_SIZE, WORLD_WIDTH);
     const endZ = Math.min(startZ + CHUNK_SIZE, WORLD_DEPTH);
-    // 清理本区块内的光源：方块还在（火把/亮灯）的保留，方块已没了的撤光。
+    // 清理本区块内的光源：方块还在（火把/亮灯/亮红石火把）的保留，方块已没了的撤光。
     // 兜底覆盖一切「直接 setBlockSafe 清格」的路径（TNT 爆炸/助手清区），
     // 避免方块没了光还常亮的孤儿光源
     for (const key of [...state.torchLights.keys()]) {
         const [lx, ly, lz] = key.split(',').map(Number);
         if (lx < startX || lx >= endX || lz < startZ || lz >= endZ) continue;
         const bt = getBlock(lx, ly, lz);
-        if (bt !== BlockTypes.TORCH && !isLampLitId(bt)) removeTorchLightByKey(key);
+        if (bt !== BlockTypes.TORCH && !isLampLitId(bt) && !isRTorchLitId(bt)) removeTorchLightByKey(key);
     }
     // 按坐标清掉本区块内的全部道具网格：方块先变空气再重建时（破坏门/花、
     // 助手工具直接清格）也要能清掉残留网格，所以不能只看当前方块类型

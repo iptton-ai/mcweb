@@ -1,13 +1,13 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_DISTANCE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isDoorId, isGearId, isLeverId, isMachineryId } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_DISTANCE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isLeverId, isRedstoneId } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
 import { breakDoorAt, toggleDoorAt, tryPlaceDoor } from './door.js';
-import { breakMachineryAt, placeMachinery, popUnsupportedMachinery, toggleGearAt, toggleLeverAt, updatePowerNetwork } from './machinery.js';
+import { breakRedstoneAt, placeRedstone, popUnsupportedRedstone, pressButtonAt, toggleLeverAt, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
 import { damageEnemy } from './entities.js';
@@ -125,10 +125,10 @@ export function breakBlock() {
     }
     const hit = raycastBlocks();
     if (hit && hit.block !== BlockTypes.BEDROCK) {
-        // 机械组（齿轮/拉杆/红石灯）：破坏返还物品，失去支撑的相邻机械连锁脱落
-        if (isMachineryId(hit.block)) {
-            const cells = breakMachineryAt(hit.x, hit.y, hit.z);
-            updatePowerNetwork();
+        // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
+        if (isRedstoneId(hit.block)) {
+            const cells = breakRedstoneAt(hit.x, hit.y, hit.z);
+            updateRedstoneNetwork();
             for (const c of cells) {
                 spawnBreakParticles(c.x, c.y, c.z, c.id);
                 rebuildAround(c.x, c.z);
@@ -155,8 +155,8 @@ export function breakBlock() {
             state.player.inventory[hit.block] = (state.player.inventory[hit.block] || 0) + 1;
             updateHotbar();
         }
-        // 支撑被拆：贴在这个面上的齿轮/拉杆随之脱落
-        for (const c of popUnsupportedMachinery(hit.x, hit.y, hit.z)) {
+        // 支撑被拆：贴在这个面上的红石元件随之脱落
+        for (const c of popUnsupportedRedstone(hit.x, hit.y, hit.z)) {
             spawnBreakParticles(c.x, c.y, c.z, c.id);
             rebuildAround(c.x, c.z);
         }
@@ -183,9 +183,14 @@ export function placeBlock() {
         toggleDoorAt(hit.x, hit.y, hit.z);
         return;
     }
-    // 右键齿轮/拉杆 = 手动开关（红石灯没有手动开关，右键照常放置）
-    if (hit && isGearId(hit.block)) {
-        toggleGearAt(hit.x, hit.y, hit.z);
+    // 右键 TNT = 手动点燃（放置的 TNT 是惰性的，可配合红石做陷阱）
+    if (hit && hit.block === BlockTypes.TNT) {
+        spawnTntEntity(hit.x, hit.y, hit.z);
+        return;
+    }
+    // 右键按钮 = 按下（1 秒后自动弹出）；右键拉杆 = 开关。红石粉/红石火把/红石灯没有右键动作
+    if (hit && isButtonId(hit.block)) {
+        pressButtonAt(hit.x, hit.y, hit.z);
         return;
     }
     if (hit && isLeverId(hit.block)) {
@@ -224,9 +229,9 @@ export function placeBlock() {
             rebuildAround(bx, bz);
             return;
         }
-        // 机械组（齿轮/拉杆/红石灯）：按所点击的面贴靠放置（见 js/machinery.js）
-        if (isMachineryId(selectedType)) {
-            const err = placeMachinery(bx, by, bz, selectedType, hit.face);
+        // 红石组（红石粉/红石火把/按钮/压力板/拉杆/红石灯）：按所点击的面贴靠放置（见 js/redstone.js）
+        if (isRedstoneId(selectedType)) {
+            const err = placeRedstone(bx, by, bz, selectedType, hit.face);
             if (err) {
                 showTooltip(err);
                 return;
@@ -245,12 +250,11 @@ export function placeBlock() {
             updateHotbar();
         }
         if (selectedType === BlockTypes.TNT) {
-            // TNT 是道具：放置后 2.5 秒引爆
-            spawnTntEntity(bx, by, bz);
-        } else {
-            spawnBreakParticles(bx, by, bz, selectedType);
-            playBlockSound(true);
+            // TNT 放置为惰性：右键点燃或红石信号引爆（配合压力板/拉杆可做陷阱）
+            showTooltip('💣 TNT 已放置：右键点燃，或用红石信号引爆');
         }
+        spawnBreakParticles(bx, by, bz, selectedType);
+        playBlockSound(true);
         const cx = Math.floor(bx / CHUNK_SIZE);
         const cz = Math.floor(bz / CHUNK_SIZE);
         rebuildChunk(cx, cz);

@@ -169,53 +169,102 @@ export function doorFacing(id) {
     return (id - DOOR_BASE) & 3;
 }
 
-// ==================== 有状态方块：机械组（齿轮/拉杆/红石灯） ====================
-// 参考门的做法把状态直接编码进方块 ID（省去逐格元数据数组），高层逻辑见 js/machinery.js。
-//   齿轮 ID = GEAR_BASE + facing*8 + powered*4 + jam*2 + manual
-//     facing：0=贴地 1=贴顶 2=贴北墙(-Z) 3=贴东墙(+X) 4=贴南墙(+Z) 5=贴西墙(-X)，
-//             记录的是挂靠面法线方向（放置时由所点击的面决定，背面必须有实心支撑）
-//     powered：被电路供能（开着的拉杆 / 相邻转动齿轮链）——派生位，由 machinery.js 重算
-//     manual：玩家右键手动开启——持久位（随方块 ID 自动存档）
-//     jam：卡死——派生位。相邻齿轮必须反向咬合；两个齿轮面对面共轴（齿对齿顶死）
-//           会锁死整个连通传动组，卡死的齿轮不转、轴心变红
-//     齿轮实际转动 = (powered || manual) && !jam，转向（±1）由 machinery.js 运行时算
-//   拉杆 ID = LEVER_BASE + facing*2 + on（右键开关，开=给 6 邻供能）
-//   红石灯 ID = LAMP_BASE + lit（被相邻开着的拉杆或转动齿轮点亮，亮时发光）
-// 共 48+12+2 = 62 个变体（35..96），齿轮复刻自 Minecraft 早期开发中被砍掉的 Gear 方块。
-export const GEAR_BASE = 35;
-export const GEAR_COUNT = 48;
+// ==================== 有状态方块：红石组（红石粉/红石火把/按钮/压力板/拉杆/红石灯） ====================
+// 参考 Minecraft 红石设计原则重做（原「机械组」齿轮已移除，ID 35..82 空间复用）：
+//   信号源(15 级) → 红石粉布线(每格 -1 级，0 级断) → 负载(红石灯/门/TNT)。
+//   红石火把是反相器：默认亮；挂靠的实心方块被充能则熄灭、解除后复亮（延迟切换，可做时钟）。
+//   激活红石粉会充能它脚下与四邻水平的实心方块；拉杆/按钮/压力板充能各自的挂靠/支撑方块。
+//   门在信号上升沿开、下降沿关（手动右键不受影响）；TNT 在上升沿点燃（放置为惰性）。
+// 参考门的做法把状态直接编码进方块 ID（省去逐格元数据数组），高层逻辑见 js/redstone.js：
+//   红石粉 ID = DUST_BASE + lit（亮灭两态；连接形状由 chunk.js 按邻格现算，只放实心方块顶面）
+//   红石火把 ID = RTORCH_BASE + facing*2 + lit（facing 同拉杆；贴顶(1)不允许放置）
+//   按钮 ID = BUTTON_BASE + facing*2 + pressed（右键按下，BUTTON_PULSE_SEC 秒后自动弹出）
+//   压力板 ID = PLATE_BASE + pressed（只放顶面；玩家/怪物脚部格与板同格 = 按下）
+//   拉杆 ID = LEVER_BASE + facing*2 + on（右键开关）
+//   红石灯 ID = LAMP_BASE + lit（6 邻有激活红石粉或激活源时点亮）
+// 共 2+12+12+2+12+2 = 42 个变体（35..62、83..96），63..82 留空。
+export const DUST_BASE = 35;
+export const DUST_COUNT = 2;
+export const RTORCH_BASE = 37;
+export const RTORCH_COUNT = 12;
+export const BUTTON_BASE = 49;
+export const BUTTON_COUNT = 12;
+export const PLATE_BASE = 61;
+export const PLATE_COUNT = 2;
 export const LEVER_BASE = 83;
 export const LEVER_COUNT = 12;
 export const LAMP_BASE = 95;
 export const LAMP_COUNT = 2;
-export const GEAR_ITEM_ID = GEAR_BASE; // 物品栏「齿轮」用贴地·停转 变体代表
+export const DUST_ITEM_ID = DUST_BASE; // 物品栏「红石粉」用熄灭变体代表
+export const RTORCH_ITEM_ID = RTORCH_BASE; // 物品栏「红石火把」用贴地·亮 变体代表
+export const BUTTON_ITEM_ID = BUTTON_BASE; // 物品栏「按钮」用贴地·弹出 变体代表
+export const PLATE_ITEM_ID = PLATE_BASE; // 物品栏「压力板」用抬起 变体代表
 export const LEVER_ITEM_ID = LEVER_BASE; // 物品栏「拉杆」用贴地·关 变体代表
 export const LAMP_ITEM_ID = LAMP_BASE; // 物品栏「红石灯」用熄灭 变体代表
-export const GEAR_SPIN_SPEED = 0.8; // 齿轮转速（圈/秒）
 
-// 机械 ID 编解码（纯函数，供 chunk.js / interaction.js / machinery.js 共用）
-export function gearId(facing, powered, jam, manual) {
-    return GEAR_BASE + facing * 8 + powered * 4 + jam * 2 + manual;
+export const RS_MAX_STRENGTH = 15; // 信号源强度（红石粉每格 -1，0 级断路）
+export const RTORCH_DELAY = 0.1; // 红石火把亮灭切换延迟（秒）——反相有节拍，粉绕回挂靠方块即成时钟
+export const BUTTON_PULSE_SEC = 1.0; // 按钮按下到自动弹出的秒数
+
+// 红石组 ID 编解码（纯函数，供 chunk.js / interaction.js / redstone.js 共用）
+export function dustId(lit) {
+    return DUST_BASE + lit;
 }
 
-export function isGearId(id) {
-    return id >= GEAR_BASE && id < GEAR_BASE + GEAR_COUNT;
+export function isDustId(id) {
+    return id >= DUST_BASE && id < DUST_BASE + DUST_COUNT;
 }
 
-export function gearFacing(id) {
-    return (id - GEAR_BASE) >> 3;
+export function dustLit(id) {
+    return (id - DUST_BASE) & 1;
 }
 
-export function gearPowered(id) {
-    return (id - GEAR_BASE) >> 2 & 1;
+export function rtorchId(facing, lit) {
+    return RTORCH_BASE + facing * 2 + lit;
 }
 
-export function gearJammed(id) {
-    return (id - GEAR_BASE) >> 1 & 1;
+export function isRTorchId(id) {
+    return id >= RTORCH_BASE && id < RTORCH_BASE + RTORCH_COUNT;
 }
 
-export function gearManual(id) {
-    return (id - GEAR_BASE) & 1;
+export function rtorchFacing(id) {
+    return (id - RTORCH_BASE) >> 1;
+}
+
+export function rtorchLit(id) {
+    return (id - RTORCH_BASE) & 1;
+}
+
+export function isRTorchLitId(id) {
+    return isRTorchId(id) && rtorchLit(id) === 1;
+}
+
+export function buttonId(facing, pressed) {
+    return BUTTON_BASE + facing * 2 + pressed;
+}
+
+export function isButtonId(id) {
+    return id >= BUTTON_BASE && id < BUTTON_BASE + BUTTON_COUNT;
+}
+
+export function buttonFacing(id) {
+    return (id - BUTTON_BASE) >> 1;
+}
+
+export function buttonPressed(id) {
+    return (id - BUTTON_BASE) & 1;
+}
+
+export function plateId(pressed) {
+    return PLATE_BASE + pressed;
+}
+
+export function isPlateId(id) {
+    return id >= PLATE_BASE && id < PLATE_BASE + PLATE_COUNT;
+}
+
+export function platePressed(id) {
+    return (id - PLATE_BASE) & 1;
 }
 
 export function leverId(facing, on) {
@@ -246,17 +295,29 @@ export function lampLit(id) {
     return (id - LAMP_BASE) & 1;
 }
 
-// 是否机械组任一方块（齿轮/拉杆/红石灯统称）
-export function isMachineryId(id) {
-    return isGearId(id) || isLeverId(id) || isLampId(id);
+// 是否红石组任一方块（红石粉/红石火把/按钮/压力板/拉杆/红石灯统称）
+export function isRedstoneId(id) {
+    return (id >= DUST_BASE && id < DUST_BASE + DUST_COUNT) ||
+        (id >= RTORCH_BASE && id < RTORCH_BASE + RTORCH_COUNT) ||
+        (id >= BUTTON_BASE && id < BUTTON_BASE + BUTTON_COUNT) ||
+        (id >= PLATE_BASE && id < PLATE_BASE + PLATE_COUNT) ||
+        isLeverId(id) || isLampId(id);
 }
 
 export function isLampLitId(id) {
     return isLampId(id) && lampLit(id) === 1;
 }
 
+// 旧版本「机械组齿轮」占据 ID 35..82，该区间已改作红石组：读入旧存档/旧快照时清为空气
+// （拉杆/红石灯/门的 ID 与编码未变，不受影响）
+export function migrateLegacyGears(u8) {
+    for (let i = 0; i < u8.length; i++) {
+        if (u8[i] >= DUST_BASE && u8[i] < LEVER_BASE) u8[i] = 0;
+    }
+}
+
 // 挂靠面法线（facing 编码见上）：0贴地 1贴顶 2北墙(-Z) 3东墙(+X) 4南墙(+Z) 5西墙(-X)。
-// config 持有这份纯数据：machinery.js（逻辑）与 chunk.js（网格摆放）共用，避免互相依赖
+// config 持有这份纯数据：redstone.js（逻辑）与 chunk.js（网格摆放）共用，避免互相依赖
 export const FACING_NORMALS = [
     [0, 1, 0], [0, -1, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0],
 ];
@@ -322,42 +383,72 @@ export const HotbarBlocks = [
     BlockTypes.FLOWER,
     BlockTypes.TNT,
     DOOR_ITEM_ID, // 橡木门：有状态方块，放置时生成上下两格（见 js/door.js）
-    GEAR_ITEM_ID, // 齿轮：有状态方块，右键手动转/停（见 js/machinery.js）
-    LEVER_ITEM_ID, // 拉杆：右键开关，给相邻齿轮/红石灯供能
-    LAMP_ITEM_ID, // 红石灯：被拉杆/转动齿轮点亮
+    DUST_ITEM_ID, // 红石粉：铺在顶面布线，信号每格 -1 级（见 js/redstone.js）
+    RTORCH_ITEM_ID, // 红石火把：默认亮的信号源；挂靠方块被充能则熄灭（反相器/时钟）
+    BUTTON_ITEM_ID, // 按钮：右键按下 1 秒后自动弹出（脉冲信号源）
+    PLATE_ITEM_ID, // 压力板：玩家/怪物踩住时是信号源（自动门/陷阱）
+    LEVER_ITEM_ID, // 拉杆：右键开关，稳态信号源
+    LAMP_ITEM_ID, // 红石灯：6 邻有信号点亮
 ];
 
-// 机械变体批量注册（思路同上门）：齿轮/拉杆是贴墙道具（customMesh，非固体不挡路），
+// 红石组变体批量注册（思路同上门）：贴面/贴地元件都是 customMesh 道具（非固体不挡路），
 // 红石灯是实心立方体，亮的变体在 chunk.js 里挂点光源
-const GEAR_ORIENT = ['贴地', '贴顶', '贴北墙', '贴东墙', '贴南墙', '贴西墙'];
-for (let facing = 0; facing < 6; facing++) {
-    for (let powered = 0; powered < 2; powered++) {
-        for (let jam = 0; jam < 2; jam++) {
-            for (let manual = 0; manual < 2; manual++) {
-                const id = gearId(facing, powered, jam, manual);
-                BlockInfo[id] = {
-                    name: `齿轮（${GEAR_ORIENT[facing]}·${jam ? '卡死' : powered || manual ? '转' : '停'}）`,
-                    solid: false,
-                    transparent: true,
-                    customMesh: true,
-                    machinery: true,
-                    color: jam ? '#c05040' : '#9a7a3a',
-                };
-            }
-        }
-    }
+const MOUNT_ORIENT = ['贴地', '贴顶', '贴北墙', '贴东墙', '贴南墙', '贴西墙'];
+for (let lit = 0; lit < 2; lit++) {
+    BlockInfo[dustId(lit)] = {
+        name: `红石粉${lit ? '（亮）' : ''}`,
+        solid: false,
+        transparent: true,
+        customMesh: true,
+        redstone: true,
+        color: lit ? '#ff3820' : '#5a1010',
+    };
 }
 for (let facing = 0; facing < 6; facing++) {
-    for (let on = 0; on < 2; on++) {
-        BlockInfo[leverId(facing, on)] = {
-            name: `拉杆（${GEAR_ORIENT[facing]}·${on ? '开' : '关'}）`,
+    for (let lit = 0; lit < 2; lit++) {
+        BlockInfo[rtorchId(facing, lit)] = {
+            name: `红石火把（${MOUNT_ORIENT[facing]}·${lit ? '亮' : '灭'}）`,
             solid: false,
             transparent: true,
             customMesh: true,
-            machinery: true,
+            redstone: true,
+            color: lit ? '#ff4020' : '#701812',
+        };
+    }
+}
+for (let facing = 0; facing < 6; facing++) {
+    for (let pressed = 0; pressed < 2; pressed++) {
+        BlockInfo[buttonId(facing, pressed)] = {
+            name: `按钮（${MOUNT_ORIENT[facing]}${pressed ? '·按下' : ''}）`,
+            solid: false,
+            transparent: true,
+            customMesh: true,
+            redstone: true,
             color: '#8a8a8a',
         };
     }
 }
-BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, machinery: true, color: '#6a4a2a' };
-BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, machinery: true, color: '#ffd870' };
+for (let pressed = 0; pressed < 2; pressed++) {
+    BlockInfo[plateId(pressed)] = {
+        name: `压力板${pressed ? '（踩下）' : ''}`,
+        solid: false,
+        transparent: true,
+        customMesh: true,
+        redstone: true,
+        color: '#8a8a8a',
+    };
+}
+for (let facing = 0; facing < 6; facing++) {
+    for (let on = 0; on < 2; on++) {
+        BlockInfo[leverId(facing, on)] = {
+            name: `拉杆（${MOUNT_ORIENT[facing]}·${on ? '开' : '关'}）`,
+            solid: false,
+            transparent: true,
+            customMesh: true,
+            redstone: true,
+            color: '#8a8a8a',
+        };
+    }
+}
+BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, redstone: true, color: '#6a4a2a' };
+BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, redstone: true, color: '#ffd870' };

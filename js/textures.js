@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, GEAR_BASE, GEAR_COUNT, GEAR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -24,7 +24,7 @@ export function createTexture(width, height, drawFn) {
 // ==================== 纹理图集 ====================
 export const atlasSize = 6;
 
-// 6x6 图集（火把/花/TNT/门之后又加了齿轮/拉杆/红石灯）
+// 6x6 图集（火把/花/TNT/门之后又加了红石组各元件）
 export const tileSize = 16;
 
 export const atlasCanvas = document.createElement('canvas');
@@ -60,7 +60,10 @@ export function generateAllTextures() {
         { type: BlockTypes.FLOWER, top: 17, side: 17, bottom: 17, name: 'flower' },
         { type: BlockTypes.TNT, top: 19, side: 18, bottom: 19, name: 'tnt' },
         { type: DOOR_ITEM_ID, top: 20, side: 20, bottom: 20, name: 'door_lower' }, // 门物品图标用下半 tile
-        { type: GEAR_ITEM_ID, top: 22, side: 22, bottom: 22, name: 'gear' }, // 齿轮物品图标（实际是 3D 道具）
+        { type: DUST_ITEM_ID, top: 22, side: 22, bottom: 22, name: 'dust' }, // 红石粉物品图标（实际是贴地粉线道具）
+        { type: RTORCH_ITEM_ID, top: 26, side: 26, bottom: 26, name: 'rtorch' }, // 红石火把（实际是 3D 道具）
+        { type: BUTTON_ITEM_ID, top: 27, side: 27, bottom: 27, name: 'button' }, // 按钮（实际是 3D 道具）
+        { type: PLATE_ITEM_ID, top: 28, side: 28, bottom: 28, name: 'plate' }, // 压力板（实际是 3D 道具）
         { type: LEVER_ITEM_ID, top: 23, side: 23, bottom: 23, name: 'lever' }, // 拉杆物品图标（实际是 3D 道具）
         { type: LAMP_BASE, top: 24, side: 24, bottom: 24, name: 'lamp_off' }, // 红石灯（灭）
         { type: LAMP_BASE + 1, top: 25, side: 25, bottom: 25, name: 'lamp_lit' }, // 红石灯（亮）
@@ -326,31 +329,23 @@ export function generateAllTextures() {
             ctx.fillRect(x + 7, y + 2, 1, 12);
             ctx.fillRect(x + 2, y + 7, 12, 1);
         },
-        22: (ctx, x, y, s) => { // 齿轮图标：木质轮体 + 8 齿 + 金属轴心
-            const c = s / 2;
-            ctx.fillStyle = '#7a5a28';
-            for (let i = 0; i < 8; i++) {
-                const a = i * Math.PI / 4;
-                ctx.save();
-                ctx.translate(x + c, y + c);
-                ctx.rotate(a);
-                ctx.fillRect(-1.5, -c + 1, 3, 4);
-                ctx.restore();
-            }
-            ctx.fillStyle = '#9a7a3a';
-            ctx.beginPath();
-            ctx.arc(x + c, y + c, c - 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#8a6a30';
-            ctx.beginPath();
-            ctx.arc(x + c, y + c, c - 5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#4a4a4a';
-            ctx.beginPath();
-            ctx.arc(x + c, y + c, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#6a6a6a';
-            ctx.fillRect(x + c - 1, y + c - 1, 2, 2);
+        22: (ctx, x, y, s) => { // 红石粉图标：中心粉堆 + 四向散落的红色晶粉
+            ctx.fillStyle = '#3a2a1a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#c02015';
+            ctx.fillRect(x + 6, y + 6, 4, 4);
+            ctx.fillStyle = '#ff3820';
+            ctx.fillRect(x + 7, y + 7, 2, 2);
+            ctx.fillStyle = '#a01812';
+            ctx.fillRect(x + 2, y + 4, 3, 2);
+            ctx.fillRect(x + 11, y + 4, 3, 2);
+            ctx.fillRect(x + 2, y + 10, 3, 2);
+            ctx.fillRect(x + 11, y + 10, 3, 2);
+            ctx.fillStyle = '#d83020';
+            ctx.fillRect(x + 5, y + 2, 2, 2);
+            ctx.fillRect(x + 9, y + 2, 2, 2);
+            ctx.fillRect(x + 5, y + 12, 2, 2);
+            ctx.fillRect(x + 9, y + 12, 2, 2);
         },
         23: (ctx, x, y, s) => { // 拉杆图标：圆石底座 + 斜置木杆（红石尖端）
             ctx.fillStyle = '#6a6a6a';
@@ -390,6 +385,32 @@ export function generateAllTextures() {
                 ctx.fillRect(x + i, y + 2, 1, s - 4);
                 ctx.fillRect(x + 2, y + i, s - 4, 1);
             }
+        },
+        26: (ctx, x, y, s) => { // 红石火把图标：木杆 + 亮红头
+            ctx.fillStyle = '#2a2a3a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6a4a2a';
+            ctx.fillRect(x + s / 2 - 1, y + s / 2, 2, s / 2);
+            ctx.fillStyle = '#ff4020';
+            ctx.fillRect(x + s / 2 - 2, y + 3, 4, 5);
+            ctx.fillStyle = '#ffa080';
+            ctx.fillRect(x + s / 2 - 1, y + 4, 2, 2);
+        },
+        27: (ctx, x, y, s) => { // 按钮图标：石质圆角小方块 + 高光
+            ctx.fillStyle = '#6a6a6a';
+            ctx.fillRect(x + 3, y + 4, s - 6, s - 8);
+            ctx.fillStyle = '#8a8a8a';
+            ctx.fillRect(x + 4, y + 5, s - 8, s - 10);
+            ctx.fillStyle = '#a8a8a8';
+            ctx.fillRect(x + 5, y + 6, 3, 2);
+        },
+        28: (ctx, x, y, s) => { // 压力板图标：俯视扁平石板 + 边缘阴影
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + 1, y + 3, s - 2, s - 6);
+            ctx.fillStyle = '#7a7a7a';
+            ctx.fillRect(x + 2, y + 4, s - 4, s - 8);
+            ctx.fillStyle = '#9a9a9a';
+            ctx.fillRect(x + 3, y + 5, s - 6, 2);
         },
     };
 
@@ -454,8 +475,11 @@ export function generateAllTextures() {
         blockUVs[DOOR_BASE + i] = blockUVs[DOOR_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
     }
 
-    // 齿轮/拉杆全部变体共享物品图标 tile（实际是 3D 道具网格，不走图集 UV）
-    for (let i = 0; i < GEAR_COUNT; i++) blockUVs[GEAR_BASE + i] = blockUVs[GEAR_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    // 红石元件全部变体共享物品图标 tile（实际是 3D 道具网格或按邻格现算的粉线，不走图集 UV）
+    for (let i = 0; i < DUST_COUNT; i++) blockUVs[DUST_BASE + i] = blockUVs[DUST_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    for (let i = 0; i < RTORCH_COUNT; i++) blockUVs[RTORCH_BASE + i] = blockUVs[RTORCH_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    for (let i = 0; i < BUTTON_COUNT; i++) blockUVs[BUTTON_BASE + i] = blockUVs[BUTTON_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    for (let i = 0; i < PLATE_COUNT; i++) blockUVs[PLATE_BASE + i] = blockUVs[PLATE_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
     for (let i = 0; i < LEVER_COUNT; i++) blockUVs[LEVER_BASE + i] = blockUVs[LEVER_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
@@ -483,7 +507,6 @@ export const atlasTexture = generateAllTextures();
 const TILE_OVERRIDES = [
     { file: 'assets/textures/door_lower.png', tile: 'door_lower' },
     { file: 'assets/textures/door_upper.png', tile: 'door_upper' },
-    { file: 'assets/textures/gear.png', tile: 'gear' },
     { file: 'assets/textures/lever.png', tile: 'lever' },
     { file: 'assets/textures/lamp_off.png', tile: 'lamp_off' },
     { file: 'assets/textures/lamp_lit.png', tile: 'lamp_lit' },

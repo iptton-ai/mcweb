@@ -12,6 +12,7 @@ import {
     WORLD_DEPTH,
     WORLD_HEIGHT,
     WORLD_WIDTH,
+    migrateLegacyGears,
 } from './config.js';
 import { state } from './state.js';
 import { buildChunkProps, updateChunkMeshes } from './chunk.js';
@@ -20,7 +21,10 @@ import { updateHealthUI } from './playerLife.js';
 import { camera } from './engine.js';
 
 const SAVE_KEY = 'mcweb.save.v1';
-const SAVE_VERSION = 1;
+// v2（2026-09-01 红石组重做）：v1 的「齿轮」方块 ID 已改作红石组，读入时迁移清为空气。
+// 存档结构本身未变，只有方块 ID 语义差异，所以结构字段保持兼容。
+const SAVE_VERSION = 2;
+const LOADABLE_VERSIONS = [1, 2];
 
 function u8ToBase64(u8) {
     let s = '';
@@ -106,7 +110,7 @@ export function loadGame() {
     } catch {
         save = null;
     }
-    if (!save || save.version !== SAVE_VERSION || !save.blocks) return false;
+    if (!save || !LOADABLE_VERSIONS.includes(save.version) || !save.blocks) return false;
 
     let u8;
     try {
@@ -118,6 +122,8 @@ export function loadGame() {
         console.error('存档世界尺寸不符，放弃恢复');
         return false;
     }
+    // 旧版存档：齿轮 ID 区间已改作红石组，清为空气（拉杆/红石灯/门不受影响）
+    if (save.version === 1) migrateLegacyGears(u8);
 
     // 覆盖世界数据并重建全部区块网格
     state.blocks = u8;

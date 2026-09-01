@@ -16,6 +16,7 @@ import {
 import { state } from './state.js';
 import { isSolid, rebuildChunk } from './chunk.js';
 import { getBlock, setBlockSafe } from './world.js';
+import { updateRedstoneNetwork } from './redstone.js';
 
 const CX_COUNT = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
 const CZ_COUNT = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
@@ -119,6 +120,8 @@ export function updateBuild(dt) {
         activeJob = null;
         finishedJob = job;
         finishedAt = performance.now();
+        // 施工可能放置/拆除红石元件与门、TNT：完成后重算一遍电路（灯亮、门开合、TNT 引爆）
+        updateRedstoneNetwork();
         job.resolve({
             label: job.label,
             total: job.total,

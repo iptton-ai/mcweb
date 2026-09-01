@@ -2,7 +2,7 @@
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
 
-import { BlockInfo, BlockTypes, DOOR_BASE, DOOR_COUNT, GEAR_BASE, GEAR_COUNT, GEAR_ITEM_ID, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
 
 function blockPalette() {
@@ -10,25 +10,34 @@ function blockPalette() {
         [BlockTypes.WATER]: '（非固体）',
         [BlockTypes.TORCH]: '（非固体装饰，自带光源）',
         [BlockTypes.FLOWER]: '（非固体装饰）',
-        [BlockTypes.TNT]: '（仅玩家手工放置会引爆）',
+        [BlockTypes.TNT]: '（放置为惰性；右键点燃或红石信号上升沿引爆）',
         [BlockTypes.BEDROCK]: '（不可破坏）',
-        [GEAR_ITEM_ID]: '（贴面道具，右键转/停，转动时向相邻齿轮传动）',
-        [LEVER_ITEM_ID]: '（贴面道具，右键开关，开=给 6 邻齿轮/红石灯供能）',
-        [LAMP_ITEM_ID]: '（实心立方体，被相邻开着的拉杆或转动齿轮点亮，亮时发光且照到的格子不刷怪）',
+        [DUST_ITEM_ID]: '（铺在实心方块顶面走线；信号 15 级每格 -1，0 级断；可沿斜上/斜下 1 格爬坡）',
+        [RTORCH_ITEM_ID]: '（默认亮=信号源；挂靠方块被充能则熄灭=反相器，切换延迟 0.1s，粉绕回挂靠方块即成时钟）',
+        [BUTTON_ITEM_ID]: '（贴面道具，右键按下 1 秒后自动弹出，期间为信号源）',
+        [PLATE_ITEM_ID]: '（放顶面；玩家/怪物踩住=信号源，自动门/陷阱用）',
+        [LEVER_ITEM_ID]: '（贴面道具，右键开关，开=信号源并充能挂靠方块）',
+        [LAMP_ITEM_ID]: '（实心立方体，6 邻有激活红石粉或激活源时点亮，亮时发光且照到的格子不刷怪）',
     };
     const inDoor = (id) => id >= DOOR_BASE && id < DOOR_BASE + DOOR_COUNT;
-    const inMachinery = (id) => (id >= GEAR_BASE && id < GEAR_BASE + GEAR_COUNT) ||
+    const inRedstone = (id) => (id >= DUST_BASE && id < DUST_BASE + DUST_COUNT) ||
+        (id >= RTORCH_BASE && id < RTORCH_BASE + RTORCH_COUNT) ||
+        (id >= BUTTON_BASE && id < BUTTON_BASE + BUTTON_COUNT) ||
+        (id >= PLATE_BASE && id < PLATE_BASE + PLATE_COUNT) ||
         (id >= LEVER_BASE && id < LEVER_BASE + LEVER_COUNT) ||
         (id >= LAMP_BASE && id < LAMP_BASE + LAMP_COUNT);
     const parts = Object.entries(BlockTypes)
-        .filter(([name, id]) => name !== 'AIR' && !inDoor(id) && !inMachinery(id))
+        .filter(([name, id]) => name !== 'AIR' && !inDoor(id) && !inRedstone(id))
         .map(([name, id]) => `${id}=${BlockInfo[id]?.name || name}${specials[id] || ''}`);
     // 门是有状态方块：16 个变体共用一个物品，合并为一行并说明编码
-    parts.push(`${DOOR_BASE}..${DOOR_BASE + DOOR_COUNT - 1}=橡木门（有状态：ID=基址+half*8+open*4+facing，facing 0北/1东/2南/3西；放置必须上下两格同 facing，上格=下格+8；关门挡路、开门可通行；右键开关）`);
-    // 机械组同理折叠：物品栏物品用基址变体代表，放置由游戏按所点击的面自动选朝向
-    parts.push(`${GEAR_BASE}..${GEAR_BASE + GEAR_COUNT - 1}=齿轮（有状态：ID=基址+facing*8+powered*4+jam*2+manual；facing 0贴地/1贴顶/2北墙/3东墙/4南墙/5西墙，背面须实心；powered=被供能、manual=手动开启，jam=卡死；转动=(powered||manual)&&!jam；相邻齿轮反向咬合、共轴同向，面对面顶死会卡死锁死整个传动组件，powered/jam 由游戏自动重算，摆放时不用写）`);
-    parts.push(`${LEVER_BASE}..${LEVER_BASE + LEVER_COUNT - 1}=拉杆（有状态：ID=基址+facing*2+on；背面须实心；右键开关，开=向 6 邻供能）`);
-    parts.push(`${LAMP_BASE}..${LAMP_BASE + 1}=红石灯（有状态：ID=基址+lit；lit=1 需相邻有开着的拉杆或转动中的齿轮）`);
+    parts.push(`${DOOR_BASE}..${DOOR_BASE + DOOR_COUNT - 1}=橡木门（有状态：ID=基址+half*8+open*4+facing，facing 0北/1东/2南/3西；放置必须上下两格同 facing，上格=下格+8；关门挡路、开门可通行；右键开关；红石信号上升沿自动开、下降沿自动关）`);
+    // 红石组同理折叠：物品栏物品用基址变体代表，放置由游戏按所点击的面自动选朝向
+    parts.push(`${DUST_BASE}..${DUST_BASE + 1}=红石粉（ID=基址+lit 派生位，摆放写 ${DUST_ITEM_ID} 即可；lit 由游戏重算）`);
+    parts.push(`${RTORCH_BASE}..${RTORCH_BASE + RTORCH_COUNT - 1}=红石火把（ID=基址+facing*2+lit；facing 0立于方块顶/2北墙/3东墙/4南墙/5西墙（不能贴顶），摆放写 ${RTORCH_ITEM_ID}；默认亮，挂靠方块被充能则熄灭=反相器）`);
+    parts.push(`${BUTTON_BASE}..${BUTTON_BASE + BUTTON_COUNT - 1}=按钮（ID=基址+facing*2+pressed，摆放写 ${BUTTON_ITEM_ID}；右键按下 1 秒自动弹出）`);
+    parts.push(`${PLATE_BASE}..${PLATE_BASE + 1}=压力板（ID=基址+pressed，摆放写 ${PLATE_ITEM_ID}；只放顶面，玩家/怪物踩住=按下）`);
+    parts.push(`${LEVER_BASE}..${LEVER_BASE + LEVER_COUNT - 1}=拉杆（ID=基址+facing*2+on；右键开关，开=信号源）`);
+    parts.push(`${LAMP_BASE}..${LAMP_BASE + 1}=红石灯（ID=基址+lit；6 邻有激活红石粉或激活源时点亮）`);
     return parts.join('，');
 }
 
@@ -74,6 +83,7 @@ ${gameStateJson()}
 - 墙高 3~4 格；留门洞（宽1~2、高2）；窗户用玻璃；屋顶可悬挑；隔墙分房间；火把照明间距 ≤10 格防刷怪；
 - 建筑外观可用多种方块搭配（原木框架+木板墙+圆石基座等）；
 - 坐标越界自动忽略；把大型建筑拆成多次调用，出错时用 clear_area 重来。
+- 想加红石自动化（路灯/自动门/陷阱/闪烁灯）：拉杆或按钮=信号源，红石粉沿实心顶面走线（每格 -1 级），红石灯/门/TNT 是负载；红石火把挂在被充能的方块上会熄灭=反相器，火把+粉环=时钟。
 run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
 
 ═══ 工作流 B：修改游戏源码（支持热重载）═══
@@ -83,6 +93,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 - state.js：全局单例 state（blocks、player、enemies、time、chunkUpdates…）+ isCreative()/isNight()
 - world.js：地形生成 generateWorld/generateTerrainHeight，getBlock/setBlockSafe/getBlockIndex
 - door.js：有状态方块「橡木门」（ID 编码见 config.js 的 DOOR_BASE 注释）：放置 tryPlaceDoor、右键开关 toggleDoorAt、破坏 breakDoorAt、门板几何 doorSlabTransform
+- redstone.js：有状态方块「红石组」（红石粉/红石火把/按钮/压力板/拉杆/红石灯，ID 编码见 config.js 的 DUST_BASE 注释）：信号源(15级)→红石粉布线(每格-1)→负载（红石灯/门/TNT）；红石火把=反相器（挂靠方块被充能则熄灭，延迟 0.1s 可做时钟）；放置 placeRedstone、网络重算 updateRedstoneNetwork、每帧 updateRedstoneTick（按钮/火把/压力板）
 - chunk.js：区块网格 rebuildChunk(cx,cz)/updateChunkMeshes()，isSolid/isTransparent/isCustomMesh，火把光源，火把/花/门的独立道具网格 getPropMesh，单格道具刷新 refreshPropAt
 - buildQueue.js：AI 施工队列（建造渐进放置，速度档/暂停在 state.buildSpeedIdx、state.buildPaused；每帧分摊网格重建；HUD 进度条与 [ ] P R 键见 ui.js/input.js）
 - saveGame.js：游戏存档（localStorage 单槽 mcweb.save.v1，结构对齐本目录 snapshot.js）：世界方块 base64 + 玩家/模式/时间/出生点；main.js 启动时 loadGame 优先于生成新世界，自动存档 30s+页面隐藏兜底；改存档字段需同步 SAVE_VERSION 版本号
