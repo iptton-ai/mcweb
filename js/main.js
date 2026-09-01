@@ -24,7 +24,7 @@ import { updateDayNightCycle } from './daynight.js';
 import { updateHighlight } from './highlight.js';
 import { updateBuild } from './buildQueue.js';
 import { resetCamMode } from './cameraRig.js';
-import { deleteSave, hasSave, initAutoSave, loadGame, saveGame, saveTimeText } from './saveGame.js';
+import { initSaves, deleteSave, listSaves, loadGame, saveGame, savedAtText, initAutoSave } from './saveGame.js';
 
 // ==================== 游戏循环 ====================
 let lastTime = 0;
@@ -174,16 +174,46 @@ function freshWorld() {
     initRedstone();
 }
 
-// 放弃当前世界与存档，按所选模式开新世界
-function startNewWorld(mode, tip) {
-    deleteSave();
+// 清掉只存在于内存的瞬时实体（怪物/掉落物/点燃的TNT），切世界（读档/重开）时调用
+function clearTransientEntities() {
+    for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
+    for (const it of state.droppedItems) scene.remove(it.mesh);
+    state.droppedItems.length = 0;
+    state.tntEntities.length = 0; // TNT 实体无独立网格（引用世界方块），直接清即可
+}
+
+// 放弃当前世界与存档，按所选模式开新世界（slot 省略 = 覆盖当前槽）
+function startNewWorld(mode, tip, slot = state.saveSlot) {
+    state.saveSlot = slot;
     resetCamMode(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
     freshWorld();
-    // 清掉旧世界残留的怪物（网格与实体一起移除，避免残留场景）
-    for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
+    // 清掉旧世界残留的怪物/掉落物/点燃的TNT
+    clearTransientEntities();
     setGameMode(mode);
+    // 新世界立即写入槽位：中途关页面不残留旧档，槽位列表即时更新
+    saveGame();
     setState('playing');
     showTooltip(tip);
+}
+
+// 首屏切换到指定槽位的世界：当前世界先兜底保存，清瞬时实体后读档进入
+function loadSlot(slot) {
+    if (slot === state.saveSlot) {
+        // 启动时已读入该槽世界（或已是当前世界），直接进入
+        setState('playing');
+        showTooltip('📂 已读取存档，欢迎回来');
+        return;
+    }
+    saveGame(); // 旧世界进度兜底（失败也继续切换，最近一次自动存档仍在）
+    resetCamMode();
+    clearTransientEntities();
+    if (!loadGame(slot)) {
+        showTooltip('⚠️ 该槽位存档无法读取');
+        return;
+    }
+    initRedstone(); // 重算供能网络与门/TNT 边沿基线（loadGame 不做红石恢复）
+    setState('playing');
+    showTooltip(`📂 已切换到世界 ${slot + 1}`);
 }
 
 // 暂停菜单里「开新世界」是危险操作：第一次点击只做警示并高亮按钮文案，再点一次才执行
@@ -205,27 +235,110 @@ function confirmNewWorld(btnId) {
     return false;
 }
 
-// 暂停菜单 / 首屏文案：暂停态以「回到游戏」为主操作；文案随状态每次显示时刷新
+// 暂停菜单 / 首屏文案：首屏以槽位列表为主操作（管所有世界），暂停态只管当前世界（隐藏列表避免游玩中换槽）
 function refreshMenuTexts() {
     const pause = getUIState() === 'pause';
-    const btnContinue = document.getElementById('btn-continue');
-    btnContinue.style.display = '';
-    const desc = pause
-        ? '回到当前世界 · 每 30 秒自动存档'
-        : (hasSave() ? `上次保存：${saveTimeText() || '未知时间'}` : '读取上次保存的世界');
-    btnContinue.innerHTML =
-        `<span class="mode-icon">${pause ? '▶' : '📂'}</span>${pause ? '回到游戏' : '继续游戏'}` +
-        `<span class="mode-desc">${desc}</span>`;
-    if (!pause && !hasSave()) btnContinue.style.display = 'none';
+    document.getElementById('btn-continue').style.display = pause ? '' : 'none';
+    document.getElementById('slot-list').style.display = pause ? 'none' : '';
     document.querySelector('#start-screen .click-hint').textContent = pause
         ? '🖱 点击空白处回到游戏'
         : '🖱 点击空白处可直接进入当前世界';
+    // 模式按钮 = 在当前槽重开新世界（暂停态需二次确认）
+    const curMeta = listSaves()[state.saveSlot];
+    const reopenDesc = curMeta
+        ? `覆盖世界 ${state.saveSlot + 1} · 重开新世界`
+        : `在槽位 ${state.saveSlot + 1} 开新世界`;
     document.querySelector('#btn-creative .mode-desc').textContent = pause
         ? '放弃当前存档 · 重开新世界'
-        : (hasSave() ? '放弃当前存档 · 开新世界' : '无限方块 · 按 F 自由飞行 · 不会受伤');
+        : reopenDesc;
     document.querySelector('#btn-survival .mode-desc').textContent = pause
         ? '放弃当前存档 · 重开新世界'
-        : (hasSave() ? '放弃当前存档 · 开新世界' : '有生命值 · 夜晚会刷出怪物袭击');
+        : reopenDesc;
+    if (!pause) renderSlotList();
+}
+
+// 首屏槽位列表：有档槽点击进入，空槽选模式开新世界，✕ 删除（二次确认）
+let delArm = null; // 删除确认状态：待确认的槽位号
+function renderSlotList() {
+    const list = document.getElementById('slot-list');
+    if (!list) return;
+    const metas = listSaves();
+    list.innerHTML = '';
+    delArm = null;
+    metas.forEach((meta, i) => {
+        const row = document.createElement('div');
+        row.className = 'slot-row' + (i === state.saveSlot ? ' current' : '');
+        if (meta) {
+            const icon = meta.gameMode === GameModes.SURVIVAL ? '⚔️' : '🏗️';
+            row.innerHTML =
+                `<span class="slot-icon">${icon}</span>` +
+                `<span class="slot-info"><span class="slot-name">世界 ${i + 1}${i === state.saveSlot ? ' · 当前' : ''}</span>` +
+                `<span class="slot-time">上次保存：${savedAtText(meta.savedAt) || '未知时间'}</span></span>` +
+                `<button class="slot-del" title="删除该存档">✕</button>`;
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
+                loadSlot(i);
+            });
+            row.querySelector('.slot-del').addEventListener('click', (e) => {
+                e.stopPropagation();
+                confirmDeleteSlot(i, row);
+            });
+        } else {
+            row.classList.add('empty');
+            row.innerHTML =
+                `<span class="slot-icon">＋</span>` +
+                `<span class="slot-info"><span class="slot-name">空槽位</span>` +
+                `<span class="slot-time">开一个新世界</span></span>` +
+                `<span class="slot-actions">` +
+                `<button class="slot-start" data-mode="${GameModes.CREATIVE}">🏗️ 建造</button>` +
+                `<button class="slot-start" data-mode="${GameModes.SURVIVAL}">⚔️ 生存</button></span>`;
+            row.querySelectorAll('.slot-start').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const survival = btn.dataset.mode === GameModes.SURVIVAL;
+                    const tip = survival
+                        ? `⚔️ 新世界 ${i + 1} · 生存模式：小心夜晚的怪物！`
+                        : `🏗️ 新世界 ${i + 1} · 建造模式：按 F 飞行，M 切换模式`;
+                    startNewWorld(btn.dataset.mode, tip, i);
+                });
+            });
+        }
+        list.appendChild(row);
+    });
+}
+
+// 删除槽位是危险操作：第一次点 ✕ 只做警示，再点一次才执行（4 秒后自动撤销）
+function confirmDeleteSlot(i, row) {
+    if (delArm === i) {
+        delArm = null;
+        deleteSave(i);
+        showTooltip(`🗑️ 已删除世界 ${i + 1} 的存档`);
+        // 删除的是当前槽：内存世界仍指向已删数据，切到别的有档槽（否则重生成为新世界），
+        // 避免自动存档把已删的旧世界写回复活的槽位
+        if (i === state.saveSlot) {
+            const next = listSaves().findIndex((m) => m);
+            resetCamMode();
+            clearTransientEntities();
+            if (next >= 0 && loadGame(next)) {
+                initRedstone();
+            } else {
+                freshWorld(); // 内部已重置红石基线；空槽当前化，首次保存时落槽
+                state.saveSlot = i;
+            }
+        }
+        renderSlotList();
+        refreshMenuTexts();
+        return;
+    }
+    delArm = i;
+    row.classList.add('confirm-del');
+    row.querySelector('.slot-del').textContent = '确认删除？';
+    setTimeout(() => {
+        if (delArm === i) {
+            delArm = null;
+            renderSlotList();
+        }
+    }, 4000);
 }
 
 function init() {
@@ -241,7 +354,8 @@ function init() {
     // 动态背景配乐（异步加载 assets/audio，音频上下文随用户手势解锁）
     initBGM();
 
-    // 有存档则恢复世界与玩家，否则生成新世界
+    // 初始化存档（旧单槽自动迁入槽 0 + 槽位索引），读取上次游玩槽位的世界，失败则生成新世界
+    initSaves();
     if (!loadGame()) {
         freshWorld();
     }
@@ -277,12 +391,11 @@ function init() {
         if (!confirmNewWorld('btn-survival')) return;
         startNewWorld(GameModes.SURVIVAL, '⚔️ 新世界 · 生存模式：小心夜晚的怪物！');
     });
-    // 继续游戏（首屏）/ 回到游戏（暂停菜单）：世界已就绪，直接进入
+    // 回到游戏（仅暂停态显示；首屏的继续游戏由槽位列表承担）
     document.getElementById('btn-continue').addEventListener('click', (e) => {
         e.stopPropagation();
-        const fromPause = getUIState() === 'pause';
         setState('playing');
-        showTooltip(fromPause ? '▶ 回到游戏' : '📂 已读取存档，欢迎回来');
+        showTooltip('▶ 回到游戏');
     });
     // 手动保存：停留在菜单，方便存完直接关页面
     document.getElementById('btn-save').addEventListener('click', (e) => {

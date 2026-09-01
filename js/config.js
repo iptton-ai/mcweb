@@ -118,6 +118,8 @@ export const BUILD_REBUILDS_PER_FRAME = 4;
 // ---- 存档（见 js/saveGame.js）----
 // 自动存档间隔（秒）；页面隐藏/关闭时也会兜底存一次
 export const SAVE_AUTOSAVE_SEC = 30;
+// 存档槽数量：每槽一个独立世界（localStorage key mcweb.save.v1.slotN + 索引 mcweb.save.index）
+export const SAVE_SLOTS = 6;
 
 export const GameModes = { CREATIVE: 'creative', SURVIVAL: 'survival' };
 

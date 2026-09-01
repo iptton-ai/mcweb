@@ -206,7 +206,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: safe center; /* 小窗口内容超高时可滚动，避免上下两端裁切 */
+            overflow-y: auto;
             cursor: pointer;
             transition: opacity 0.5s;
         }
@@ -447,6 +448,104 @@
             border-color: #a5e87a;
             background: rgba(70, 100, 50, 0.95);
         }
+        /* 存档槽列表（首屏，多存档位）：两列网格，全部槽位一屏可见；
+           flex:none 防止被 flex 布局压扁（高度不够时由 #start-screen 整体滚动） */
+        #slot-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 600px;
+            max-width: 92vw;
+            flex: none;
+            margin-bottom: 16px;
+        }
+        .slot-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(40, 40, 66, 0.9);
+            border: 2px solid #5a5a7a;
+            border-radius: 10px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #fff;
+            text-align: left;
+        }
+        .slot-row:hover {
+            border-color: #7ec850;
+            background: rgba(60, 70, 90, 0.95);
+        }
+        .slot-row.current {
+            border-color: #7ec850;
+        }
+        .slot-row .slot-icon {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+            flex: none;
+        }
+        .slot-row .slot-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .slot-row .slot-name {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .slot-row .slot-time {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .slot-row .slot-del {
+            background: transparent;
+            border: none;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            opacity: 0;
+            transition: opacity 0.15s;
+            flex: none;
+        }
+        .slot-row:hover .slot-del,
+        .slot-row.confirm-del .slot-del {
+            opacity: 1;
+        }
+        .slot-row .slot-del:hover,
+        .slot-row.confirm-del .slot-del {
+            color: #ff6b5a;
+        }
+        .slot-row .slot-actions {
+            display: flex;
+            gap: 6px;
+            flex: none;
+            margin-left: auto;
+        }
+        .slot-row .slot-start {
+            background: rgba(60, 70, 90, 0.9);
+            color: #fff;
+            border: 1px solid #5a5a7a;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .slot-row .slot-start:hover {
+            border-color: #7ec850;
+        }
         .save-btn {
             background: rgba(40, 40, 66, 0.9);
             color: #fff;
@@ -504,10 +603,12 @@
     <div id="start-screen">
         <h1>⛏ 我的世界</h1>
         <div class="subtitle">网页复刻版</div>
+        <!-- 存档槽列表（首屏，多存档位）：JS 动态渲染；暂停态隐藏，仅显示回到游戏 -->
+        <div id="slot-list"></div>
         <div id="continue-row">
             <button class="mode-btn continue" id="btn-continue" style="display: none">
-                <span class="mode-icon">📂</span>继续游戏
-                <span class="mode-desc" id="continue-desc">读取上次保存的世界</span>
+                <span class="mode-icon">▶</span>回到游戏
+                <span class="mode-desc">回到当前世界 · 每 30 秒自动存档</span>
             </button>
         </div>
         <div id="mode-select">

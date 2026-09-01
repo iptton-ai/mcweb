@@ -102,7 +102,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 - redstone.js：有状态方块「红石组」（红石粉/红石火把/按钮/压力板/拉杆/红石灯，ID 编码见 config.js 的 DUST_BASE 注释）：信号源(15级)→红石粉布线(每格-1)→负载（红石灯/门/TNT）；红石火把=反相器（挂靠方块被充能则熄灭，延迟 0.1s 可做时钟）；放置 placeRedstone、网络重算 updateRedstoneNetwork、每帧 updateRedstoneTick（按钮/火把/压力板）
 - chunk.js：区块网格 rebuildChunk(cx,cz)/updateChunkMeshes()，isSolid/isTransparent/isCustomMesh，火把光源，火把/花/门的独立道具网格 getPropMesh，单格道具刷新 refreshPropAt
 - buildQueue.js：AI 施工队列（建造渐进放置，速度档/暂停在 state.buildSpeedIdx、state.buildPaused；每帧分摊网格重建；HUD 进度条与 [ ] P R 键见 ui.js/input.js）
-- saveGame.js：游戏存档（localStorage 单槽 mcweb.save.v1，结构对齐本目录 snapshot.js）：世界方块 base64 + 玩家/模式/时间/出生点；main.js 启动时 loadGame 优先于生成新世界，自动存档 30s+页面隐藏兜底；改存档字段需同步 SAVE_VERSION 版本号
+- saveGame.js：游戏存档（localStorage 多槽：每槽 key mcweb.save.v1.slotN + 轻量索引 mcweb.save.index，槽数 config.SAVE_SLOTS，当前槽 state.saveSlot，旧单槽 mcweb.save.v1 自动迁入槽 0）：每槽一个独立世界（方块 RLE 压缩 base64，enc:'rle'/'raw'，字段对齐本目录 snapshot.js）+ 玩家/模式/时间/出生点；main.js 启动时 initSaves→loadGame 优先于生成新世界，自动存档 30s+页面隐藏兜底写当前槽；改存档字段需同步 SAVE_VERSION 版本号
 - textures.js：Canvas 程序化纹理。tiles 表（type→top/side/bottom 的 tile 索引）+ drawFunctions（按索引绘制）+ blockUVs；图集 atlasSize=5（5×5=25 格、每格 16px），tile 索引 0..19 已占用，20..24 空闲
 - interaction.js：breakBlock/placeBlock/raycastBlocks（破坏/放置/射线拾取）
 - playerPhysics.js：移动、碰撞、相机；playerLife.js：生命、死亡重生、掉落物

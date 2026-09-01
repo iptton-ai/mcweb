@@ -28,6 +28,7 @@ export const state = {
         inventory: {}, // 生存模式物品计数：blockType -> 数量（创造模式不使用）
     },
     gameMode: GameModes.CREATIVE,
+    saveSlot: 0, // 当前游玩的存档槽位（0..SAVE_SLOTS-1，读写均指向该槽，见 js/saveGame.js）
     enemies: [],
     torchLights: new Map(), // "x,y,z" -> PointLight
     droppedItems: [],
