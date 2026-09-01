@@ -9,8 +9,8 @@ import { isSolid } from './chunk.js';
 import { getBlock } from './world.js';
 import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { updateHealthUI } from './playerLife.js';
-import { closeInventory } from './input.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
+import { setState } from './uiModal.js';
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -73,7 +73,8 @@ export function updateHotbar() {
             slot.appendChild(countSpan);
             if (count === 0) slot.classList.add('empty');
         }
-        slot.addEventListener('click', () => {
+        slot.addEventListener('click', (e) => {
+            e.stopPropagation(); // 不触发「点击重新锁定指针」兜底
             state.player.selectedSlot = index;
             updateHotbar();
             showTooltip(BlockInfo[blockType].name);
@@ -114,7 +115,7 @@ export function buildInventoryGrid() {
         slot.addEventListener('click', () => {
             state.player.selectedSlot = HotbarBlocks.indexOf(blockType);
             updateHotbar();
-            closeInventory();
+            setState('playing'); // 选中方块后关闭背包（状态机负责恢复指针锁定）
             showTooltip(BlockInfo[blockType].name);
         });
         grid.appendChild(slot);
@@ -163,7 +164,8 @@ export function updateDebugInfo() {
 // R 键用 MediaRecorder 把画布录成 webm 下载，方便记录 AI 建造过程。
 
 const BUILD_WIDGET_STYLE = `
-#build-widget{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:60;
+#build-widget{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:120;
+/* z-index 120：盖过开始界面(100)/死亡界面(90)——AI 施工时在暂停菜单或死亡界面里也能暂停、调速、传送 */
   display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;
   background:rgba(20,20,34,.85);border:2px solid #4a4a6a;color:#e8e8f4;
   font-size:12.5px;user-select:none;white-space:nowrap;}

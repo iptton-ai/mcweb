@@ -44,7 +44,7 @@ export const state = {
     spawn: { x: WORLD_WIDTH / 2, y: 0, z: WORLD_DEPTH / 2 },
     enemySpawnTimer: 0, // 刷怪游戏刻累积计时器
     viewMode: 0, // 0=第一人称 1=第三人称(背后)
-    assistantOpen: false, // AI 助手会话面板是否打开（input.js 用于抑制指针锁定相关行为）
+    assistantOpen: false, // AI 助手会话面板是否打开（由 uiModal.js 状态机维护的镜像字段）
     buildSpeedIdx: BUILD_DEFAULT_SPEED_IDX, // 施工速度档位（BUILD_SPEED_LEVELS 下标，[ ] 键可调）
     buildPaused: false, // 施工暂停（录制时可暂停调整机位）
 };

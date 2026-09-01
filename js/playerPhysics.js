@@ -9,21 +9,24 @@ import { isSolid } from './chunk.js';
 import { playerMesh } from './entities.js';
 import { keys } from './input.js';
 import { showTooltip } from './ui.js';
+import { isGameActive } from './uiModal.js';
 
 // ==================== 玩家物理 ====================
 export function updatePlayerPhysics(dt) {
     const p = state.player;
     const speed = p.flying ? FLY_SPEED : WALK_SPEED;
 
-    // 移动输入
+    // 移动输入（仅 playing 状态读取按键：暂停/背包/死亡时世界照常运行但玩家不响应按键；
+    // AI 助手面板打开不影响——面板开着也能用键盘继续玩，聊天框打字由输入焦点天然隔离）
+    const k = isGameActive() ? keys : {};
     const forward = new THREE.Vector3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
     const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
     const moveDir = new THREE.Vector3(0, 0, 0);
 
-    if (keys['KeyW']) moveDir.add(forward);
-    if (keys['KeyS']) moveDir.sub(forward);
-    if (keys['KeyA']) moveDir.sub(right);
-    if (keys['KeyD']) moveDir.add(right);
+    if (k['KeyW']) moveDir.add(forward);
+    if (k['KeyS']) moveDir.sub(forward);
+    if (k['KeyA']) moveDir.sub(right);
+    if (k['KeyD']) moveDir.add(right);
     if (moveDir.length() > 0) moveDir.normalize();
 
     const targetVx = moveDir.x * speed;
@@ -36,13 +39,13 @@ export function updatePlayerPhysics(dt) {
 
     if (p.flying) {
         p.vy = 0;
-        if (keys['Space']) p.vy = FLY_SPEED;
-        if (keys['ShiftLeft'] || keys['ShiftRight']) p.vy = -FLY_SPEED;
+        if (k['Space']) p.vy = FLY_SPEED;
+        if (k['ShiftLeft'] || k['ShiftRight']) p.vy = -FLY_SPEED;
         p.onGround = false;
     } else {
         p.vy += GRAVITY * dt;
         p.vy = Math.max(p.vy, -40);
-        if (keys['Space'] && p.onGround) {
+        if (k['Space'] && p.onGround) {
             p.vy = JUMP_VELOCITY;
             p.onGround = false;
         }

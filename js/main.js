@@ -2,7 +2,7 @@
 
 import { BlockTypes, CHUNK_SIZE, GameModes, MAX_HEALTH, PLAYER_EYE_HEIGHT, TICK_RATE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
-import { camera, canvas, renderer, scene } from './engine.js';
+import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
 import { isSolid, rebuildChunk, updateChunkMeshes } from './chunk.js';
 import { breakBlock, placeBlock } from './interaction.js';
@@ -12,7 +12,8 @@ import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
 import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
-import { hideStartScreen, mouseDown, mouseLocked, mouseMoveDelta, setupInput } from './input.js';
+import { mouseDown, mouseMoveDelta, setupInput } from './input.js';
+import { getUIState, initUIModal, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
 import { updateDayNightCycle } from './daynight.js';
 import { updateHighlight } from './highlight.js';
@@ -38,8 +39,8 @@ function gameLoop(timestamp) {
         state.fpsTimer = 0;
     }
 
-    // 视角更新
-    if (mouseLocked && !state.player.inventoryOpen) {
+    // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）
+    if (mouseLocked) {
         const sensitivity = 0.0022;
         state.player.yaw -= mouseMoveDelta.x * sensitivity;
         state.player.pitch -= mouseMoveDelta.y * sensitivity;
@@ -50,7 +51,7 @@ function gameLoop(timestamp) {
     }
 
     // 连续破坏/放置
-    if (mouseLocked && !state.player.inventoryOpen) {
+    if (mouseLocked) {
         if (mouseDown.left) {
             accumulator += dt;
             if (accumulator > TICK_RATE) {
@@ -160,12 +161,56 @@ function startNewWorld(mode, tip) {
     // 清掉旧世界残留的怪物（网格与实体一起移除，避免残留场景）
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
     setGameMode(mode);
-    hideStartScreen();
-    canvas.requestPointerLock();
+    setState('playing');
     showTooltip(tip);
 }
 
+// 暂停菜单里「开新世界」是危险操作：第一次点击只做警示并高亮按钮文案，再点一次才执行
+let newWorldArmed = null;
+function confirmNewWorld(btnId) {
+    if (getUIState() !== 'pause') return true; // 首屏没有可放弃的对局，直接进入
+    if (newWorldArmed === btnId) {
+        newWorldArmed = null;
+        return true;
+    }
+    newWorldArmed = btnId;
+    document.querySelector(`#${btnId} .mode-desc`).textContent = '⚠️ 再点一次：放弃当前存档并重开新世界';
+    setTimeout(() => {
+        if (newWorldArmed === btnId) {
+            newWorldArmed = null;
+            refreshMenuTexts();
+        }
+    }, 4000);
+    return false;
+}
+
+// 暂停菜单 / 首屏文案：暂停态以「回到游戏」为主操作；文案随状态每次显示时刷新
+function refreshMenuTexts() {
+    const pause = getUIState() === 'pause';
+    const btnContinue = document.getElementById('btn-continue');
+    btnContinue.style.display = '';
+    const desc = pause
+        ? '回到当前世界 · 每 30 秒自动存档'
+        : (hasSave() ? `上次保存：${saveTimeText() || '未知时间'}` : '读取上次保存的世界');
+    btnContinue.innerHTML =
+        `<span class="mode-icon">${pause ? '▶' : '📂'}</span>${pause ? '回到游戏' : '继续游戏'}` +
+        `<span class="mode-desc">${desc}</span>`;
+    if (!pause && !hasSave()) btnContinue.style.display = 'none';
+    document.querySelector('#start-screen .click-hint').textContent = pause
+        ? '🖱 点击空白处回到游戏'
+        : '🖱 点击空白处可直接进入当前世界';
+    document.querySelector('#btn-creative .mode-desc').textContent = pause
+        ? '放弃当前存档 · 重开新世界'
+        : (hasSave() ? '放弃当前存档 · 开新世界' : '无限方块 · 按 F 自由飞行 · 不会受伤');
+    document.querySelector('#btn-survival .mode-desc').textContent = pause
+        ? '放弃当前存档 · 重开新世界'
+        : (hasSave() ? '放弃当前存档 · 开新世界' : '有生命值 · 夜晚会刷出怪物袭击');
+}
+
 function init() {
+    // UI 模态状态机最先初始化（统一管理浮层显隐与指针锁）
+    initUIModal();
+
     // 初始化粒子
     initParticles();
 
@@ -193,45 +238,44 @@ function init() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 开始界面：模式选择按钮（选模式 = 放弃当前存档开新世界）
+    // 开始界面 / 暂停菜单：模式选择按钮（暂停态下开新世界需二次确认）
     document.getElementById('btn-creative').addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!confirmNewWorld('btn-creative')) return;
         startNewWorld(GameModes.CREATIVE, '🏗️ 新世界 · 建造模式：按 F 飞行，M 切换模式');
     });
     document.getElementById('btn-survival').addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!confirmNewWorld('btn-survival')) return;
         startNewWorld(GameModes.SURVIVAL, '⚔️ 新世界 · 生存模式：小心夜晚的怪物！');
     });
-    // 继续游戏：世界在启动时已从存档恢复，直接进入
+    // 继续游戏（首屏）/ 回到游戏（暂停菜单）：世界已就绪，直接进入
     document.getElementById('btn-continue').addEventListener('click', (e) => {
         e.stopPropagation();
-        hideStartScreen();
-        canvas.requestPointerLock();
-        showTooltip('📂 已读取存档，欢迎回来');
+        const fromPause = getUIState() === 'pause';
+        setState('playing');
+        showTooltip(fromPause ? '▶ 回到游戏' : '📂 已读取存档，欢迎回来');
     });
-    // 手动保存：停留在开始界面，方便存完直接关页面
+    // 手动保存：停留在菜单，方便存完直接关页面
     document.getElementById('btn-save').addEventListener('click', (e) => {
         e.stopPropagation();
         showTooltip(saveGame() ? '💾 进度已保存，可放心关闭页面' : '⚠️ 存档失败：浏览器存储空间不足');
     });
     document.getElementById('start-screen').addEventListener('click', () => {
         // 以当前世界进入（可能是读档恢复的，也可能是新世界）
-        hideStartScreen();
-        canvas.requestPointerLock();
-        showTooltip('WASD 移动 | 左键破坏/攻击 | 右键放置');
+        const fromTitle = getUIState() === 'title';
+        setState('playing');
+        if (fromTitle) showTooltip('WASD 移动 | 左键破坏/攻击 | 右键放置');
     });
     document.getElementById('respawn-btn').addEventListener('click', () => {
         respawn();
     });
 
-    // 存在存档时：显示「继续游戏」入口，并把模式按钮标注为开新世界
-    if (hasSave()) {
-        document.getElementById('btn-continue').style.display = '';
-        const t = saveTimeText();
-        if (t) document.getElementById('continue-desc').textContent = `上次保存：${t}`;
-        document.querySelector('#btn-creative .mode-desc').textContent = '放弃当前存档 · 开新世界';
-        document.querySelector('#btn-survival .mode-desc').textContent = '放弃当前存档 · 开新世界';
-    }
+    // 菜单文案随状态刷新（首次载入 + 每次进入 title/pause 时）
+    refreshMenuTexts();
+    onUIStateChange((prev, next) => {
+        if (next === 'pause' || next === 'title') refreshMenuTexts();
+    });
 
     // 自动存档（定时 + 页面隐藏/关闭兜底）
     initAutoSave();

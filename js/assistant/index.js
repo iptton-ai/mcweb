@@ -18,6 +18,9 @@ async function probeFileApi() {
             return true;
         }
     } catch { /* 忽略 */ }
+    // 静态托管上这次探测必然 404，浏览器会在控制台打一行网络日志——JS 无法抑制，
+    // 只能跟一句说明防止误读为故障；世界建造工具不依赖文件 API，不受影响。
+    console.info('[AI助手] 文件 API 不可用（静态托管属预期）：源码改码/热重载停用，世界建造不受影响');
     setFileApiOnline(false);
     return false;
 }

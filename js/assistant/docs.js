@@ -79,7 +79,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 - interaction.js：breakBlock/placeBlock/raycastBlocks（破坏/放置/射线拾取）
 - playerPhysics.js：移动、碰撞、相机；playerLife.js：生命、死亡重生、掉落物
 - entities.js：僵尸生成与 AI、玩家第三人称模型；tnt.js：TNT；particles.js：粒子；daynight.js：昼夜光照；highlight.js：选中框；audio.js：WebAudio 音效
-- input.js：键鼠输入与指针锁定（新键位写在 setupInput 的 keydown，需判断 mouseLocked，用 e.code，避开浏览器默认键并 preventDefault）
+- input.js：键鼠输入（指针锁定与浮层状态由 uiModal.js 状态机管理；新键位写在 setupInput 的 keydown，游戏键用 isPlaying() 门控、施工控制键用状态判断，打字中的输入框用 isTypingTarget(e) 让路；用 e.code，避开浏览器默认键并 preventDefault）
 - ui.js：物品栏/HUD/模式切换；engine.js：three 场景/相机/渲染器；main.js：装配与主循环 gameLoop
 - js/assistant/*：本助手自身代码，除非用户明确要求，不要修改；*.bak* 为历史备份，禁止读写
 
@@ -87,7 +87,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS）、WORLD
 1) config.js：BlockTypes 加 ID（下一个可用整数）、BlockInfo 加 {name, solid, transparent, color, 按需 customMesh:true}、按需加入 HotbarBlocks（物品栏自动渲染）；
 2) textures.js：tiles 数组加 {type, top, side, bottom, name}，drawFunctions 加对应 tile 索引的绘制函数（优先用空闲索引 20..24；若必须扩 atlasSize 注意所有 tile 索引按 atlasSize 换行，会整体平移 UV，务必同步检查）；
 3) chunk.js：非标准立方体（如门）设 BlockInfo.customMesh=true 并在 getPropMesh 加网格分支（参考 TORCH/FLOWER）；状态切换（开/关）用两个 BlockType 或修改场景对象后 rebuildChunk；
-4) 交互（右键开关）：input.js 或 interaction.js 加逻辑；若新键位，注意 mouseLocked 判定。
+4) 交互（右键开关）：input.js 或 interaction.js 加逻辑；若新键位，注意用 isPlaying() 门控。
 配方② 新增按键/交互：input.js keydown 中加 e.code 分支（参考 KeyF 飞行开关）。
 配方③ 调整刷怪/物理参数：只改 config.js（常量集中管理）。
 

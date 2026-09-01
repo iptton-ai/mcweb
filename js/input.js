@@ -1,33 +1,59 @@
 // ==================== input.js ====================
+// 键鼠输入。门控原则：游戏键只问「UI 状态机是否 playing」（uiModal.js）与
+// 「焦点是否在输入框」，不再看指针是否锁定；施工控制键（[ ] P G R）在除首屏外的
+// 任何状态都可用，便于 AI 施工时在暂停菜单/背包/助手面板/死亡界面里控制建造。
 
 import { BlockInfo, HotbarBlocks } from './config.js';
 import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
 import { breakBlock, placeBlock } from './interaction.js';
 import { cycleViewMode } from './playerPhysics.js';
-import { adjustBuildSpeed, getBuildStatus, speedText, toggleBuildPaused } from './buildQueue.js';
+import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { buildInventoryGrid, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
+import { getUIState, isAssistantVisible, isPlaying, isTypingTarget, onUIStateChange, requestLock, setState } from './uiModal.js';
 
-// ==================== 输入处理 ====================
+// ==================== 输入状态 ====================
 export const keys = {};
 
 export let mouseDown = { left: false, right: false };
 
 export let mouseMoveDelta = { x: 0, y: 0 };
 
-export let mouseLocked = false;
+// 离开 playing / 窗口失焦时清空按键与鼠标按住态，防止角色粘滞移动
+export function clearKeys() {
+    for (const k in keys) keys[k] = false;
+    mouseDown.left = false;
+    mouseDown.right = false;
+}
 
 export function setupInput() {
+    // 任何 UI 状态切换都清空输入（防止开关菜单/面板的瞬间粘滞移动）
+    onUIStateChange(() => clearKeys());
+
     document.addEventListener('keydown', (e) => {
+        if (isTypingTarget(e)) return; // 在助手聊天/设置等输入框打字时，游戏键全部让路
         keys[e.code] = true;
-        if (e.code === 'Space') e.preventDefault();
-        if (e.code === 'Escape' && state.player.inventoryOpen) {
-            closeInventory();
+
+        const st = getUIState();
+        if (e.code === 'Space' && st === 'playing') e.preventDefault();
+
+        // Esc：指针锁定时浏览器截获 Esc（页面收不到 keydown），这里只处理浮层状态下的 Esc
+        if (e.code === 'Escape') {
+            if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
+            return;
         }
-        if (e.code === 'KeyE' && mouseLocked) {
-            toggleInventory();
+        // E：开关背包（开着背包也能按 E 关闭）
+        if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
+            setState(st === 'playing' ? 'inventory' : 'playing');
+            return;
         }
-        if (e.code === 'KeyF' && mouseLocked) {
+        if (st !== 'playing') {
+            // 暂停菜单/背包/助手面板/死亡界面里：只放行 AI 施工控制键
+            if (st !== 'title') handleBuildKeys(e);
+            return;
+        }
+        // ---- 以下为 playing 状态的游戏键 ----
+        if (e.code === 'KeyF') {
             if (isCreative()) {
                 state.player.flying = !state.player.flying;
                 state.player.vy = 0;
@@ -36,32 +62,14 @@ export function setupInput() {
                 showTooltip('⚠️ 只有建造模式才能飞行（按 M 切换）');
             }
         }
-        if (e.code === 'KeyM' && mouseLocked) {
+        if (e.code === 'KeyM') {
             toggleGameMode();
         }
-        if ((e.code === 'F5' || e.code === 'KeyV') && mouseLocked) {
+        if (e.code === 'F5' || e.code === 'KeyV') {
             e.preventDefault(); // 阻止 F5 刷新页面
             cycleViewMode();
         }
-        // 施工速度/暂停/录像（AI 渐进建造时用，键位仅在指针锁定时生效）
-        if (e.code === 'BracketLeft' && mouseLocked) {
-            adjustBuildSpeed(-1);
-            showTooltip(`🏗️ 施工速度：${speedText()}`);
-        }
-        if (e.code === 'BracketRight' && mouseLocked) {
-            adjustBuildSpeed(1);
-            showTooltip(`🏗️ 施工速度：${speedText()}`);
-        }
-        if (e.code === 'KeyP' && mouseLocked) {
-            showTooltip(toggleBuildPaused() ? '⏸ 施工已暂停（P 继续）' : '▶ 施工继续');
-        }
-        // G：传送到施工现场（AI 建在远处时快速过去观看）
-        if (e.code === 'KeyG' && mouseLocked) {
-            teleportToBuildSite();
-        }
-        if (e.code === 'KeyR' && mouseLocked) {
-            toggleBuildRecording();
-        }
+        handleBuildKeys(e);
         if (e.code.startsWith('Digit')) {
             const num = parseInt(e.code.replace('Digit', ''));
             if (num >= 1 && num <= 9) {
@@ -75,13 +83,14 @@ export function setupInput() {
         keys[e.code] = false;
     });
 
+    // 窗口失焦/切走时清空按键（alt-tab 后角色不再漂移）
+    window.addEventListener('blur', clearKeys);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) clearKeys();
+    });
+
     canvas.addEventListener('mousedown', (e) => {
-        if (state.assistantOpen) return; // AI 会话面板打开时不响应游戏点击
-        if (!mouseLocked && !state.player.inventoryOpen) {
-            canvas.requestPointerLock();
-            return;
-        }
-        if (state.player.inventoryOpen) return;
+        if (!isPlaying()) return; // 浮层状态与未锁定时不响应；重新锁定统一走下方点击兜底
         if (e.button === 0) {
             mouseDown.left = true;
             breakBlock();
@@ -99,7 +108,7 @@ export function setupInput() {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     canvas.addEventListener('wheel', (e) => {
-        if (!mouseLocked || state.player.inventoryOpen) return;
+        if (!isPlaying()) return;
         const delta = e.deltaY > 0 ? 1 : -1;
         state.player.selectedSlot = (state.player.selectedSlot + delta + HotbarBlocks.length) % HotbarBlocks
             .length;
@@ -108,56 +117,32 @@ export function setupInput() {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!mouseLocked || state.player.inventoryOpen) return;
+        if (!isPlaying()) return;
         mouseMoveDelta.x += e.movementX;
         mouseMoveDelta.y += e.movementY;
     });
 
-    document.addEventListener('pointerlockchange', () => {
-        mouseLocked = document.pointerLockElement === canvas;
-        state.player.mouseLocked = mouseLocked;
-        // 死亡时退出锁定是为了点复活按钮，不要弹开始界面（其 z-index 高于死亡界面会挡住按钮）；
-        // AI 助手面板打开时同理（面板需要鼠标和键盘）
-        if (!mouseLocked && !state.player.inventoryOpen && !state.player.dead && !state.assistantOpen) {
-            showStartScreen();
-        }
-    });
-
     document.addEventListener('click', () => {
-        // 死亡时不要重新锁定指针，否则复活按钮点不到；AI 助手面板打开时同理
-        if (!mouseLocked && !state.player.inventoryOpen && !state.player.dead && !state.assistantOpen) {
-            canvas.requestPointerLock();
-        }
+        // playing 但指针未锁定（如冷却期锁定失败）：任意点击重新锁定。
+        // 助手面板打开时鼠标归面板，不在此抢锁。
+        if (getUIState() === 'playing' && !isAssistantVisible() && !isPlaying()) requestLock();
     });
 }
 
-export function toggleInventory() {
-    state.player.inventoryOpen = !state.player.inventoryOpen;
-    const panel = document.getElementById('inventory-panel');
-    if (state.player.inventoryOpen) {
-        panel.classList.add('open');
-        document.exitPointerLock();
-        buildInventoryGrid();
-    } else {
-        panel.classList.remove('open');
-        canvas.requestPointerLock();
+// AI 施工控制：[ ] 调速 / P 暂停 / G 传送 / R 录像。
+// 不依赖指针锁定：AI 建造时在暂停菜单或助手面板里也能暂停、调速、前往施工现场。
+function handleBuildKeys(e) {
+    if (e.code === 'BracketLeft') {
+        adjustBuildSpeed(-1);
+        showTooltip(`🏗️ 施工速度：${speedText()}`);
+    } else if (e.code === 'BracketRight') {
+        adjustBuildSpeed(1);
+        showTooltip(`🏗️ 施工速度：${speedText()}`);
+    } else if (e.code === 'KeyP') {
+        showTooltip(toggleBuildPaused() ? '⏸ 施工已暂停（P 继续）' : '▶ 施工继续');
+    } else if (e.code === 'KeyG') {
+        teleportToBuildSite();
+    } else if (e.code === 'KeyR') {
+        toggleBuildRecording();
     }
-}
-
-export function closeInventory() {
-    if (state.player.inventoryOpen) {
-        state.player.inventoryOpen = false;
-        document.getElementById('inventory-panel').classList.remove('open');
-        canvas.requestPointerLock();
-    }
-}
-
-export function showStartScreen() {
-    const screen = document.getElementById('start-screen');
-    screen.classList.remove('hidden');
-}
-
-export function hideStartScreen() {
-    const screen = document.getElementById('start-screen');
-    screen.classList.add('hidden');
 }

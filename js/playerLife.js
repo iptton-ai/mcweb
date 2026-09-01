@@ -2,10 +2,11 @@
 
 import { MAX_HEALTH } from './config.js';
 import { isCreative, state } from './state.js';
-import { canvas, scene } from './engine.js';
+import { scene } from './engine.js';
 import { playHitSound } from './audio.js';
 import { killEnemySilent } from './entities.js';
 import { updateHotbar } from './ui.js';
+import { setState } from './uiModal.js';
 
 // ==================== 玩家伤害与重生 ====================
 export function damagePlayer(dmg) {
@@ -28,7 +29,7 @@ export function die() {
     const p = state.player;
     p.dead = true;
     document.getElementById('death-screen').classList.add('visible');
-    document.exitPointerLock();
+    setState('dead'); // 状态机负责解锁指针，且死亡时不会误弹暂停菜单
 }
 
 export function respawn() {
@@ -46,7 +47,7 @@ export function respawn() {
     updateHotbar();
     // 清掉所有怪物
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
-    canvas.requestPointerLock();
+    setState('playing'); // 状态机负责重新锁定指针（失败时显示「点击继续」并自动重试）
 }
 
 export function updateHealthUI() {

@@ -8,8 +8,7 @@ import {
     createSession, deleteSession, getActiveSession, listSessions, setActiveSession,
     autoTitle, touchSession,
 } from './sessions.js';
-import { state } from '../state.js';
-import { canvas } from '../engine.js';
+import { setAssistantVisible, togglePauseMenu } from '../uiModal.js';
 
 // ---------- 样式 ----------
 const STYLE = `
@@ -87,9 +86,10 @@ const STYLE = `
 #ai-settings h3{margin:0;color:#fff;font-size:16px;}
 #ai-settings label{color:#9ab;font-size:12px;display:block;margin-bottom:3px;}
 #ai-settings input[type=text],#ai-settings input[type=password],#ai-settings input[type=number],
-#ai-settings textarea{width:100%;background:#1c1c30;border:2px solid #3d3d5c;border-radius:6px;color:#fff;
+#ai-settings select,#ai-settings textarea{width:100%;background:#1c1c30;border:2px solid #3d3d5c;border-radius:6px;color:#fff;
   padding:7px 9px;font-size:13px;font-family:inherit;outline:none;}
-#ai-settings input:focus,#ai-settings textarea:focus{border-color:#7ec850;}
+#ai-settings select option{background:#1c1c30;color:#fff;}
+#ai-settings input:focus,#ai-settings select:focus,#ai-settings textarea:focus{border-color:#7ec850;}
 #ai-settings textarea{min-height:74px;resize:vertical;line-height:1.5;}
 #ai-settings .row{display:flex;gap:10px;}
 #ai-settings .row>div{flex:1;}
@@ -167,6 +167,21 @@ function scrollBottom() {
     els.messages.scrollTop = els.messages.scrollHeight;
 }
 
+// ---------- LLM 预设服务商 ----------
+// 仅作「快速填入」：选中后回填 API 地址与模型名，输入框仍可自由修改；
+// 打开设置时按当前地址反向匹配高亮预设，对不上就显示「自定义」。
+// 地址均为 OpenAI 兼容 baseUrl（llm.js 自动拼 /chat/completions）。
+const PROVIDER_PRESETS = [
+    { id: 'zhipu', name: '智谱 GLM Coding Plan', baseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
+      models: ['glm-4.6', 'glm-4.5', 'glm-4.5-air'] },
+    { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1',
+      models: ['deepseek-chat', 'deepseek-reasoner'] },
+    { id: 'kimi', name: 'Kimi Code Plan（月之暗面）', baseUrl: 'https://api.kimi.com/coding/v1',
+      models: ['kimi-k2-turbo-preview', 'kimi-k2-0905-preview', 'kimi-k2-thinking'] },
+    { id: 'ollama', name: 'Ollama（本机）', baseUrl: 'http://localhost:11434/v1',
+      models: ['qwen3:8b', 'llama3.1:8b', 'deepseek-r1:8b'] },
+];
+
 // ---------- DOM 构建 ----------
 function buildDom() {
     const style = document.createElement('style');
@@ -204,18 +219,22 @@ function buildDom() {
       </footer>
       <div id="ai-settings" class="hidden">
         <h3>⚙️ LLM 设置</h3>
+        <div><label>预设服务商（快速填入地址与模型，之后仍可手动修改）</label>
+          <select id="ai-set-preset"></select></div>
         <div><label>API 地址（OpenAI 兼容，填到 /v1）</label>
           <input type="text" id="ai-set-baseurl" placeholder="https://api.deepseek.com/v1"></div>
         <div><label>API Key</label>
           <input type="password" id="ai-set-key" placeholder="sk-…"></div>
         <div class="row">
-          <div><label>模型</label><input type="text" id="ai-set-model" placeholder="deepseek-chat"></div>
+          <div><label>模型</label><input type="text" id="ai-set-model" list="ai-model-list" placeholder="deepseek-chat"></div>
           <div><label>温度</label><input type="number" id="ai-set-temp" step="0.1" min="0" max="2"></div>
           <div><label>工具轮数上限</label><input type="number" id="ai-set-iters" step="1" min="1" max="100"></div>
         </div>
+        <datalist id="ai-model-list"></datalist>
         <div><label>附加系统提示词（可选，追加在游戏档案之后）</label>
           <textarea id="ai-set-extra" placeholder="例如：回复尽量简短；建造风格偏好现代简约…"></textarea></div>
         <div class="hint">密钥仅保存在本机 localStorage；LLM 请求由浏览器直连上游接口（需上游允许跨域）。
+        选 Ollama 无需真实 Key，填任意非空值即可（如 ollama）；HTTPS 页面无法直连本机 http 接口。
         文件读写/热重载依赖 server.py（python3 server.py 启动）。</div>
         <div class="ai-settings-actions">
           <button class="ai-btn primary" id="ai-set-save">保存</button>
@@ -262,9 +281,38 @@ function buildDom() {
     });
     // 面板内点击不冒泡到游戏（游戏会抢指针锁定）
     panel.addEventListener('click', (e) => e.stopPropagation());
+
+    // 预设服务商下拉：选中即回填地址与模型名（自定义选项不回填）
+    const presetSel = panel.querySelector('#ai-set-preset');
+    for (const p of PROVIDER_PRESETS) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name}（${p.baseUrl}）`;
+        presetSel.appendChild(opt);
+    }
+    const optCustom = document.createElement('option');
+    optCustom.value = 'custom';
+    optCustom.textContent = '自定义（手动填写）';
+    presetSel.appendChild(optCustom);
+    presetSel.addEventListener('change', () => {
+        const p = PROVIDER_PRESETS.find((x) => x.id === presetSel.value);
+        if (!p) return;
+        panel.querySelector('#ai-set-baseurl').value = p.baseUrl;
+        panel.querySelector('#ai-set-model').value = p.models[0];
+        fillModelSuggestions(p);
+    });
+}
+
+// 模型输入框的下拉候选：跟随所选预设；自定义时给出全部预设模型的并集
+function fillModelSuggestions(preset) {
+    const dl = els.settings.querySelector('#ai-model-list');
+    const models = preset ? preset.models : [...new Set(PROVIDER_PRESETS.flatMap((p) => p.models))];
+    dl.innerHTML = models.map((m) => `<option value="${m}"></option>`).join('');
 }
 
 // ---------- 键盘（捕获阶段，优先于游戏输入） ----------
+// 面板是「不阻塞游戏的侧栏」：只拦截 Esc 与 T，其余按键放行给游戏——
+// AI 建造时面板开着也能用 WASD/E/M/1-9 继续玩；在聊天框打字时由输入焦点天然隔离。
 export function handleKeydown(e) {
     if (els.panel.classList.contains('hidden')) {
         if (e.code === 'KeyT') {
@@ -274,15 +322,15 @@ export function handleKeydown(e) {
         }
         return;
     }
-    // 面板打开：拦截所有按键，避免泄入游戏（WASD/数字/空格等）
-    e.stopPropagation();
     if (e.code === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         if (!els.settings.classList.contains('hidden')) els.settings.classList.add('hidden');
         else if (!els.sessions.classList.contains('hidden')) els.sessions.classList.add('hidden');
-        else closePanel();
+        else togglePauseMenu(); // Esc = 暂停/回到游戏，面板保持打开（z-index 高于菜单）
     } else if (e.code === 'KeyT' && document.activeElement !== els.input) {
         e.preventDefault();
+        e.stopPropagation();
         closePanel();
     }
 }
@@ -290,8 +338,8 @@ export function handleKeydown(e) {
 // ---------- 面板开关 ----------
 function openPanel() {
     els.panel.classList.remove('hidden');
-    stateAssistantOpen(true);
-    document.exitPointerLock?.();
+    // 状态机负责让指针锁让位（鼠标归面板）；游戏状态不受影响，关闭后照常继续
+    setAssistantVisible(true);
     renderAll(getActiveSession());
     updateModelBadge();
     setTimeout(() => els.input.focus(), 50);
@@ -301,30 +349,11 @@ function closePanel() {
     els.panel.classList.add('hidden');
     els.sessions.classList.add('hidden');
     els.settings.classList.add('hidden');
-    stateAssistantOpen(false);
-    resumePointerLock();
-}
-
-// 关面板后立即回到可操作状态：恢复指针锁定（Esc/T/关闭按钮都在用户手势内，锁定请求合法）。
-// 死亡/背包/开始界面打开时不抢焦点，交给原有交互；Chrome 对刚退出的指针锁有约 1 秒
-// 重入冷却，被拒时静默即可——用户随后点一下画面仍会锁定（input.js 的点击兜底）。
-function resumePointerLock() {
-    const startScreen = document.getElementById('start-screen');
-    if (state.player.dead || state.player.inventoryOpen) return;
-    if (startScreen && !startScreen.classList.contains('hidden')) return;
-    try {
-        const req = canvas.requestPointerLock();
-        if (req && typeof req.catch === 'function') req.catch(() => {});
-    } catch { /* 旧浏览器同步抛错则忽略 */ }
+    setAssistantVisible(false); // 面板关闭且处于 playing 时，状态机自动恢复指针锁
 }
 
 function togglePanel() {
     els.panel.classList.contains('hidden') ? openPanel() : closePanel();
-}
-
-// input.js 通过 state.assistantOpen 抑制「松开指针弹开始界面/点击重新锁定」
-function stateAssistantOpen(v) {
-    state.assistantOpen = v;
 }
 
 // ---------- 渲染 ----------
@@ -463,14 +492,23 @@ function newSession() {
 }
 
 // ---------- 设置 ----------
+// 地址按「去掉末尾斜杠」归一后比较，/v1 与 /v1/ 视为同一家
+function matchPreset(baseUrl) {
+    const norm = (u) => (u || '').trim().replace(/\/+$/, '');
+    return PROVIDER_PRESETS.find((p) => norm(p.baseUrl) === norm(baseUrl));
+}
+
 function openSettings() {
     const c = getConfig();
+    const hit = matchPreset(c.baseUrl);
+    els.settings.querySelector('#ai-set-preset').value = hit ? hit.id : 'custom';
     els.settings.querySelector('#ai-set-baseurl').value = c.baseUrl;
     els.settings.querySelector('#ai-set-key').value = c.apiKey;
     els.settings.querySelector('#ai-set-model').value = c.model;
     els.settings.querySelector('#ai-set-temp').value = c.temperature;
     els.settings.querySelector('#ai-set-iters').value = c.maxToolIterations;
     els.settings.querySelector('#ai-set-extra').value = c.extraInstructions || '';
+    fillModelSuggestions(hit);
     els.settings.classList.remove('hidden');
 }
 

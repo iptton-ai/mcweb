@@ -27,7 +27,10 @@ function notifyBuildStart(label) {
 let fileApiOnline = false;
 export function setFileApiOnline(v) { fileApiOnline = v; }
 function fileApiHint() {
-    return '本地文件 API 不可用：请停掉 http.server，改用 python3 server.py 启动（它提供文件读写与热加载）。';
+    const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    return local
+        ? '本地文件 API 不可用：请停掉 http.server，改用 python3 server.py 启动（它提供文件读写与热加载）。'
+        : '当前是公网静态部署，源码读写与热重载不可用（安全考虑，公网不开放写文件接口）；世界建造功能不受影响，请继续用世界类工具完成任务。';
 }
 
 // ---------- 通用小工具 ----------
