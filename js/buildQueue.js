@@ -20,7 +20,7 @@ import { getBlock, setBlockSafe } from './world.js';
 const CX_COUNT = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
 const CZ_COUNT = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
 
-// job = { label, ops: [[x,y,z,t],…], total, cursor, applied, skipped[], startedAt, resolve }
+// job = { label, ops: [[x,y,z,t],…], total, cursor, applied, skipped[], startedAt, resolve, bounds }
 // ops 中 t=0（空气）表示清除；调用方负责边界与方块 ID 校验，玩家重叠在逐格应用时再判
 let jobQueue = [];
 let activeJob = null;
@@ -28,6 +28,21 @@ let budgetCarry = 0;                       // 速度积分的小数余额（bps*
 const dirtyChunks = new Set();             // 已写入但网格未重建的区块 key（跨帧分摊重建）
 let finishedJob = null;                    // 刚完成的任务，供 HUD 短暂显示结果
 let finishedAt = 0;
+
+// 入队时一次性算出任务的操作范围（建造跟拍相机按它取景），避免每帧遍历大 ops
+function computeBounds(ops) {
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (const [x, y, z] of ops) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (z < minZ) minZ = z;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+        if (z > maxZ) maxZ = z;
+    }
+    return { minX, minY, minZ, maxX, maxY, maxZ };
+}
 
 function currentLevel() {
     return BUILD_SPEED_LEVELS[state.buildSpeedIdx] || BUILD_SPEED_LEVELS[BUILD_SPEED_LEVELS.length - 1];
@@ -63,7 +78,7 @@ export function enqueueBuildOps(label, ops) {
             resolve({ label, total: 0, applied: 0, skipped: [], 秒: 0 });
             return;
         }
-        jobQueue.push({ label, ops, total: ops.length, cursor: 0, applied: 0, skipped: [], startedAt: 0, resolve });
+        jobQueue.push({ label, ops, total: ops.length, cursor: 0, applied: 0, skipped: [], startedAt: 0, resolve, bounds: computeBounds(ops) });
     });
 }
 
@@ -188,4 +203,25 @@ export function getBuildFocus() {
     if (!job || job.ops.length === 0) return null;
     const [x, y, z] = job.ops[Math.min(job.cursor, job.ops.length - 1)];
     return { x, y, z, label: job.label };
+}
+
+// 全部待应用任务的操作范围（建造跟拍相机取景用）；没有任务时返回 null。
+// 只含未完成任务：刚完成的任务不算，跟拍收尾靠 cameraRig 自己缓存的最后一次 bounds。
+export function getBuildBounds() {
+    let b = null;
+    for (const job of [activeJob, ...jobQueue]) {
+        if (!job) continue;
+        if (!b) {
+            b = { ...job.bounds };
+            continue;
+        }
+        const o = job.bounds;
+        b.minX = Math.min(b.minX, o.minX);
+        b.minY = Math.min(b.minY, o.minY);
+        b.minZ = Math.min(b.minZ, o.minZ);
+        b.maxX = Math.max(b.maxX, o.maxX);
+        b.maxY = Math.max(b.maxY, o.maxY);
+        b.maxZ = Math.max(b.maxZ, o.maxZ);
+    }
+    return b;
 }

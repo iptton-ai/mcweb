@@ -17,8 +17,9 @@ export function updatePlayerPhysics(dt) {
     const speed = p.flying ? FLY_SPEED : WALK_SPEED;
 
     // 移动输入（仅 playing 状态读取按键：暂停/背包/死亡时世界照常运行但玩家不响应按键；
+    // 自由摄像头/建造跟拍视角下键位归摄像头，玩家原地站立；
     // AI 助手面板打开不影响——面板开着也能用键盘继续玩，聊天框打字由输入焦点天然隔离）
-    const k = isGameActive() ? keys : {};
+    const k = (isGameActive() && state.camMode === 'player') ? keys : {};
     const forward = new THREE.Vector3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
     const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
     const moveDir = new THREE.Vector3(0, 0, 0);
@@ -153,6 +154,7 @@ export function cycleViewMode() {
 }
 
 export function updateCamera() {
+    if (state.camMode !== 'player') return; // 自由摄像头/建造跟拍：相机由 cameraRig.js 接管
     const p = state.player;
     const eyeX = p.x, eyeY = p.y + PLAYER_EYE_HEIGHT, eyeZ = p.z;
     camera.rotation.order = 'YXZ';
@@ -184,11 +186,12 @@ export function updateCamera() {
     camera.rotation.z = 0; // 清除 lookAt 残留的滚转，否则画面倾斜
 }
 
-// 玩家模型同步（仅第三人称可见），含行走摆臂动画
+// 玩家模型同步（第三人称 / 自由摄像头·跟拍视角下可见——相机离开身体后世界里能看到主角），
+// 含行走摆臂动画
 export function updatePlayerMesh(dt) {
     if (!playerMesh) return;
     const p = state.player;
-    playerMesh.visible = state.viewMode !== 0;
+    playerMesh.visible = state.viewMode !== 0 || state.camMode !== 'player';
     if (!playerMesh.visible) return;
     playerMesh.position.set(p.x, p.y, p.z);
     playerMesh.rotation.y = p.yaw; // 模型脸朝 -Z，与视线方向一致

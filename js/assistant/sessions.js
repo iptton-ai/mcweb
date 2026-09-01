@@ -2,7 +2,8 @@
 // 会话管理：多会话 + 消息持久化（localStorage）
 // 消息统一结构：
 //   { role:'user',      content }
-//   { role:'assistant', content, toolCalls?: [{id, name, arguments}] }
+//   { role:'assistant', content, reasoning?, toolCalls?: [{id, name, arguments}] }
+//     reasoning = 思考模型返回的思考文本，仅供前端折叠展示，不回传 LLM
 //   { role:'tool',      toolCallId, name, content, isError? }
 //   { role:'user', meta:'system', content }  // 系统事件（重载恢复等），发给 LLM 时加前缀
 

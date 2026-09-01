@@ -9,6 +9,7 @@ import { canvas } from './engine.js';
 import { breakBlock, placeBlock } from './interaction.js';
 import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
+import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
 import { buildInventoryGrid, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
 import { getUIState, isAssistantVisible, isPlaying, isTypingTarget, onUIStateChange, requestLock, setState } from './uiModal.js';
 
@@ -90,13 +91,23 @@ export function setupInput() {
     });
 
     canvas.addEventListener('mousedown', (e) => {
-        if (!isPlaying()) return; // 浮层状态与未锁定时不响应；重新锁定统一走下方点击兜底
+        if (getUIState() !== 'playing') return; // 浮层（菜单/背包/死亡）状态不响应游戏点击
+        if (!isPlaying()) {
+            // 未锁定（含助手面板打开时）：点击画面接管鼠标开始操作。
+            // 面板保持打开；按 Esc 释放鼠标即回到面板操作。
+            requestLock();
+            return;
+        }
         if (e.button === 0) {
-            mouseDown.left = true;
-            breakBlock();
+            if (state.camMode === 'player') {
+                mouseDown.left = true;
+                breakBlock();
+            }
         } else if (e.button === 2) {
-            mouseDown.right = true;
-            placeBlock();
+            if (state.camMode === 'player') {
+                mouseDown.right = true;
+                placeBlock();
+            }
         }
     });
 
@@ -109,6 +120,11 @@ export function setupInput() {
 
     canvas.addEventListener('wheel', (e) => {
         if (!isPlaying()) return;
+        // 自由摄像头：滚轮调飞行速度（物品栏选择让位）
+        if (state.camMode === 'free') {
+            adjustCamSpeed(e.deltaY > 0 ? -1 : 1);
+            return;
+        }
         const delta = e.deltaY > 0 ? 1 : -1;
         state.player.selectedSlot = (state.player.selectedSlot + delta + HotbarBlocks.length) % HotbarBlocks
             .length;
@@ -129,8 +145,8 @@ export function setupInput() {
     });
 }
 
-// AI 施工控制：[ ] 调速 / P 暂停 / G 传送 / R 录像。
-// 不依赖指针锁定：AI 建造时在暂停菜单或助手面板里也能暂停、调速、前往施工现场。
+// AI 施工控制：[ ] 调速 / P 暂停 / G 传送 / R 录像 / C 摄像头（自由视角·建造跟拍）。
+// 不依赖指针锁定：AI 建造时在暂停菜单或助手面板里也能暂停、调速、前往施工现场、切跟拍机位。
 function handleBuildKeys(e) {
     if (e.code === 'BracketLeft') {
         adjustBuildSpeed(-1);
@@ -144,5 +160,7 @@ function handleBuildKeys(e) {
         teleportToBuildSite();
     } else if (e.code === 'KeyR') {
         toggleBuildRecording();
+    } else if (e.code === 'KeyC') {
+        cycleCameraMode();
     }
 }

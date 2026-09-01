@@ -49,10 +49,10 @@ function completionsUrl() {
 }
 
 /**
- * 发起一次对话补全（stream: true），返回聚合后的 {content, toolCalls}
- * onDelta(累计文本) 用于流式渲染
+ * 发起一次对话补全（stream: true），返回聚合后的 {content, reasoning, toolCalls}
+ * onDelta(累计正文) / onReasoning(累计思考 reasoning_content) 用于流式渲染
  */
-export async function chatCompletion({ messages, tools, signal, onDelta }) {
+export async function chatCompletion({ messages, tools, signal, onDelta, onReasoning }) {
     const cfg = getConfig();
     const headerMs = Number(cfg.requestTimeoutMs) > 0 ? Number(cfg.requestTimeoutMs) : HEADER_TIMEOUT_MS;
     const idleMs = Number(cfg.idleTimeoutMs) > 0 ? Number(cfg.idleTimeoutMs) : IDLE_TIMEOUT_MS;
@@ -111,14 +111,14 @@ export async function chatCompletion({ messages, tools, signal, onDelta }) {
 
         const ctype = resp.headers.get('Content-Type') || '';
         if (ctype.includes('application/json')) {
-            // 上游不支持流式：整体解析
+            // 上游不支持流式：整体解析（思考模型会带 reasoning_content 字段）
             const json = await resp.json();
             const msg = json.choices?.[0]?.message || {};
-            return normalizeResult(msg.content || '', msg.tool_calls || []);
+            return normalizeResult(msg.content || '', msg.tool_calls || [], msg.reasoning_content ?? msg.reasoning ?? '');
         }
 
         armIdle();
-        return await consumeStream(resp, onDelta, armIdle);
+        return await consumeStream(resp, onDelta, onReasoning, armIdle);
     } catch (e) {
         if (signal?.aborted) throw new DOMException('已停止', 'AbortError');
         throw e;
@@ -128,11 +128,12 @@ export async function chatCompletion({ messages, tools, signal, onDelta }) {
     }
 }
 
-async function consumeStream(resp, onDelta, onActivity) {
+async function consumeStream(resp, onDelta, onReasoning, onActivity) {
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
     let content = '';
+    let reasoning = '';
     const toolAcc = []; // 按增量序号聚合工具调用
 
     while (true) {
@@ -157,6 +158,13 @@ async function consumeStream(resp, onDelta, onActivity) {
                     continue; // 跳过无法解析的碎片
                 }
                 const delta = json.choices?.[0]?.delta || {};
+                // 思考内容（DeepSeek-R1 / GLM 思考 / Kimi thinking 用 reasoning_content，
+                // OpenRouter 等用 reasoning）：不回传 LLM，仅供前端折叠展示
+                const think = delta.reasoning_content ?? delta.reasoning;
+                if (think) {
+                    reasoning += think;
+                    onReasoning?.(reasoning);
+                }
                 if (delta.content) {
                     content += delta.content;
                     onDelta?.(content);
@@ -173,14 +181,14 @@ async function consumeStream(resp, onDelta, onActivity) {
             }
         }
     }
-    return normalizeResult(content, toolAcc.filter(Boolean));
+    return normalizeResult(content, toolAcc.filter(Boolean), reasoning);
 }
 
-function normalizeResult(content, rawToolCalls) {
+function normalizeResult(content, rawToolCalls, reasoning = '') {
     const toolCalls = (rawToolCalls || []).map((tc, i) => ({
         id: tc.id || `call_${i}_${Date.now()}`,
         name: tc.function?.name || tc.name || '',
         arguments: tc.function?.arguments ?? tc.arguments ?? '{}',
     })).filter((tc) => tc.name);
-    return { content, toolCalls };
+    return { content, reasoning, toolCalls };
 }

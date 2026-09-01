@@ -7,6 +7,7 @@ import { playHitSound } from './audio.js';
 import { killEnemySilent } from './entities.js';
 import { updateHotbar } from './ui.js';
 import { setState } from './uiModal.js';
+import { resetCamMode } from './cameraRig.js';
 
 // ==================== 玩家伤害与重生 ====================
 export function damagePlayer(dmg) {
@@ -37,6 +38,7 @@ export function respawn() {
     p.dead = false;
     p.health = MAX_HEALTH;
     p.invulnTimer = 2;
+    resetCamMode(); // 摄像头可能停在自由/跟拍机位，重生后回到玩家视角看重生点
     p.x = state.spawn.x;
     p.y = state.spawn.y;
     p.z = state.spawn.z;

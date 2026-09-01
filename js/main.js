@@ -15,9 +15,11 @@ import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
 import { mouseDown, mouseMoveDelta, setupInput } from './input.js';
 import { getUIState, initUIModal, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
+import { updateCameraRig } from './cameraRig.js';
 import { updateDayNightCycle } from './daynight.js';
 import { updateHighlight } from './highlight.js';
 import { updateBuild } from './buildQueue.js';
+import { resetCamMode } from './cameraRig.js';
 import { deleteSave, hasSave, initAutoSave, loadGame, saveGame, saveTimeText } from './saveGame.js';
 
 // ==================== 游戏循环 ====================
@@ -39,19 +41,28 @@ function gameLoop(timestamp) {
         state.fpsTimer = 0;
     }
 
-    // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）
+    // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）。
+    // 自由摄像头时鼠标转的是摄像头朝向（freeCam），玩家视角保持不动
     if (mouseLocked) {
         const sensitivity = 0.0022;
-        state.player.yaw -= mouseMoveDelta.x * sensitivity;
-        state.player.pitch -= mouseMoveDelta.y * sensitivity;
-        const maxPitch = Math.PI / 2 - 0.01;
-        state.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, state.player.pitch));
+        if (state.camMode === 'free') {
+            const fc = state.freeCam;
+            fc.yaw -= mouseMoveDelta.x * sensitivity;
+            fc.pitch -= mouseMoveDelta.y * sensitivity;
+            const maxPitch = Math.PI / 2 - 0.01;
+            fc.pitch = Math.max(-maxPitch, Math.min(maxPitch, fc.pitch));
+        } else {
+            state.player.yaw -= mouseMoveDelta.x * sensitivity;
+            state.player.pitch -= mouseMoveDelta.y * sensitivity;
+            const maxPitch = Math.PI / 2 - 0.01;
+            state.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, state.player.pitch));
+        }
         mouseMoveDelta.x = 0;
         mouseMoveDelta.y = 0;
     }
 
-    // 连续破坏/放置
-    if (mouseLocked) {
+    // 连续破坏/放置（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）
+    if (mouseLocked && state.camMode === 'player') {
         if (mouseDown.left) {
             accumulator += dt;
             if (accumulator > TICK_RATE) {
@@ -70,8 +81,11 @@ function gameLoop(timestamp) {
     // 玩家物理
     updatePlayerPhysics(dt);
 
-    // 玩家模型（第三人称）
+    // 玩家模型（第三人称 / 自由·跟拍视角下可见）
     updatePlayerMesh(dt);
+
+    // 摄像头模式（自由摄像头 / 建造跟拍；player 模式下相机已由 updatePlayerPhysics 更新）
+    updateCameraRig(dt);
 
     // 昼夜循环
     updateDayNightCycle(dt);
@@ -157,6 +171,7 @@ function freshWorld() {
 // 放弃当前世界与存档，按所选模式开新世界
 function startNewWorld(mode, tip) {
     deleteSave();
+    resetCamMode(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
     freshWorld();
     // 清掉旧世界残留的怪物（网格与实体一起移除，避免残留场景）
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
@@ -292,4 +307,4 @@ console.log('世界大小: ' + WORLD_WIDTH + 'x' + WORLD_DEPTH + 'x' + WORLD_HEI
 
 console.log('方块类型: ' + Object.keys(BlockTypes).length);
 
-console.log('操作: WASD移动 | 鼠标破坏/放置 | E物品栏 | F飞行(建造) | M切换模式 | F5/V切换视角');
+console.log('操作: WASD移动 | 鼠标破坏/放置 | E物品栏 | F飞行(建造) | M切换模式 | F5/V切换视角 | C自由摄像头/建造跟拍');

@@ -57,6 +57,14 @@ const STYLE = `
   font-size:11px;color:#a8c8e8;white-space:pre-wrap;word-break:break-all;font-family:Consolas,monospace;}
 .ai-tool .ok{color:#7ec850;}
 .ai-tool .err{color:#ff7a6a;}
+.ai-think{width:100%;border:1px solid #2d2d44;border-radius:8px;background:rgba(26,26,44,.72);font-size:12px;}
+.ai-think summary{cursor:pointer;padding:5px 9px;color:#8f8fc8;list-style:none;user-select:none;}
+.ai-think summary::marker{content:'';}
+.ai-think.streaming summary{color:#b8a8f0;}
+.ai-think.streaming summary::after{content:' …';animation:ai-think-pulse 1.2s infinite;}
+@keyframes ai-think-pulse{0%,100%{opacity:.3;}50%{opacity:1;}}
+.ai-think .think-body{max-height:230px;overflow-y:auto;margin:0;padding:7px 10px;border-top:1px solid #2d2d44;
+  color:#9a9ab8;white-space:pre-wrap;word-break:break-word;line-height:1.5;font-size:11.5px;}
 #ai-status{flex:0 0 auto;min-height:18px;padding:1px 12px 4px;font-size:12px;color:#8a8ab0;}
 #ai-composer{flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:2px solid #2d2d44;}
 #ai-input{flex:1;resize:none;background:#1c1c30;border:2px solid #3d3d5c;border-radius:8px;color:#fff;
@@ -114,6 +122,12 @@ let streamEl = null;     // 流式渲染中的气泡
 let streamText = '';
 let streamDirty = false; // 节流渲染标记
 let pendingToolCards = []; // 等待结果的工具卡片队列
+let thinkEl = null;      // 气泡内的「思考过程」折叠卡片（流式期间引用）
+let thinkBody = null;
+let thinkText = '';
+let thinkDirty = false;
+let thinkTouched = false;   // 用户手动点过折叠头，之后不再自动收起
+let contentStarted = false; // 本条流式消息是否已开始输出正文（开始即收起思考卡）
 
 // ---------- 工具函数 ----------
 function esc(s) {
@@ -384,6 +398,21 @@ function setCardResult(card, resultText, isError) {
     if (!card.open) card.open = isError; // 失败自动展开
 }
 
+// 思考过程折叠卡片（reasoning 本机展示用；streaming=true 表示思考仍在流式输出）
+function buildThinkCard(reasoning, streaming = false) {
+    const details = document.createElement('details');
+    details.className = 'ai-think' + (streaming ? ' streaming' : '');
+    details.open = streaming;
+    const summary = document.createElement('summary');
+    summary.textContent = streaming ? '💭 思考中' : '💭 思考过程';
+    const body = document.createElement('div');
+    body.className = 'think-body';
+    if (reasoning) body.textContent = reasoning;
+    details.appendChild(summary);
+    details.appendChild(body);
+    return { details, summary, body };
+}
+
 function renderMsg(msg) {
     const div = document.createElement('div');
     if (msg.role === 'user') {
@@ -391,6 +420,7 @@ function renderMsg(msg) {
         div.textContent = msg.content;
     } else if (msg.role === 'assistant') {
         div.className = 'ai-msg assistant';
+        if (msg.reasoning) div.appendChild(buildThinkCard(msg.reasoning).details);
         if (msg.content) {
             const md = document.createElement('div');
             md.className = 'ai-md';
@@ -579,27 +609,73 @@ function ensureStreamBubble() {
         streamEl.appendChild(md);
         els.messages.appendChild(streamEl);
         streamText = '';
+        contentStarted = false;
         scrollBottom();
     }
 }
 
-function flushStream() {
-    if (!streamDirty || !streamEl) return;
-    streamDirty = false;
-    streamEl.querySelector('.ai-md').innerHTML = renderMarkdown(streamText) || '<p>…</p>';
-    scrollBottom();
+// 流式思考卡片：插在正文前面，思考中自动展开，出正文/结束后收起（可手动点开）
+function ensureThinkCard() {
+    if (thinkEl || !streamEl) return;
+    const { details, summary, body } = buildThinkCard('', true);
+    summary.addEventListener('click', () => { thinkTouched = true; }); // 手动开合后不再自动收起
+    streamEl.insertBefore(details, streamEl.querySelector('.ai-md'));
+    thinkEl = details;
+    thinkBody = body;
+    thinkText = '';
+    thinkTouched = false;
 }
 
-function finishStreamBubble(text) {
-    if (!streamEl) return;
-    streamEl.querySelector('.ai-md').innerHTML = renderMarkdown(text) || '';
+// 思考结束（正文开始或消息定型）：去掉流式动效，未手动操作则收起
+function sealThinkCard() {
+    if (!thinkEl) return;
+    thinkEl.classList.remove('streaming');
+    thinkEl.querySelector('summary').textContent = '💭 思考过程';
+    if (!thinkTouched) thinkEl.open = false;
+}
+
+function flushStream() {
+    if (!streamDirty && !thinkDirty) return;
+    const needThink = thinkDirty;
+    const needText = streamDirty;
+    streamDirty = false;
+    thinkDirty = false;
+    if (needThink && thinkBody) {
+        thinkBody.textContent = thinkText;
+        thinkBody.scrollTop = thinkBody.scrollHeight; // 思考体内部滚动跟随
+        scrollBottom();
+    }
+    if (needText && streamEl) {
+        streamEl.querySelector('.ai-md').innerHTML = renderMarkdown(streamText) || '<p>…</p>';
+        scrollBottom();
+    }
+}
+
+// 定型流式气泡：思考卡收起、正文渲染最终 Markdown；正文为空则移除正文框（纯思考/纯工具回合）。
+// 返回气泡元素（工具卡片等可直接并入其中），无气泡（如非流式上游）返回 null
+function finishStreamBubble(content, reasoning) {
+    if (!streamEl) return null;
+    const el = streamEl;
+    if (thinkEl) {
+        sealThinkCard();
+        if (reasoning) thinkBody.textContent = reasoning;
+        thinkEl = null;
+        thinkBody = null;
+    }
+    const md = el.querySelector('.ai-md');
+    const html = renderMarkdown(content) || '';
+    if (html) md.innerHTML = html;
+    else md.remove();
     streamEl = null;
     scrollBottom();
+    return el;
 }
 
 function dropStreamBubble() {
     streamEl?.remove();
     streamEl = null;
+    thinkEl = null;
+    thinkBody = null;
 }
 
 async function trySend() {
@@ -627,6 +703,8 @@ async function runTurn(session) {
     pendingToolCards = [];
     abortCtrl = new AbortController();
     streamEl = null;
+    thinkEl = null;
+    thinkBody = null;
     // 状态栏附带耗时：请求慢/卡住时一眼可见，不会像冻结一样没反馈
     const turnStartAt = Date.now();
     let statusBase = '';
@@ -641,26 +719,44 @@ async function runTurn(session) {
         const res = await runAgentTurn({
             session,
             signal: abortCtrl.signal,
+            onReasoningText: (full) => {
+                ensureStreamBubble();
+                ensureThinkCard();
+                thinkText = full;
+                thinkDirty = true;
+                requestAnimationFrame(flushStream);
+                setTimeout(flushStream, 300); // 兜底：webview 遮挡时 rAF 可能不触发
+            },
             onStreamText: (full) => {
                 ensureStreamBubble();
+                if (!contentStarted) {
+                    contentStarted = true;
+                    sealThinkCard(); // 正文开始输出：思考卡收起（仍可点开回看）
+                }
                 streamText = full;
                 streamDirty = true;
                 requestAnimationFrame(flushStream);
                 setTimeout(flushStream, 300); // 兜底：webview 遮挡时 rAF 可能不触发（streamDirty 防重复刷新）
             },
             onAssistantDone: (msg) => {
-                finishStreamBubble(msg.content);
+                const hadBubble = !!streamEl;
+                const bubble = finishStreamBubble(msg.content, msg.reasoning);
                 if (els.panel.classList.contains('hidden')) return;
-                // 渲染该 assistant 消息（文本已由流式气泡展示，这里补工具卡片）
+                if (!hadBubble) {
+                    // 非流式上游（整体 JSON）：没有流式气泡，整条消息按历史样式补渲染
+                    renderMsg(msg);
+                    scrollBottom();
+                    return;
+                }
+                // 渲染该 assistant 消息（思考卡与正文已由流式气泡展示，这里补工具卡片）
                 const div = document.createElement('div');
-                div.className = 'ai-msg assistant';
                 for (const tc of msg.toolCalls || []) {
                     const card = toolCard(tc.name, fmtArgs(tc.arguments));
                     pendingToolCards.push({ id: tc.id, card });
                     div.appendChild(card);
                 }
                 if (div.childNodes.length > 0) {
-                    els.messages.appendChild(div);
+                    (bubble || els.messages).appendChild(div);
                     scrollBottom();
                 }
             },
@@ -676,8 +772,7 @@ async function runTurn(session) {
             reportStatus('🔄 正在热重载页面…');
         }
     } catch (e) {
-        finishStreamBubble('');
-        dropStreamBubble();
+        dropStreamBubble(); // 出错/中止：丢弃半截流式气泡（含未定型的思考卡）
         if (e.name === 'AbortError') {
             const div = document.createElement('div');
             div.className = 'ai-msg system-event';

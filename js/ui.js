@@ -10,6 +10,7 @@ import { getBlock } from './world.js';
 import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
+import { camModeText, toggleBuildCam } from './cameraRig.js';
 import { setState } from './uiModal.js';
 
 // ==================== 游戏模式切换 ====================
@@ -150,7 +151,10 @@ export function updateDebugInfo() {
     const dirIndex = Math.round(yawDeg / 45) % 8;
     document.getElementById('dbg-dir').textContent = dirs[dirIndex];
     document.getElementById('dbg-mobs').textContent = state.enemies.length;
-    document.getElementById('dbg-view').textContent = ['第一人称', '第三人称(背后)'][state.viewMode];
+    // 摄像头脱离玩家时优先显示摄像头模式，否则显示第一/第三人称
+    const camText = camModeText();
+    document.getElementById('dbg-view').textContent =
+        camText || ['第一人称', '第三人称(背后)'][state.viewMode];
     const hit = raycastBlocks();
     if (hit) {
         document.getElementById('dbg-selected').textContent = BlockInfo[hit.block]?.name || '未知';
@@ -177,13 +181,13 @@ const BUILD_WIDGET_STYLE = `
   cursor:pointer;font-size:12px;padding:2px 7px;font-family:inherit;}
 #build-widget button:hover{border-color:#7ec850;}
 #build-rec.rec-on{color:#ff7a6a;border-color:#a03030;}
+#build-cam.cam-on{color:#8fd0ff;border-color:#3a70a0;}
 #build-hint{color:#8888a8;font-size:11px;}
 `;
 
 let buildEls = null;     // 控件 DOM 引用
 let wasActive = false;   // 上一帧是否有施工任务（用于完成后延迟隐藏）
-let rec = null;          // MediaRecorder 实例（null = 未在录）
-let recChunks = [];
+let rec = null;          // MediaRecorder 实例（null = 未在录；stop 即置空，收尾在闭包里）
 let recStartAt = 0;
 
 export function initBuildWidget() {
@@ -204,8 +208,9 @@ export function initBuildWidget() {
       <span id="build-speed">极速</span>
       <button id="build-faster" title="加速（] 键）">＋</button>
       <button id="build-pause" title="暂停/继续施工（P 键）">⏸</button>
+      <button id="build-cam" title="建造跟拍：俯视拍摄施工全过程，建完自动停录（C 键循环切换视角）">🎥</button>
       <button id="build-rec" title="录制游戏画面（R 键），停止后存为 webm">⏺</button>
-      <span id="build-hint">[ ]调速 · P暂停 · R录像 · G前往</span>`;
+      <span id="build-hint">[ ]调速 · P暂停 · C视角 · R录像 · G前往</span>`;
     document.body.appendChild(root);
     // 面板内点击不冒泡，避免触发「点击重新锁定指针」
     root.addEventListener('click', (e) => e.stopPropagation());
@@ -217,12 +222,14 @@ export function initBuildWidget() {
         count: root.querySelector('#build-count'),
         speed: root.querySelector('#build-speed'),
         pause: root.querySelector('#build-pause'),
+        camBtn: root.querySelector('#build-cam'),
         recBtn: root.querySelector('#build-rec'),
     };
     buildEls.root.querySelector('#build-goto').addEventListener('click', () => teleportToBuildSite());
     buildEls.root.querySelector('#build-slower').addEventListener('click', () => adjustBuildSpeed(-1));
     buildEls.root.querySelector('#build-faster').addEventListener('click', () => adjustBuildSpeed(1));
     buildEls.pause.addEventListener('click', () => toggleBuildPaused());
+    buildEls.camBtn.addEventListener('click', () => toggleBuildCam());
     buildEls.recBtn.addEventListener('click', () => toggleBuildRecording());
 }
 
@@ -258,11 +265,20 @@ export function teleportToBuildSite() {
     showTooltip(`📍 已前往施工现场：${focus.label}`);
 }
 
+// 是否正在录像（cameraRig.js 判断跟拍该不该自动停录用）
+export function isRecording() {
+    return !!rec;
+}
+
 // R 键 / 控件按钮共用：开始或停止录制游戏画布（视频，不含声音）
 export function toggleBuildRecording() {
     if (!buildEls) initBuildWidget();
     if (rec) {
-        rec.stop(); // 收尾在 onstop
+        // 立即置空：stop 到 onstop 异步收尾之间再按 R 不会对已停止的 recorder 重复 stop；
+        // 收尾（打包下载）用下方闭包捕获的实例，不依赖 rec
+        const stopped = rec;
+        rec = null;
+        if (stopped.state !== 'inactive') stopped.stop();
         return;
     }
     if (typeof MediaRecorder === 'undefined') {
@@ -272,12 +288,12 @@ export function toggleBuildRecording() {
     const stream = canvas.captureStream(60);
     const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
         .find((m) => MediaRecorder.isTypeSupported(m)) || '';
-    rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8000000 } : undefined);
-    recChunks = [];
-    recStartAt = Date.now();
-    rec.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
-    rec.onstop = () => {
-        const blob = new Blob(recChunks, { type: 'video/webm' });
+    const mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8000000 } : undefined);
+    // 数据块/起始时间收进闭包：stop 与新一次录制并发时互不污染
+    const chunks = [];
+    mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    mr.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
         const a = document.createElement('a');
         const d = new Date();
         const pad = (n) => String(n).padStart(2, '0');
@@ -285,10 +301,11 @@ export function toggleBuildRecording() {
         a.download = `建造录像-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.webm`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-        rec = null;
         showTooltip('🎥 录像已保存（webm）');
     };
-    rec.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
+    rec = mr;
+    recStartAt = Date.now();
+    mr.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
     showTooltip('🎥 开始录制游戏画面…（R 停止）');
 }
 
@@ -315,6 +332,8 @@ export function updateBuildWidget() {
     buildEls.speed.textContent = speedText();
     buildEls.pause.textContent = st.paused ? '▶' : '⏸';
     buildEls.pause.title = st.paused ? '继续施工（P 键）' : '暂停施工（P 键）';
+    buildEls.camBtn.classList.toggle('cam-on', state.camMode === 'build');
+    buildEls.camBtn.textContent = state.camMode === 'build' ? '🎥 跟拍中' : '🎥';
     if (recOn) {
         const sec = Math.floor((Date.now() - recStartAt) / 1000);
         buildEls.recBtn.textContent = `⏹ ${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;

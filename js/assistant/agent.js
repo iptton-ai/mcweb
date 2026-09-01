@@ -9,6 +9,7 @@ import { executeTool, getToolSchemas } from './tools.js';
 
 const MAX_API_MESSAGES = 60;   // 发给 LLM 的历史长度上限（按条数）
 const MAX_TOOL_RESULT = 24000; // 单条工具结果发给 LLM 的字符上限
+const MAX_STORED_REASONING = 30000; // 存入会话的思考文本上限（超出保留末尾：结论在末段）
 
 function toApiMessage(m) {
     if (m.role === 'assistant') {
@@ -44,14 +45,15 @@ function buildApiMessages(session) {
 /**
  * 执行一轮完整对话（可能包含多次工具循环）
  * 回调：
- *   onStreamText(累计文本)   流式渲染中
- *   onAssistantDone(msg)     一条 assistant 消息定型（含 toolCalls）
- *   onToolCall(tc)           工具开始执行
- *   onToolResult(toolMsg)    工具执行完成
- *   onStatus(text)           状态提示
+ *   onStreamText(累计正文)     流式渲染中
+ *   onReasoningText(累计思考)  思考内容（reasoning_content）流式渲染中
+ *   onAssistantDone(msg)       一条 assistant 消息定型（含 toolCalls / reasoning）
+ *   onToolCall(tc)             工具开始执行
+ *   onToolResult(toolMsg)      工具执行完成
+ *   onStatus(text)             状态提示
  * 返回 { finalText, reloading }
  */
-export async function runAgentTurn({ session, signal, onStreamText, onAssistantDone, onToolCall, onToolResult, onStatus }) {
+export async function runAgentTurn({ session, signal, onStreamText, onReasoningText, onAssistantDone, onToolCall, onToolResult, onStatus }) {
     if (!isConfigured()) {
         throw new Error('尚未配置 LLM：请点击面板右上角 ⚙️ 填写 API 地址 / Key / 模型');
     }
@@ -62,14 +64,21 @@ export async function runAgentTurn({ session, signal, onStreamText, onAssistantD
 
     for (let iter = 0; iter < cfg.maxToolIterations; iter++) {
         onStatus?.(iter === 0 ? '思考中…' : `第 ${iter + 1} 轮工具调用…`);
-        const { content, toolCalls } = await chatCompletion({
+        const { content, reasoning, toolCalls } = await chatCompletion({
             messages,
             tools,
             signal,
             onDelta: (full) => { lastText = full; onStreamText?.(full); },
+            onReasoning: (full) => onReasoningText?.(full),
         });
 
-        const assistantMsg = { role: 'assistant', content, toolCalls: toolCalls.length ? toolCalls : undefined };
+        const assistantMsg = {
+            role: 'assistant',
+            content,
+            // 思考文本只在本机展示（toApiMessage 不回传 LLM），超限保留末尾
+            reasoning: reasoning ? (reasoning.length > MAX_STORED_REASONING ? reasoning.slice(-MAX_STORED_REASONING) : reasoning) : undefined,
+            toolCalls: toolCalls.length ? toolCalls : undefined,
+        };
         session.messages.push(assistantMsg);
         onAssistantDone?.(assistantMsg);
         messages.push(toApiMessage(assistantMsg));

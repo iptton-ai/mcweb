@@ -21,6 +21,15 @@ export const WALK_SPEED = 4.5;
 
 export const FLY_SPEED = 10.0;
 
+// ---- 摄像头模式（js/cameraRig.js：自由摄像头 + 建造跟拍）----
+export const CAM_FOV = 75; // 与 engine.js 的相机视场角保持一致（跟拍高度按它反推）
+export const FREE_CAM_BASE_SPEED = FLY_SPEED * 2.5; // 自由摄像头基础速度，滚轮可调倍速
+export const FREE_CAM_SPEED_MIN = 0.25;
+export const FREE_CAM_SPEED_MAX = 8;
+export const BUILD_CAM_MARGIN = 8; // 跟拍画面四周预留余量（格）
+export const BUILD_CAM_MIN_HEIGHT = 16; // 跟拍相机最低高度（格）
+export const BUILD_CAM_DONE_DELAY = 2.5; // 建造完成后跟拍停留秒数，随后自动停录并回玩家视角
+
 export const REACH_DISTANCE = 6.0;
 
 export const PLAYER_WIDTH = 0.6;

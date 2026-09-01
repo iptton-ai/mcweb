@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { BlockTypes } from './config.js';
+import { state } from './state.js';
 import { scene } from './engine.js';
 import { raycastBlocks } from './interaction.js';
 
@@ -22,6 +23,11 @@ highlightLine.visible = false;
 scene.add(highlightLine);
 
 export function updateHighlight() {
+    // 自由摄像头/建造跟拍视角下准星不再是玩家视线，不显示高亮框
+    if (state.camMode !== 'player') {
+        highlightLine.visible = false;
+        return;
+    }
     const hit = raycastBlocks();
     if (hit && hit.block !== BlockTypes.AIR && hit.block !== BlockTypes.WATER) {
         highlightLine.visible = true;
