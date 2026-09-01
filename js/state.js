@@ -32,6 +32,7 @@ export const state = {
     enemies: [],
     torchLights: new Map(), // "x,y,z" -> PointLight
     droppedItems: [],
+    itemDrops: [], // 机器产出的物品实体（js/items.js：重力/磁吸/拾取/寿命，不进存档）
     tntEntities: [],
     time: 0, // 游戏时间(秒)
     dayLength: 600, // 一天的长度（秒）

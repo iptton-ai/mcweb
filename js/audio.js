@@ -148,3 +148,72 @@ export function playExplosionSound() {
         noise.start(audioCtx.currentTime);
     } catch (e) {}
 }
+
+// 粉碎闷响：低通后的短噪声重击（粉碎轮吃下一格投料）
+export function playCrushSound() {
+    if (!audioCtx) return;
+    try {
+        const t0 = audioCtx.currentTime;
+        const n = Math.floor(audioCtx.sampleRate * 0.14);
+        const buffer = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < n; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 420; // 低通做「闷」
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.45, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        src.start(t0);
+    } catch (e) {}
+}
+
+// 锯木声：中频「嗤——」刮擦（机械锯工作中，节拍性播放）
+export function playSawSound() {
+    if (!audioCtx) return;
+    try {
+        const t0 = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, t0);
+        osc.frequency.linearRampToValueAtTime(190, t0 + 0.16); // 吃进木头的「变钝」起伏
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 900;
+        filter.Q.value = 2;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.1, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.22);
+    } catch (e) {}
+}
+
+// 物品拾取：短促上扬「啵」（机器产出入包）
+export function playPickupSound() {
+    if (!audioCtx) return;
+    try {
+        const t0 = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(480, t0);
+        osc.frequency.exponentialRampToValueAtTime(880, t0 + 0.07);
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.12, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.11);
+    } catch (e) {}
+}

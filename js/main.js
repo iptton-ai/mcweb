@@ -13,6 +13,7 @@ import { initAudio } from './audio.js';
 import { initBGM, updateBGM } from './bgm.js';
 import { initRedstone, updateRedstoneTick } from './redstone.js';
 import { initKinetic, updateKineticTick } from './kinetic.js';
+import { clearItemDrops, updateItemDrops } from './items.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
@@ -100,6 +101,9 @@ function gameLoop(timestamp) {
     // 动力组（旋转动画 + 粉碎轮/机械锯计时，见 js/kinetic.js）
     updateKineticTick(dt);
 
+    // 机器产出的物品实体（磁吸/拾取，见 js/items.js）
+    updateItemDrops(dt);
+
     // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
     updateBGM();
 
@@ -176,8 +180,9 @@ function freshWorld() {
 
     // 红石组：清按钮/火把延迟队列与门/TNT 边沿基线（新世界不该残留旧世界电平）
     initRedstone();
-    // 动力组：清机器进度并重算动力网络
+    // 动力组：清机器进度并重算动力网络；物品实体是瞬时量，随世界一起清
     initKinetic();
+    clearItemDrops();
 }
 
 // 清掉只存在于内存的瞬时实体（怪物/掉落物/点燃的TNT/机器产出的物品实体），切世界（读档/重开）时调用
@@ -185,6 +190,7 @@ function clearTransientEntities() {
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
     for (const it of state.droppedItems) scene.remove(it.mesh);
     state.droppedItems.length = 0;
+    clearItemDrops();
     state.tntEntities.length = 0; // TNT 实体无独立网格（引用世界方块），直接清即可
 }
 

@@ -8,7 +8,7 @@ import { getBlock, getBlockIndex } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
 import { breakDoorAt, toggleDoorAt, tryPlaceDoor } from './door.js';
 import { breakPistonGroupAt, placePiston } from './piston.js';
-import { breakKineticAt, placeKinetic, updateKineticNetwork } from './kinetic.js';
+import { breakKineticAt, crusherIntakeError, placeKinetic, updateKineticNetwork } from './kinetic.js';
 import { breakRedstoneAt, placeRedstone, popUnsupportedRedstone, pressButtonAt, toggleLeverAt, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
@@ -326,6 +326,12 @@ export function placeBlock() {
                 updateHotbar();
             }
             playBlockSound(true);
+            return;
+        }
+        // 粉碎轮投料口校验：配对粉碎轮的正上方只能放可粉碎方块（配方见 config.js KINETIC_RECIPES）
+        const intakeErr = crusherIntakeError(bx, by, bz, selectedType);
+        if (intakeErr) {
+            showTooltip(intakeErr);
             return;
         }
         state.blocks[getBlockIndex(bx, by, bz)] = selectedType;

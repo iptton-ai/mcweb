@@ -23,9 +23,13 @@ import {
     AXIS_Z,
     BlockInfo,
     BlockTypes,
+    CHUNK_SIZE,
     COGWHEEL_ITEM_ID,
+    CRUSH_SEC,
     CRUSHER_ITEM_ID,
     CRUSHER_SU_LOAD,
+    FACING_NORMALS,
+    KINETIC_RECIPES,
     KINETIC_SPIN_VIS,
     SAW_ITEM_ID,
     SAW_SU_LOAD,
@@ -36,7 +40,6 @@ import {
     WORLD_DEPTH,
     WORLD_HEIGHT,
     WORLD_WIDTH,
-    FACING_NORMALS,
     cogAxis,
     crusherAxis,
     isCogId,
@@ -53,7 +56,11 @@ import {
 } from './config.js';
 import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
-import { refreshPropAt } from './chunk.js';
+import { refreshPropAt, rebuildChunk } from './chunk.js';
+import { popUnsupportedRedstone } from './redstone.js';
+import { spawnBreakParticles } from './particles.js';
+import { playCrushSound } from './audio.js';
+import { spawnItemDrop } from './items.js';
 
 const keyOf = (x, y, z) => `${x},${y},${z}`;
 
@@ -78,7 +85,9 @@ function normalAxis(dx, dy, dz) {
 // ==================== 派生态（求解结果） ====================
 let kineticMap = new Map(); // key -> { compId, dir }（dir ±1 = 相对自身轴的转向，无动力时无意义）
 let components = []; // 分量聚合：{ capacity, load, wheels, poweredWheels, jammed, overstressed, running, spin }
-let crusherPaired = new Set(); // 配对成功的粉碎轮 key 集（负载/投料只算配对轮）
+let crusherCells = []; // 配对成功的粉碎轮（机器 tick 与负载统计用）
+const crusherPaired = new Set(); // 配对粉碎轮 key 集（投料口校验/HUD 未配对提示用）
+let sawCells = []; // 全部机械锯（Commit C 的锯切 tick 用）
 
 // ==================== 放置 ====================
 // 轴类方块朝所点击面的法线方向放置（点顶面 = 立轴，贴墙 = 横轴垂直墙面）；
@@ -144,7 +153,8 @@ export function updateKineticNetwork() {
     }
 
     // 粉碎轮配对：水平相邻两轮、轴向相同、连线方向垂直于该轴（单只不成对 = 无功能不计负载）
-    crusherPaired = new Set();
+    crusherCells = [];
+    crusherPaired.clear();
     for (const c of cells) {
         if (!isCrusherId(c.id)) continue;
         for (const [dx, dz] of HORIZ_DIRS) {
@@ -152,10 +162,12 @@ export function updateKineticNetwork() {
             if (!isCrusherId(nid) || crusherAxis(nid) !== c.axis) continue;
             if ((dx !== 0 ? AXIS_X : AXIS_Z) !== c.axis) {
                 crusherPaired.add(keyOf(c.x, c.y, c.z));
+                crusherCells.push(c);
                 break;
             }
         }
     }
+    sawCells = cells.filter((c) => c.saw);
 
     const byKey = new Map(cells.map((c) => [keyOf(c.x, c.y, c.z), c]));
     const newMap = new Map();
@@ -299,16 +311,77 @@ export function kineticStatusAt(x, y, z) {
     return `⚙️ ${name} · ${prefix}转速 ${WHEEL_RPM} RPM · 应力 ${c.load}/${c.capacity}`;
 }
 
-// ==================== 终端机器（粉碎轮 / 机械锯，后续提交落地） ====================
-function updateCrushers(dt) { void dt; }
+// ==================== 终端机器 A：粉碎轮 ====================
+// 配对粉碎轮的正上方格 = 投料口（玩家右键把方块「放置」进去，零新交互）。
+// 网络正常转动 + 投料口有可粉碎方块 → CRUSH_SEC 秒倒计时（粒子点缀）→ 方块消失，
+// 按配方表产出物品实体弹出（js/items.js）。无玩家在场照常工作。
+// 网络停转（过载/卡死/断水）时进度冻结；投料被换走则进度作废。
+const crushProgress = new Map(); // 粉碎轮 key -> { input, t, fx }
+
+function updateCrushers(dt) {
+    for (const c of crusherCells) {
+        const k = keyOf(c.x, c.y, c.z);
+        const comp = componentAt(k);
+        const ix = c.x, iy = c.y + 1, iz = c.z; // 投料口
+        const input = getBlock(ix, iy, iz);
+        const pr = crushProgress.get(k);
+        if (!comp?.running || !(input in KINETIC_RECIPES)) {
+            if (pr && pr.input !== input) crushProgress.delete(k); // 换料作废；停机冻结
+            continue;
+        }
+        let e = pr;
+        if (!e || e.input !== input) {
+            e = { input, t: 0, fx: 0 };
+            crushProgress.set(k, e);
+        }
+        e.t += dt;
+        e.fx += dt;
+        if (e.fx > 0.45) {
+            e.fx = 0;
+            spawnBreakParticles(ix, iy, iz, input); // 碾碎中的碎屑点缀
+        }
+        if (e.t < CRUSH_SEC) continue;
+        crushProgress.delete(k);
+        setBlockSafe(ix, iy, iz, BlockTypes.AIR);
+        rebuildChunk(Math.floor(ix / CHUNK_SIZE), Math.floor(iz / CHUNK_SIZE));
+        // 投料方块上贴着的红石元件失去支撑，连锁脱落
+        for (const cc of popUnsupportedRedstone(ix, iy, iz)) {
+            spawnBreakParticles(cc.x, cc.y, cc.z, cc.id);
+            rebuildChunk(Math.floor(cc.x / CHUNK_SIZE), Math.floor(cc.z / CHUNK_SIZE));
+        }
+        const recipe = KINETIC_RECIPES[input];
+        spawnItemDrop(ix + 0.5, iy + 0.3, iz + 0.5, recipe.item, recipe.count);
+        playCrushSound();
+    }
+}
+
+// 投料口放置校验（interaction.js 放置分支调用）：目标格是配对粉碎轮的正上方、
+// 且所放方块不在配方表 → 返回错误提示（推荐方案：投不进去，别让玩家白放）。
+// 水放行（造水景常见动作，不算投料）。
+export function crusherIntakeError(bx, by, bz, itemId) {
+    const below = getBlock(bx, by - 1, bz);
+    if (!isCrusherId(below) || !crusherPaired.has(keyOf(bx, by - 1, bz))) return null;
+    if (itemId === BlockTypes.WATER || itemId in KINETIC_RECIPES) return null;
+    return '❌ 这个方块不能粉碎（可投：石头/圆石/沙砾/玻璃/原木/树干）';
+}
+
+// 该格动力分量（无/未注册返回 null）
+function componentAt(k) {
+    const entry = kineticMap.get(k);
+    return entry ? components[entry.compId] : null;
+}
+
+// ==================== 终端机器 B：机械锯（阶段二 Commit C 落地） ====================
+const sawProgress = new Map(); // 机械锯 key -> { target, t, fx }
 
 function updateSaws(dt) { void dt; }
 
 // ==================== 外部兜底 ====================
-// 该格机器进度作废（方块被破坏/读档时；由 breakKineticAt / initKinetic 调用）
+// 该格机器进度作废（方块被破坏/换格时；由 breakKineticAt 调用）
 function dropMachineProgressAt(x, y, z) {
-    // 粉碎/锯进度表在阶段二 Commit B/C 落地时填充
-    void x; void y; void z;
+    const k = keyOf(x, y, z);
+    crushProgress.delete(k);
+    sawProgress.delete(k);
 }
 
 // 读档/开新世界后调用：清机器进度并重算全网（派生态不存档，现场恢复）
@@ -318,5 +391,6 @@ export function initKinetic() {
 }
 
 function dropAllMachineProgress() {
-    // 同上，Commit B/C 填充
+    crushProgress.clear();
+    sawProgress.clear();
 }
