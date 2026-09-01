@@ -5,6 +5,7 @@ import { isCreative, state } from './state.js';
 import { canvas, scene } from './engine.js';
 import { playHitSound } from './audio.js';
 import { killEnemySilent } from './entities.js';
+import { updateHotbar } from './ui.js';
 
 // ==================== 玩家伤害与重生 ====================
 export function damagePlayer(dmg) {
@@ -39,8 +40,10 @@ export function respawn() {
     p.y = state.spawn.y;
     p.z = state.spawn.z;
     p.vx = p.vy = p.vz = 0;
+    p.inventory = {}; // 死亡惩罚：清空背包
     document.getElementById('death-screen').classList.remove('visible');
     updateHealthUI();
+    updateHotbar();
     // 清掉所有怪物
     for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
     canvas.requestPointerLock();

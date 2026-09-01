@@ -1,7 +1,7 @@
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, THIRD_PERSON_FOCUS, THIRD_PERSON_LIFT, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
@@ -144,8 +144,8 @@ export function updatePlayerPhysics(dt) {
 
 // ==================== 视角系统 ====================
 export function cycleViewMode() {
-    state.viewMode = (state.viewMode + 1) % 3;
-    const names = ['🎥 第一人称', '🎥 第三人称（背后）', '🎥 第三人称（正面）'];
+    state.viewMode = (state.viewMode + 1) % 2; // 第三人称只保留背后视角
+    const names = ['🎥 第一人称', '🎥 第三人称（背后）'];
     showTooltip(names[state.viewMode]);
 }
 
@@ -163,24 +163,22 @@ export function updateCamera() {
         return;
     }
 
-    const front = state.viewMode === 2;
-    // 视线方向 forward = (-sin(yaw)·cos(pitch), sin(pitch), -cos(yaw)·cos(pitch))
+    // 第三人称（背后）：相机在眼睛后方并抬升越过头顶，注视眼睛前方焦点，
+    // 使屏幕准星落在手触及的位置而不是人物头上
     const cp = Math.cos(p.pitch);
     const fx = -Math.sin(p.yaw) * cp, fy = Math.sin(p.pitch), fz = -Math.cos(p.yaw) * cp;
-    // 背后视角：相机在眼睛后方；正面视角：相机在眼睛前方并回头
-    const ox = front ? fx : -fx, oy = front ? fy : -fy, oz = front ? fz : -fz;
 
-    // 防穿墙：沿偏移方向步进，撞到实心方块就缩回
+    // 防穿墙：沿偏移方向步进（计入抬升高度），撞到实心方块就缩回
     let dist = THIRD_PERSON_DIST;
     for (let d = 0.3; d <= THIRD_PERSON_DIST; d += 0.2) {
-        const bx = Math.floor(eyeX + ox * d);
-        const by = Math.floor(eyeY + oy * d);
-        const bz = Math.floor(eyeZ + oz * d);
+        const bx = Math.floor(eyeX - fx * d);
+        const by = Math.floor(eyeY - fy * d + THIRD_PERSON_LIFT);
+        const bz = Math.floor(eyeZ - fz * d);
         if (isSolid(getBlock(bx, by, bz))) { dist = Math.max(0.3, d - 0.3); break; }
     }
-    camera.position.set(eyeX + ox * dist, eyeY + oy * dist, eyeZ + oz * dist);
-    camera.rotation.y = front ? p.yaw + Math.PI : p.yaw;
-    camera.rotation.x = front ? -p.pitch : p.pitch;
+    camera.position.set(eyeX - fx * dist, eyeY - fy * dist + THIRD_PERSON_LIFT, eyeZ - fz * dist);
+    camera.lookAt(eyeX + fx * THIRD_PERSON_FOCUS, eyeY + fy * THIRD_PERSON_FOCUS, eyeZ + fz * THIRD_PERSON_FOCUS);
+    camera.rotation.z = 0; // 清除 lookAt 残留的滚转，否则画面倾斜
 }
 
 // 玩家模型同步（仅第三人称可见），含行走摆臂动画

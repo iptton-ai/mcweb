@@ -51,6 +51,30 @@ export function playHitSound() {
     } catch (e) {}
 }
 
+// 门开关音：短促「咔嗒」，开门音调上扬、关门下沉
+export function playDoorSound(isOpen) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const t0 = audioCtx.currentTime;
+        if (isOpen) {
+            osc.frequency.setValueAtTime(160, t0);
+            osc.frequency.exponentialRampToValueAtTime(330, t0 + 0.09);
+        } else {
+            osc.frequency.setValueAtTime(330, t0);
+            osc.frequency.exponentialRampToValueAtTime(160, t0 + 0.09);
+        }
+        gain.gain.setValueAtTime(0.12, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+        osc.start(t0);
+        osc.stop(t0 + 0.13);
+    } catch (e) {}
+}
+
 export function playExplosionSound() {
     if (!audioCtx) return;
     try {

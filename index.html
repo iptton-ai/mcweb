@@ -135,6 +135,22 @@
             white-space: nowrap;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
+        /* 物品数量角标（生存模式） */
+        .hotbar-slot .slot-count,
+        .inv-slot .slot-count {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 13px;
+            color: #fff;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+        }
+        .hotbar-slot.empty,
+        .inv-slot.empty {
+            opacity: 0.35;
+        }
 
         /* 调试信息 */
         #debug-info {
@@ -416,6 +432,36 @@
             gap: 16px;
             margin-bottom: 24px;
         }
+        #continue-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        #continue-row .mode-btn.continue {
+            min-width: 420px;
+            border-color: #7ec850;
+            background: rgba(52, 78, 40, 0.9);
+        }
+        #continue-row .mode-btn.continue:hover {
+            border-color: #a5e87a;
+            background: rgba(70, 100, 50, 0.95);
+        }
+        .save-btn {
+            background: rgba(40, 40, 66, 0.9);
+            color: #fff;
+            border: 2px solid #5a5a7a;
+            border-radius: 10px;
+            padding: 10px 26px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 20px;
+        }
+        .save-btn:hover {
+            border-color: #7ec850;
+            background: rgba(60, 70, 90, 0.95);
+        }
         .mode-btn {
             background: rgba(40, 40, 66, 0.9);
             color: #fff;
@@ -458,6 +504,12 @@
     <div id="start-screen">
         <h1>⛏ 我的世界</h1>
         <div class="subtitle">网页复刻版</div>
+        <div id="continue-row">
+            <button class="mode-btn continue" id="btn-continue" style="display: none">
+                <span class="mode-icon">📂</span>继续游戏
+                <span class="mode-desc" id="continue-desc">读取上次保存的世界</span>
+            </button>
+        </div>
         <div id="mode-select">
             <button class="mode-btn creative" id="btn-creative">
                 <span class="mode-icon">🏗️</span>建造模式
@@ -468,14 +520,15 @@
                 <span class="mode-desc">有生命值 · 夜晚会刷出怪物袭击</span>
             </button>
         </div>
+        <button class="save-btn" id="btn-save">💾 保存进度（进入游戏后每 30 秒也会自动存档）</button>
         <div class="controls-info">
             <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃 &nbsp;|&nbsp; <kbd>Shift</kbd> 潜行<br>
             <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置方块<br>
             <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换方块 &nbsp;|&nbsp; <kbd>E</kbd> 打开物品栏<br>
             <kbd>F</kbd> 切换飞行（建造模式）&nbsp;|&nbsp; <kbd>M</kbd> 切换游戏模式 &nbsp;|&nbsp; <kbd>Esc</kbd> 释放鼠标<br>
-            <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角：第一人称 → 第三人称(背后) → 第三人称(正面)
+            <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角：第一人称 ↔ 第三人称(背后)
         </div>
-        <div class="click-hint">🖱 点击空白处可直接进入（默认建造模式）</div>
+        <div class="click-hint">🖱 点击空白处可直接进入当前世界</div>
     </div>
 
     <!-- 准星 -->
@@ -530,5 +583,7 @@
     </script>
 
     <script type="module" src="./js/main.js"></script>
+    <!-- AI 助手引导：零依赖、独立加载，游戏代码损坏时仍能捕获错误并提示 -->
+    <script type="module" src="./js/assistant/boot.js"></script>
 </body>
 </html>

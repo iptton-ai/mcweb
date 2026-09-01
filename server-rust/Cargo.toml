@@ -1,0 +1,7 @@
+# 「我的世界 - 网页复刻版」Rust 服务器：仅标准库，零第三方依赖
+[package]
+name = "game-server"
+version = "0.1.0"
+edition = "2021"
+
+# 保持默认 release 配置即可；如需更小二进制可加 strip = true

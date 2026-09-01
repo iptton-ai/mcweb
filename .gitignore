@@ -1,0 +1,6 @@
+# 助手自动备份目录与 Python 缓存不入库
+assistant_backups/
+__pycache__/
+*.pyc
+# Rust 服务器构建产物
+server-rust/target/

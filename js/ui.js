@@ -1,13 +1,16 @@
 // ==================== ui.js ====================
 
-import { BlockInfo, BlockTypes, GameModes, HotbarBlocks } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, WORLD_HEIGHT } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { canvas } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 import { raycastBlocks } from './interaction.js';
+import { isSolid } from './chunk.js';
+import { getBlock } from './world.js';
 import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { updateHealthUI } from './playerLife.js';
 import { closeInventory } from './input.js';
+import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -15,6 +18,10 @@ export function setGameMode(mode) {
     const p = state.player;
     if (mode === GameModes.SURVIVAL) {
         p.flying = false;
+        // 首次进入生存：赠送少量火把度过夜晚
+        if (Object.keys(state.player.inventory).length === 0) {
+            state.player.inventory[BlockTypes.TORCH] = 10;
+        }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {
             for (let i = 0; i < 3; i++) mobSpawnTick();
@@ -24,6 +31,7 @@ export function setGameMode(mode) {
         for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
     }
     updateHealthUI();
+    updateHotbar(); // 模式切换后刷新数量角标显示
 }
 
 export function toggleGameMode() {
@@ -56,6 +64,15 @@ export function updateHotbar() {
         nameSpan.className = 'block-name';
         nameSpan.textContent = BlockInfo[blockType].name;
         slot.appendChild(nameSpan);
+        // 生存模式：显示数量角标，数量为 0 灰显
+        if (!isCreative()) {
+            const count = state.player.inventory[blockType] || 0;
+            const countSpan = document.createElement('span');
+            countSpan.className = 'slot-count';
+            countSpan.textContent = count;
+            slot.appendChild(countSpan);
+            if (count === 0) slot.classList.add('empty');
+        }
         slot.addEventListener('click', () => {
             state.player.selectedSlot = index;
             updateHotbar();
@@ -85,6 +102,15 @@ export function buildInventoryGrid() {
         nameSpan.className = 'inv-name';
         nameSpan.textContent = BlockInfo[blockType].name;
         slot.appendChild(nameSpan);
+        // 生存模式：显示数量角标，数量为 0 灰显
+        if (!isCreative()) {
+            const count = state.player.inventory[blockType] || 0;
+            const countSpan = document.createElement('span');
+            countSpan.className = 'slot-count';
+            countSpan.textContent = count;
+            slot.appendChild(countSpan);
+            if (count === 0) slot.classList.add('empty');
+        }
         slot.addEventListener('click', () => {
             state.player.selectedSlot = HotbarBlocks.indexOf(blockType);
             updateHotbar();
@@ -123,11 +149,175 @@ export function updateDebugInfo() {
     const dirIndex = Math.round(yawDeg / 45) % 8;
     document.getElementById('dbg-dir').textContent = dirs[dirIndex];
     document.getElementById('dbg-mobs').textContent = state.enemies.length;
-    document.getElementById('dbg-view').textContent = ['第一人称', '第三人称(背后)', '第三人称(正面)'][state.viewMode];
+    document.getElementById('dbg-view').textContent = ['第一人称', '第三人称(背后)'][state.viewMode];
     const hit = raycastBlocks();
     if (hit) {
         document.getElementById('dbg-selected').textContent = BlockInfo[hit.block]?.name || '未知';
     } else {
         document.getElementById('dbg-selected').textContent = '-';
     }
+}
+
+// ==================== 施工进度控件 + 游戏画面录制 ====================
+// AI 渐进施工时顶部显示进度条；[ ] 调速、P 暂停（键位在 input.js），
+// R 键用 MediaRecorder 把画布录成 webm 下载，方便记录 AI 建造过程。
+
+const BUILD_WIDGET_STYLE = `
+#build-widget{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;
+  background:rgba(20,20,34,.85);border:2px solid #4a4a6a;color:#e8e8f4;
+  font-size:12.5px;user-select:none;white-space:nowrap;}
+#build-widget.hidden{display:none;}
+#build-title{max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+#build-bar{width:130px;height:10px;border:1px solid #3d3d5c;border-radius:5px;background:#14142a;overflow:hidden;}
+#build-fill{height:100%;width:0%;background:#7ec850;}
+#build-widget button{background:#2d2d4a;border:1px solid #4a4a6a;border-radius:5px;color:#e0e0e0;
+  cursor:pointer;font-size:12px;padding:2px 7px;font-family:inherit;}
+#build-widget button:hover{border-color:#7ec850;}
+#build-rec.rec-on{color:#ff7a6a;border-color:#a03030;}
+#build-hint{color:#8888a8;font-size:11px;}
+`;
+
+let buildEls = null;     // 控件 DOM 引用
+let wasActive = false;   // 上一帧是否有施工任务（用于完成后延迟隐藏）
+let rec = null;          // MediaRecorder 实例（null = 未在录）
+let recChunks = [];
+let recStartAt = 0;
+
+export function initBuildWidget() {
+    if (buildEls) return;
+    const style = document.createElement('style');
+    style.textContent = BUILD_WIDGET_STYLE;
+    document.head.appendChild(style);
+
+    const root = document.createElement('div');
+    root.id = 'build-widget';
+    root.className = 'hidden';
+    root.innerHTML = `
+      <span id="build-title">🏗️ 施工</span>
+      <div id="build-bar"><div id="build-fill"></div></div>
+      <span id="build-count">0/0</span>
+      <button id="build-goto" title="传送到施工现场（G 键）">📍</button>
+      <button id="build-slower" title="减速（[ 键）">−</button>
+      <span id="build-speed">极速</span>
+      <button id="build-faster" title="加速（] 键）">＋</button>
+      <button id="build-pause" title="暂停/继续施工（P 键）">⏸</button>
+      <button id="build-rec" title="录制游戏画面（R 键），停止后存为 webm">⏺</button>
+      <span id="build-hint">[ ]调速 · P暂停 · R录像 · G前往</span>`;
+    document.body.appendChild(root);
+    // 面板内点击不冒泡，避免触发「点击重新锁定指针」
+    root.addEventListener('click', (e) => e.stopPropagation());
+
+    buildEls = {
+        root,
+        title: root.querySelector('#build-title'),
+        fill: root.querySelector('#build-fill'),
+        count: root.querySelector('#build-count'),
+        speed: root.querySelector('#build-speed'),
+        pause: root.querySelector('#build-pause'),
+        recBtn: root.querySelector('#build-rec'),
+    };
+    buildEls.root.querySelector('#build-goto').addEventListener('click', () => teleportToBuildSite());
+    buildEls.root.querySelector('#build-slower').addEventListener('click', () => adjustBuildSpeed(-1));
+    buildEls.root.querySelector('#build-faster').addEventListener('click', () => adjustBuildSpeed(1));
+    buildEls.pause.addEventListener('click', () => toggleBuildPaused());
+    buildEls.recBtn.addEventListener('click', () => toggleBuildRecording());
+}
+
+// 前往施工现场（G 键 / 📍 按钮）：把玩家传到施工焦点所在柱的地表上。
+// 摄像机绑定玩家本体，AI 在远处选址时靠它一步到位观看建造。
+export function teleportToBuildSite() {
+    const focus = getBuildFocus();
+    if (!focus) {
+        showTooltip('🏗️ 当前没有施工任务');
+        return;
+    }
+    const p = state.player;
+    if (Math.hypot(focus.x + 0.5 - p.x, focus.z + 0.5 - p.z) < 6 && Math.abs(focus.y - p.y) < 6) {
+        showTooltip('📍 已在施工现场附近');
+        return;
+    }
+    // 沿焦点柱自上而下找落脚点（最高实心方块的上一格）
+    let groundY = 0;
+    for (let y = WORLD_HEIGHT - 1; y >= 1; y--) {
+        if (isSolid(getBlock(focus.x, y, focus.z))) {
+            groundY = y + 1;
+            break;
+        }
+    }
+    if (groundY <= 0) {
+        showTooltip('⚠️ 施工位置下方没有地面，无法传送');
+        return;
+    }
+    p.x = focus.x + 0.5;
+    p.y = groundY;
+    p.z = focus.z + 0.5;
+    p.vy = 0;
+    showTooltip(`📍 已前往施工现场：${focus.label}`);
+}
+
+// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频，不含声音）
+export function toggleBuildRecording() {
+    if (!buildEls) initBuildWidget();
+    if (rec) {
+        rec.stop(); // 收尾在 onstop
+        return;
+    }
+    if (typeof MediaRecorder === 'undefined') {
+        showTooltip('⚠️ 当前浏览器不支持 MediaRecorder，无法录像');
+        return;
+    }
+    const stream = canvas.captureStream(60);
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+        .find((m) => MediaRecorder.isTypeSupported(m)) || '';
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8000000 } : undefined);
+    recChunks = [];
+    recStartAt = Date.now();
+    rec.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+    rec.onstop = () => {
+        const blob = new Blob(recChunks, { type: 'video/webm' });
+        const a = document.createElement('a');
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        a.href = URL.createObjectURL(blob);
+        a.download = `建造录像-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.webm`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        rec = null;
+        showTooltip('🎥 录像已保存（webm）');
+    };
+    rec.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
+    showTooltip('🎥 开始录制游戏画面…（R 停止）');
+}
+
+// 每帧刷新控件（main.js gameLoop 调用）：有任务或录像中常显，任务结束后停留 3 秒
+export function updateBuildWidget() {
+    if (!buildEls) return;
+    const st = getBuildStatus();
+    const recOn = !!rec;
+    if (st.active) wasActive = true;
+    const show = st.active || recOn || wasActive || lastFinishedAgeMs() < 3000;
+    if (!st.active && wasActive) {
+        wasActive = false;
+        if (!recOn) {
+            showTooltip(`✅ 施工完成：${st.label}（${st.applied}/${st.total} 格）`);
+        }
+    }
+    buildEls.root.classList.toggle('hidden', !show);
+    if (!show) return;
+
+    buildEls.title.textContent = st.label ? `🏗️ ${st.label}` : '🏗️ 施工';
+    const pct = st.total ? Math.round((st.applied / st.total) * 100) : 0;
+    buildEls.fill.style.width = pct + '%';
+    buildEls.count.textContent = `${st.applied}/${st.total}`;
+    buildEls.speed.textContent = speedText();
+    buildEls.pause.textContent = st.paused ? '▶' : '⏸';
+    buildEls.pause.title = st.paused ? '继续施工（P 键）' : '暂停施工（P 键）';
+    if (recOn) {
+        const sec = Math.floor((Date.now() - recStartAt) / 1000);
+        buildEls.recBtn.textContent = `⏹ ${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+    } else {
+        buildEls.recBtn.textContent = '⏺';
+    }
+    buildEls.recBtn.classList.toggle('rec-on', recOn);
 }

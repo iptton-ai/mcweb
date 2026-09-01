@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes } from './config.js';
+import { BlockInfo, BlockTypes, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -59,6 +59,7 @@ export function generateAllTextures() {
         { type: BlockTypes.TORCH, top: 16, side: 16, bottom: 16, name: 'torch' },
         { type: BlockTypes.FLOWER, top: 17, side: 17, bottom: 17, name: 'flower' },
         { type: BlockTypes.TNT, top: 19, side: 18, bottom: 19, name: 'tnt' },
+        { type: DOOR_ITEM_ID, top: 20, side: 20, bottom: 20, name: 'door_lower' }, // 门物品图标用下半 tile
     ];
 
     const drawFunctions = {
@@ -289,6 +290,38 @@ export function generateAllTextures() {
             ctx.fillRect(x, y, 2, s);
             ctx.fillRect(x + s - 2, y, 2, s);
         },
+        20: (ctx, x, y, s) => { // 门下半：竖木板 + 凹嵌板 + 把手
+            ctx.fillStyle = '#b89040';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < s; i += 4) {
+                ctx.fillStyle = '#8a6a30';
+                ctx.fillRect(x + i, y, 1, s);
+            }
+            ctx.fillStyle = '#a07c34';
+            ctx.fillRect(x + 3, y + 2, s - 6, s - 4);
+            ctx.fillStyle = '#c8a050';
+            ctx.fillRect(x + 4, y + 3, s - 8, s - 6);
+            ctx.fillStyle = '#6a4a20';
+            ctx.fillRect(x + 3, y + s - 2, s - 6, 1);
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + s - 5, y + Math.floor(s / 2) - 1, 2, 2);
+        },
+        21: (ctx, x, y, s) => { // 门上半：竖木板 + 四格玻璃窗
+            ctx.fillStyle = '#b89040';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < s; i += 4) {
+                ctx.fillStyle = '#8a6a30';
+                ctx.fillRect(x + i, y, 1, s);
+            }
+            ctx.fillStyle = '#9ec8e8';
+            ctx.fillRect(x + 3, y + 3, 4, 4);
+            ctx.fillRect(x + 9, y + 3, 4, 4);
+            ctx.fillRect(x + 3, y + 9, 4, 4);
+            ctx.fillRect(x + 9, y + 9, 4, 4);
+            ctx.fillStyle = '#6a4a20';
+            ctx.fillRect(x + 7, y + 2, 1, 12);
+            ctx.fillRect(x + 2, y + 7, 12, 1);
+        },
     };
 
     for (const tile of tiles) {
@@ -347,6 +380,20 @@ export function generateAllTextures() {
         bottom: tileMap['water'],
     };
 
+    // 门 16 个变体共享物品图标（下半 tile）；实际门板渲染不走图集 UV（见 getDoorTileTexture）
+    for (let i = 0; i < DOOR_COUNT; i++) {
+        blockUVs[DOOR_BASE + i] = blockUVs[DOOR_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    }
+
+    // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
+    // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位
+    if (!tileMap['door_upper'] && drawFunctions[21]) {
+        const ux = (21 % atlasSize) * tileSize;
+        const uy = Math.floor(21 / atlasSize) * tileSize;
+        drawFunctions[21](atlasCtx, ux, uy, tileSize);
+        tileMap['door_upper'] = { x: 21 % atlasSize, y: Math.floor(21 / atlasSize) };
+    }
+
     const atlasTexture = new THREE.CanvasTexture(atlasCanvas);
     atlasTexture.magFilter = THREE.NearestFilter;
     atlasTexture.minFilter = THREE.NearestFilter;
@@ -356,6 +403,68 @@ export function generateAllTextures() {
 }
 
 export const atlasTexture = generateAllTextures();
+
+// ==================== 自定义贴图覆盖（ComfyUI 生成） ====================
+// assets/textures/<名>.png 若存在（16×16），加载后覆盖图集对应 tile 并通知
+// 已派生的道具纹理重绘（门板）。没有这些文件时保持上面的程序化兜底纹理。
+const TILE_OVERRIDES = [
+    { file: 'assets/textures/door_lower.png', tile: 'door_lower' },
+    { file: 'assets/textures/door_upper.png', tile: 'door_upper' },
+];
+
+const tileOverrideListeners = [];
+
+export function onTileOverride(fn) {
+    tileOverrideListeners.push(fn);
+}
+
+for (const { file, tile } of TILE_OVERRIDES) {
+    if (!tileMap[tile]) continue;
+    const img = new Image();
+    img.onload = () => {
+        const t = tileMap[tile];
+        atlasCtx.drawImage(img, t.x * tileSize, t.y * tileSize, tileSize, tileSize);
+        atlasTexture.needsUpdate = true;
+        for (const fn of tileOverrideListeners) fn();
+    };
+    img.onerror = () => { /* 无自定义贴图：保持程序化兜底 */ };
+    img.src = file;
+}
+
+// ==================== 门道具纹理 ====================
+// 门板是独立薄片网格（BoxGeometry 各面默认铺满整张纹理），
+// 从图集裁出对应 tile 单独成纹理；自定义贴图加载完成后自动重绘。
+const doorTileTextures = {};
+
+function redrawDoorTile(entry) {
+    const t = tileMap[entry.key];
+    if (!t) return;
+    entry.ctx.clearRect(0, 0, tileSize, tileSize);
+    entry.ctx.drawImage(atlasCanvas, t.x * tileSize, t.y * tileSize, tileSize, tileSize, 0, 0, tileSize,
+        tileSize);
+    entry.tex.needsUpdate = true;
+}
+
+export function getDoorTileTexture(half) {
+    const key = half ? 'door_upper' : 'door_lower';
+    let entry = doorTileTextures[key];
+    if (!entry) {
+        const cnv = document.createElement('canvas');
+        cnv.width = tileSize;
+        cnv.height = tileSize;
+        const ctx = cnv.getContext('2d');
+        const tex = new THREE.CanvasTexture(cnv);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        entry = { cnv, ctx, tex, key };
+        doorTileTextures[key] = entry;
+        redrawDoorTile(entry);
+        onTileOverride(() => redrawDoorTile(entry));
+    }
+    return entry.tex;
+}
 
 export function getUVForFace(blockType, face) {
     const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];

@@ -1,10 +1,11 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, doorHalf, isDoorId } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
-import { atlasTexture, getUVForFace } from './textures.js';
+import { atlasTexture, getUVForFace, getDoorTileTexture } from './textures.js';
+import { doorSlabTransform } from './door.js';
 import { getBlock } from './world.js';
 
 // ==================== 区块渲染 ====================
@@ -86,6 +87,20 @@ export function getPropMesh(blockType) {
             ctx.fillRect(6, 3, 4, 3);
         });
         mesh = createCrossPlanes(tex);
+    } else if (isDoorId(blockType)) {
+        // 门：3/16 格厚的薄片板，朝向/开合由方块 ID 决定（编码见 config.js）
+        const { w, d, ox, oz } = doorSlabTransform(blockType);
+        const mat = new THREE.MeshLambertMaterial({
+            map: getDoorTileTexture(doorHalf(blockType)),
+            transparent: true,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+        });
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), mat);
+        slab.position.set(ox, 0.5, oz); // 道具原点在格底面中心，门板占满整格高
+        const group = new THREE.Group();
+        group.add(slab);
+        mesh = group;
     }
     if (mesh) propMeshCache.set(blockType, mesh);
     return mesh ? mesh.clone() : null;
@@ -335,6 +350,22 @@ export function updateChunkMeshes() {
     }
 }
 
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门）
+function isPropBlock(bt) {
+    return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt);
+}
+
+// 在 (x,y,z) 放置该格对应的道具网格（火把含光源），挂入 state.droppedItems
+function addPropAt(bt, x, y, z) {
+    if (bt === BlockTypes.TORCH) addTorchLight(x, y, z);
+    const m = getPropMesh(bt);
+    if (!m) return;
+    m.position.set(x + 0.5, y, z + 0.5);
+    m.userData.propKey = `${x},${y},${z}`;
+    scene.add(m);
+    state.droppedItems.push({ x, y, z, mesh: m, prop: true });
+}
+
 // 销毁区块内所有道具网格与火把光源
 export function disposeChunkProps(chunkX, chunkZ) {
     const startX = chunkX * CHUNK_SIZE;
@@ -344,15 +375,23 @@ export function disposeChunkProps(chunkX, chunkZ) {
     for (let x = startX; x < endX; x++) {
         for (let z = startZ; z < endZ; z++) {
             for (let y = 0; y < WORLD_HEIGHT; y++) {
-                const bt = getBlock(x, y, z);
-                if (bt === BlockTypes.TORCH) removeTorchLightAt(x, y, z);
-                else if (bt === BlockTypes.FLOWER) removeDroppedItemAt(x, y, z);
+                if (getBlock(x, y, z) === BlockTypes.TORCH) removeTorchLightAt(x, y, z);
             }
+        }
+    }
+    // 按坐标清掉本区块内的全部道具网格：方块先变空气再重建时（破坏门/花、
+    // 助手工具直接清格）也要能清掉残留网格，所以不能只看当前方块类型
+    for (let i = state.droppedItems.length - 1; i >= 0; i--) {
+        const it = state.droppedItems[i];
+        if (!it.prop) continue;
+        if (it.x >= startX && it.x < endX && it.z >= startZ && it.z < endZ) {
+            scene.remove(it.mesh);
+            state.droppedItems.splice(i, 1);
         }
     }
 }
 
-// 依据世界数据重建区块内的道具（火把光源 + 花网格）
+// 依据世界数据重建区块内的道具（火把光源 + 花网格 + 门板网格）
 export function buildChunkProps(chunkX, chunkZ) {
     const startX = chunkX * CHUNK_SIZE;
     const startZ = chunkZ * CHUNK_SIZE;
@@ -362,27 +401,16 @@ export function buildChunkProps(chunkX, chunkZ) {
         for (let z = startZ; z < endZ; z++) {
             for (let y = 0; y < WORLD_HEIGHT; y++) {
                 const bt = getBlock(x, y, z);
-                if (bt === BlockTypes.TORCH) {
-                    addTorchLight(x, y, z);
-                    const m = getPropMesh(BlockTypes.TORCH);
-                    if (m) {
-                        m.position.set(x + 0.5, y, z + 0.5);
-                        m.userData.propKey = `${x},${y},${z}`;
-                        scene.add(m);
-                        state.droppedItems.push({ x, y, z, mesh: m, prop: true });
-                    }
-                } else if (bt === BlockTypes.FLOWER) {
-                    const m = getPropMesh(BlockTypes.FLOWER);
-                    if (m) {
-                        m.position.set(x + 0.5, y, z + 0.5);
-                        m.userData.propKey = `${x},${y},${z}`;
-                        scene.add(m);
-                        state.droppedItems.push({ x, y, z, mesh: m, prop: true });
-                    }
-                }
+                if (isPropBlock(bt)) addPropAt(bt, x, y, z);
             }
         }
     }
+}
+
+// 局部刷新单格道具网格（门开关时用，避免整个区块重建）
+export function refreshPropAt(x, y, z) {
+    removeDroppedItemAt(x, y, z);
+    addPropAt(getBlock(x, y, z), x, y, z);
 }
 
 export function removeDroppedItemAt(x, y, z) {

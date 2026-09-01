@@ -64,6 +64,12 @@ export const TORCH_SPAWN_BLOCK_RADIUS = 6;
 export const THIRD_PERSON_DIST = 4.5;
 
 // 第三人称相机距离
+export const THIRD_PERSON_LIFT = 0.7;
+
+// 第三人称相机抬升高度（越过头顶，准星不被人物头部遮挡）
+export const THIRD_PERSON_FOCUS = 3.5;
+
+// 第三人称相机注视点与眼睛的距离（视线方向上前方的焦点）
 export const ENEMY_SPEED = 2.6;
 
 export const ENEMY_DAMAGE = 2;
@@ -73,6 +79,27 @@ export const ENEMY_ATTACK_RANGE = 1.3;
 export const MAX_HEALTH = 20;
 
 // 20 = 10颗心
+
+// ---- 施工队列（AI 建造渐进放置，便于录制延时摄影；见 js/buildQueue.js）----
+// 速度档位：每秒放置的方块数，Infinity = 一次性放完（网格重建仍分帧）
+export const BUILD_SPEED_LEVELS = [
+    { label: '延时', bps: 20 },
+    { label: '慢速', bps: 80 },
+    { label: '中速', bps: 300 },
+    { label: '快速', bps: 1200 },
+    { label: '极速', bps: 6000 },
+    { label: '瞬间', bps: Infinity },
+];
+
+// 默认速度档：极速（日常建造接近即时，又不会像瞬间档那样集中重建）
+export const BUILD_DEFAULT_SPEED_IDX = 4;
+
+// 每帧最多重建的区块网格数：把大量网格重建分摊到多帧，避免建造瞬间掉帧
+export const BUILD_REBUILDS_PER_FRAME = 4;
+
+// ---- 存档（见 js/saveGame.js）----
+// 自动存档间隔（秒）；页面隐藏/关闭时也会兜底存一次
+export const SAVE_AUTOSAVE_SEC = 30;
 
 export const GameModes = { CREATIVE: 'creative', SURVIVAL: 'survival' };
 
@@ -99,6 +126,40 @@ export const BlockTypes = {
     TNT: 18,
 };
 
+// ==================== 有状态方块：门 ====================
+// 参考 Minecraft Wiki（Door/BS）：一扇门占上下两格，方块状态有
+// half（下/上）、facing（放置时玩家水平朝向）、open（开/关）、hinge（铰链侧）。
+// 本作把状态直接编码进方块 ID（省去逐格元数据数组），并简化为固定左铰链：
+//   ID = DOOR_BASE + half*8 + open*4 + facing
+//   facing：0=北(-Z) 1=东(+X) 2=南(+Z) 3=西(-X)，共 16 个变体（19..34）。
+// 关门时门板贴在 facing 反侧的格边（原版规则：朝东的门关着占格子西侧），
+// 开门时绕左铰链转 90°，贴到相邻格边。高层逻辑（放置/开关/破坏）见 js/door.js。
+export const DOOR_BASE = 19;
+export const DOOR_COUNT = 16;
+export const DOOR_THICKNESS = 3 / 16; // 原版门板厚度：3/16 格
+export const DOOR_ITEM_ID = DOOR_BASE; // 物品栏中的「橡木门」用下半关门北向变体代表
+
+// 门 ID 编解码（纯函数，供 chunk.js / interaction.js / door.js 共用）
+export function doorId(half, open, facing) {
+    return DOOR_BASE + half * 8 + open * 4 + facing;
+}
+
+export function isDoorId(id) {
+    return id >= DOOR_BASE && id < DOOR_BASE + DOOR_COUNT;
+}
+
+export function doorHalf(id) {
+    return (id - DOOR_BASE) >> 3 & 1;
+}
+
+export function doorOpen(id) {
+    return (id - DOOR_BASE) >> 2 & 1;
+}
+
+export function doorFacing(id) {
+    return (id - DOOR_BASE) & 3;
+}
+
 export const BlockInfo = {
     [BlockTypes.AIR]: { name: '空气', solid: false, transparent: true, color: '#000000' },
     [BlockTypes.GRASS]: { name: '草方块', solid: true, transparent: false, color: '#5a9e3d' },
@@ -121,6 +182,26 @@ export const BlockInfo = {
     [BlockTypes.TNT]: { name: 'TNT', solid: true, transparent: false, tnt: true, color: '#c03020' },
 };
 
+// 门变体批量注册：solid 随开合变化（关门挡路、开门可通行，近似原版碰撞），
+// transparent 使邻方面不被剔除，customMesh 走火把/花同款道具网格渲染路径
+const DOOR_SUFFIX = [['N', '北'], ['E', '东'], ['S', '南'], ['W', '西']];
+for (let half = 0; half < 2; half++) {
+    for (let open = 0; open < 2; open++) {
+        for (let facing = 0; facing < 4; facing++) {
+            const id = doorId(half, open, facing);
+            BlockTypes[`DOOR_${half === 0 ? 'LOWER' : 'UPPER'}_${open === 0 ? 'CLOSED' : 'OPEN'}_${DOOR_SUFFIX[facing][0]}`] = id;
+            BlockInfo[id] = {
+                name: `橡木门${half === 1 ? '（上半）' : ''}${open === 1 ? '（开）' : ''}`,
+                solid: open === 0,
+                transparent: true,
+                customMesh: true,
+                door: true,
+                color: '#b89040',
+            };
+        }
+    }
+}
+
 export const HotbarBlocks = [
     BlockTypes.GRASS,
     BlockTypes.DIRT,
@@ -139,4 +220,5 @@ export const HotbarBlocks = [
     BlockTypes.TORCH,
     BlockTypes.FLOWER,
     BlockTypes.TNT,
+    DOOR_ITEM_ID, // 橡木门：有状态方块，放置时生成上下两格（见 js/door.js）
 ];

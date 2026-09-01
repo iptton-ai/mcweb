@@ -1,6 +1,6 @@
 // ==================== state.js ====================
 
-import { GameModes, MAX_HEALTH, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BUILD_DEFAULT_SPEED_IDX, GameModes, MAX_HEALTH, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 
 // ==================== 游戏状态 ====================
 export const state = {
@@ -25,6 +25,7 @@ export const state = {
         dead: false,
         attackCooldown: 0,
         invulnTimer: 0,
+        inventory: {}, // 生存模式物品计数：blockType -> 数量（创造模式不使用）
     },
     gameMode: GameModes.CREATIVE,
     enemies: [],
@@ -42,7 +43,10 @@ export const state = {
     sunAngle: 0,
     spawn: { x: WORLD_WIDTH / 2, y: 0, z: WORLD_DEPTH / 2 },
     enemySpawnTimer: 0, // 刷怪游戏刻累积计时器
-    viewMode: 0, // 0=第一人称 1=第三人称(背后) 2=第三人称(正面)
+    viewMode: 0, // 0=第一人称 1=第三人称(背后)
+    assistantOpen: false, // AI 助手会话面板是否打开（input.js 用于抑制指针锁定相关行为）
+    buildSpeedIdx: BUILD_DEFAULT_SPEED_IDX, // 施工速度档位（BUILD_SPEED_LEVELS 下标，[ ] 键可调）
+    buildPaused: false, // 施工暂停（录制时可暂停调整机位）
 };
 
 export function isCreative() {
