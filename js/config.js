@@ -30,7 +30,16 @@ export const BUILD_CAM_MARGIN = 8; // 跟拍画面四周预留余量（格）
 export const BUILD_CAM_MIN_HEIGHT = 16; // 跟拍相机最低高度（格）
 export const BUILD_CAM_DONE_DELAY = 2.5; // 建造完成后跟拍停留秒数，随后自动停录并回玩家视角
 
-export const REACH_DISTANCE = 6.0;
+// ---- 触及距离（照搬原版：创造 5.2 格 / 生存 4.5 格，raycastBlocks 按模式取用）----
+export const REACH_CREATIVE = 5.2;
+
+export const REACH_SURVIVAL = 4.5;
+
+// ---- 挖掘节奏（照搬原版，见 js/mining.js）----
+export const BREAK_DELAY = 0.3; // 每破坏一块后的强制间隔（原版 6 tick = 0.3s，即挖方块除外）
+export const CREATIVE_BREAK_INTERVAL = 0.1; // 创造模式按住连续拆除的节奏（原版即点即碎，限速是为区块重建分摊帧耗）
+export const INSTANT_BREAK_SEC = 0.05; // ≤此值视为即挖（原版规则），不受连挖间隔限制
+export const MINING_HIT_FX_SEC = 0.25; // 挖掘中撞击音效/粒子/挥动的循环周期（原版体感值）
 
 export const PLAYER_WIDTH = 0.6;
 
@@ -322,26 +331,31 @@ export const FACING_NORMALS = [
     [0, 1, 0], [0, -1, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0],
 ];
 
+// ==================== 方块挖掘属性（照搬原版 hardness/工具类别/掉落）====================
+// hardness：原版硬度值；-1 = 不可破坏（基岩）。tool：原版「最佳工具」类别（镐/斧/锹，徒手=无）。
+// needsTool：true = 必须用对应类别工具挖才有掉落（原版石质方块的规则，如石头手挖 7.5s 还不掉落）。
+// drop：生存模式破坏掉落的物品 ID；缺省 = 掉自身；null = 无掉落（玻璃/树叶，原版无精准采集时不掉落）。
+// 破坏耗时 = 硬度 × (可采集 ? 1.5 : 5) ÷ 工具速度，水中/悬空各再 ×5（js/mining.js）。
 export const BlockInfo = {
     [BlockTypes.AIR]: { name: '空气', solid: false, transparent: true, color: '#000000' },
-    [BlockTypes.GRASS]: { name: '草方块', solid: true, transparent: false, color: '#5a9e3d' },
-    [BlockTypes.DIRT]: { name: '泥土', solid: true, transparent: false, color: '#8b5a2b' },
-    [BlockTypes.STONE]: { name: '石头', solid: true, transparent: false, color: '#7a7a7a' },
-    [BlockTypes.WOOD]: { name: '原木', solid: true, transparent: false, color: '#6b4423' },
-    [BlockTypes.LEAVES]: { name: '树叶', solid: true, transparent: true, color: '#3d7a2a' },
-    [BlockTypes.SAND]: { name: '沙子', solid: true, transparent: false, color: '#dbc47a' },
+    [BlockTypes.GRASS]: { name: '草方块', solid: true, transparent: false, color: '#5a9e3d', hardness: 0.6, tool: 'shovel', drop: BlockTypes.DIRT }, // 原版：草方块掉泥土
+    [BlockTypes.DIRT]: { name: '泥土', solid: true, transparent: false, color: '#8b5a2b', hardness: 0.5, tool: 'shovel' },
+    [BlockTypes.STONE]: { name: '石头', solid: true, transparent: false, color: '#7a7a7a', hardness: 1.5, tool: 'pickaxe', needsTool: true, drop: BlockTypes.COBBLESTONE }, // 原版：石头掉圆石，徒手挖无掉落
+    [BlockTypes.WOOD]: { name: '原木', solid: true, transparent: false, color: '#6b4423', hardness: 2.0, tool: 'axe' },
+    [BlockTypes.LEAVES]: { name: '树叶', solid: true, transparent: true, color: '#3d7a2a', hardness: 0.2, drop: null }, // 原版：树叶不掉落（树苗概率忽略）
+    [BlockTypes.SAND]: { name: '沙子', solid: true, transparent: false, color: '#dbc47a', hardness: 0.5, tool: 'shovel' },
     [BlockTypes.WATER]: { name: '水', solid: false, transparent: true, color: '#3a6ea5' },
-    [BlockTypes.BEDROCK]: { name: '基岩', solid: true, transparent: false, color: '#3a3a3a' },
-    [BlockTypes.BRICK]: { name: '砖块', solid: true, transparent: false, color: '#a0522d' },
-    [BlockTypes.GLASS]: { name: '玻璃', solid: true, transparent: true, color: '#c8d8e8' },
-    [BlockTypes.PLANKS]: { name: '木板', solid: true, transparent: false, color: '#c8a050' },
-    [BlockTypes.COBBLESTONE]: { name: '圆石', solid: true, transparent: false, color: '#6a6a6a' },
-    [BlockTypes.GRAVEL]: { name: '沙砾', solid: true, transparent: false, color: '#9a8a7a' },
-    [BlockTypes.SNOW]: { name: '雪', solid: true, transparent: false, color: '#f0f0f0' },
-    [BlockTypes.LOG]: { name: '树干', solid: true, transparent: false, color: '#5a3a1a' },
-    [BlockTypes.TORCH]: { name: '火把', solid: false, transparent: true, customMesh: true, color: '#e8a030' },
-    [BlockTypes.FLOWER]: { name: '花', solid: false, transparent: true, customMesh: true, color: '#e04a5a' },
-    [BlockTypes.TNT]: { name: 'TNT', solid: true, transparent: false, tnt: true, color: '#c03020' },
+    [BlockTypes.BEDROCK]: { name: '基岩', solid: true, transparent: false, color: '#3a3a3a', hardness: -1 }, // 不可破坏
+    [BlockTypes.BRICK]: { name: '砖块', solid: true, transparent: false, color: '#a0522d', hardness: 2.0, tool: 'pickaxe', needsTool: true },
+    [BlockTypes.GLASS]: { name: '玻璃', solid: true, transparent: true, color: '#c8d8e8', hardness: 0.3, drop: null }, // 原版：玻璃碎了不掉落
+    [BlockTypes.PLANKS]: { name: '木板', solid: true, transparent: false, color: '#c8a050', hardness: 2.0, tool: 'axe' },
+    [BlockTypes.COBBLESTONE]: { name: '圆石', solid: true, transparent: false, color: '#6a6a6a', hardness: 2.0, tool: 'pickaxe', needsTool: true },
+    [BlockTypes.GRAVEL]: { name: '沙砾', solid: true, transparent: false, color: '#9a8a7a', hardness: 0.6, tool: 'shovel' },
+    [BlockTypes.SNOW]: { name: '雪', solid: true, transparent: false, color: '#f0f0f0', hardness: 0.5, tool: 'shovel' },
+    [BlockTypes.LOG]: { name: '树干', solid: true, transparent: false, color: '#5a3a1a', hardness: 2.0, tool: 'axe' },
+    [BlockTypes.TORCH]: { name: '火把', solid: false, transparent: true, customMesh: true, color: '#e8a030', hardness: 0 },
+    [BlockTypes.FLOWER]: { name: '花', solid: false, transparent: true, customMesh: true, color: '#e04a5a', hardness: 0 },
+    [BlockTypes.TNT]: { name: 'TNT', solid: true, transparent: false, tnt: true, color: '#c03020', hardness: 0 },
 };
 
 // 门变体批量注册：solid 随开合变化（关门挡路、开门可通行，近似原版碰撞），
@@ -359,10 +373,43 @@ for (let half = 0; half < 2; half++) {
                 customMesh: true,
                 door: true,
                 color: '#b89040',
+                hardness: 3.0, // 原版橡木门硬度 3（斧头快挖；破坏返还走 breakDoorAt 特例）
+                tool: 'axe',
             };
         }
     }
 }
+
+// ==================== 工具（P2：照搬原版工具策略，铁质一档）====================
+// 原版工具分级（木2/石4/铁6/钻8/金12）依赖合成系统做出层级推进，本作没有合成台，
+// 因此只引入铁质一档（速度×6，正好是原版中位），生存开局直接配备（见 ui.js setGameMode）。
+// 工具是「物品」不是方块：ID 从 100 起、绝不写进 state.blocks，只出现在物品栏/HotbarBlocks
+// （故本块必须定义在 HotbarBlocks 之前）。
+// tool.class 命中方块的 BlockInfo.tool 才有速度加成；攻击数值照搬原版铁质武器
+// （剑 6 伤害·冷却 0.6s；徒手 1 伤害·冷却 0.25s；创造模式一击必杀）。
+export const TOOL_BASE = 100;
+
+export const ToolTypes = {
+    PICKAXE: 100, // 铁镐：石质方块（石头/圆石/砖）快速挖掘 + 采集掉落
+    AXE: 101,     // 铁斧：木质方块（原木/木板/门）快速挖掘
+    SHOVEL: 102,  // 铁锹：泥土/沙/沙砾/雪快速挖掘
+    SWORD: 103,   // 铁剑：不加速挖掘，攻击 6 伤害
+};
+
+export function isToolId(id) {
+    return id >= TOOL_BASE && id <= TOOL_BASE + 3;
+}
+
+BlockInfo[ToolTypes.PICKAXE] = { name: '铁镐', color: '#d8d8d8', tool: { class: 'pickaxe', speed: 6, damage: 4, attackCd: 0.9 } };
+BlockInfo[ToolTypes.AXE] = { name: '铁斧', color: '#d8d8d8', tool: { class: 'axe', speed: 6, damage: 5, attackCd: 0.9 } };
+BlockInfo[ToolTypes.SHOVEL] = { name: '铁锹', color: '#d8d8d8', tool: { class: 'shovel', speed: 6, damage: 3, attackCd: 0.9 } };
+BlockInfo[ToolTypes.SWORD] = { name: '铁剑', color: '#d8d8d8', tool: { class: 'sword', speed: 1.5, damage: 6, attackCd: 0.6 } };
+
+// 徒手攻击（原版拳头：1 伤害，攻击速度 4/s = 冷却 0.25s）
+export const FIST_ATTACK = { damage: 1, attackCd: 0.25 };
+
+// 怪物血量对齐原版僵尸（20 = 10 颗心）
+export const ENEMY_HEALTH = 20;
 
 export const HotbarBlocks = [
     BlockTypes.GRASS,
@@ -389,6 +436,10 @@ export const HotbarBlocks = [
     PLATE_ITEM_ID, // 压力板：玩家/怪物踩住时是信号源（自动门/陷阱）
     LEVER_ITEM_ID, // 拉杆：右键开关，稳态信号源
     LAMP_ITEM_ID, // 红石灯：6 邻有信号点亮
+    ToolTypes.PICKAXE, // 铁镐：石质方块快速挖掘 + 采集掉落（物品，不能放置）
+    ToolTypes.AXE, // 铁斧：木质方块快速挖掘
+    ToolTypes.SHOVEL, // 铁锹：泥土/沙快速挖掘
+    ToolTypes.SWORD, // 铁剑：攻击 6 伤害（原版铁剑数值）
 ];
 
 // 红石组变体批量注册（思路同上门）：贴面/贴地元件都是 customMesh 道具（非固体不挡路），
@@ -450,5 +501,5 @@ for (let facing = 0; facing < 6; facing++) {
         };
     }
 }
-BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, redstone: true, color: '#6a4a2a' };
-BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, redstone: true, color: '#ffd870' };
+BlockInfo[LAMP_ITEM_ID] = { name: '红石灯', solid: true, transparent: false, redstone: true, color: '#6a4a2a', hardness: 0.3 };
+BlockInfo[lampId(1)] = { name: '红石灯（亮）', solid: true, transparent: false, redstone: true, color: '#ffd870', hardness: 0.3 };

@@ -1,7 +1,7 @@
 // ==================== entities.js ====================
 
 import * as THREE from 'three';
-import { BlockTypes, DESPAWN_CHANCE, ENEMY_ATTACK_RANGE, ENEMY_DAMAGE, ENEMY_SPEED, LAZY_DIST, MAX_ENEMIES, PACK_SPAWN_TRIES, SPAWN_ATTEMPTS_PER_TICK, SPAWN_MAX_DIST, SPAWN_MIN_DIST, TICK_RATE, TORCH_SPAWN_BLOCK_RADIUS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, DESPAWN_CHANCE, ENEMY_ATTACK_RANGE, ENEMY_DAMAGE, ENEMY_HEALTH, ENEMY_SPEED, LAZY_DIST, MAX_ENEMIES, PACK_SPAWN_TRIES, SPAWN_ATTEMPTS_PER_TICK, SPAWN_MAX_DIST, SPAWN_MIN_DIST, TICK_RATE, TORCH_SPAWN_BLOCK_RADIUS, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { scene } from './engine.js';
 import { getBlock } from './world.js';
@@ -111,7 +111,7 @@ export function spawnEnemy(x, y, z) {
     state.enemies.push({
         x, y, z,
         vy: 0,
-        hp: 10,
+        hp: ENEMY_HEALTH, // 20 = 原版僵尸血量（徒手 1 点要打 20 下，铁剑 6 点 4 下——原版逼你做武器）
         attackTimer: 0,
         animTime: Math.random() * 10,
         mesh,

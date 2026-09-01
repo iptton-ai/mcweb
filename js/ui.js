@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, WORLD_HEIGHT } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, GameModes, HotbarBlocks, ToolTypes, WORLD_HEIGHT } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { canvas } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -19,9 +19,14 @@ export function setGameMode(mode) {
     const p = state.player;
     if (mode === GameModes.SURVIVAL) {
         p.flying = false;
-        // 首次进入生存：赠送少量火把度过夜晚
+        // 首次进入生存：赠送火把 + 铁质工具一套（原版靠「撸树→合成」获得工具，本作无合成系统，
+        // 开局直配铁质一档：镐挖石、斧伐木、锹掘土、剑战斗——石头徒手挖极慢且无掉落，工具是生存刚需）
         if (Object.keys(state.player.inventory).length === 0) {
             state.player.inventory[BlockTypes.TORCH] = 10;
+            state.player.inventory[ToolTypes.PICKAXE] = 1;
+            state.player.inventory[ToolTypes.AXE] = 1;
+            state.player.inventory[ToolTypes.SHOVEL] = 1;
+            state.player.inventory[ToolTypes.SWORD] = 1;
         }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {

@@ -1,11 +1,13 @@
 // ==================== main.js ====================
 
-import { BlockTypes, CHUNK_SIZE, GameModes, MAX_HEALTH, PLAYER_EYE_HEIGHT, TICK_RATE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, CHUNK_SIZE, GameModes, MAX_HEALTH, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
 import { isSolid, rebuildChunk, updateChunkMeshes } from './chunk.js';
-import { breakBlock, placeBlock } from './interaction.js';
+import { placeBlock } from './interaction.js';
+import { updateMining } from './mining.js';
+import { initViewmodel, renderViewmodel, updateViewmodel } from './viewmodel.js';
 import { initParticles, updateParticles } from './particles.js';
 import { initAudio } from './audio.js';
 import { initBGM, updateBGM } from './bgm.js';
@@ -26,8 +28,6 @@ import { deleteSave, hasSave, initAutoSave, loadGame, saveGame, saveTimeText } f
 
 // ==================== 游戏循环 ====================
 let lastTime = 0;
-
-let accumulator = 0;
 
 function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
@@ -63,21 +63,12 @@ function gameLoop(timestamp) {
         mouseMoveDelta.y = 0;
     }
 
-    // 连续破坏/放置（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）
-    if (mouseLocked && state.camMode === 'player') {
-        if (mouseDown.left) {
-            accumulator += dt;
-            if (accumulator > TICK_RATE) {
-                breakBlock();
-                accumulator = 0;
-            }
-        } else {
-            accumulator = 0;
-        }
-        if (mouseDown.right) {
-            placeBlock();
-            mouseDown.right = false; // 防止连续放置
-        }
+    // 挖掘/放置（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）。
+    // 挖掘按 js/mining.js 的原版规则：生存按住蓄力（松手/换目标重置），创造即点即碎限速连拆
+    updateMining(dt, mouseLocked && state.camMode === 'player' && mouseDown.left);
+    if (mouseLocked && state.camMode === 'player' && mouseDown.right) {
+        placeBlock();
+        mouseDown.right = false; // 防止连续放置
     }
 
     // 玩家物理
@@ -85,6 +76,9 @@ function gameLoop(timestamp) {
 
     // 玩家模型（第三人称 / 自由·跟拍视角下可见）
     updatePlayerMesh(dt);
+
+    // 第一人称手部视图模型（挥动/持物/摆动；渲染在主场景之后叠加）
+    updateViewmodel(dt);
 
     // 摄像头模式（自由摄像头 / 建造跟拍；player 模式下相机已由 updatePlayerPhysics 更新）
     updateCameraRig(dt);
@@ -120,8 +114,9 @@ function gameLoop(timestamp) {
     // 施工进度控件（AI 建造时顶部显示）
     updateBuildWidget();
 
-    // 渲染
+    // 渲染（先世界，再清深度叠加第一人称手部，见 js/viewmodel.js）
     renderer.render(scene, camera);
+    renderViewmodel(renderer);
 }
 
 // ==================== 初始化 ====================
@@ -262,6 +257,7 @@ function init() {
     updateHealthUI();
     setupInput();
     initBuildWidget();
+    initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）
 
     // 窗口大小调整
     window.addEventListener('resize', () => {

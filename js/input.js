@@ -6,7 +6,9 @@
 import { BlockInfo, HotbarBlocks } from './config.js';
 import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
-import { breakBlock, placeBlock } from './interaction.js';
+import { placeBlock } from './interaction.js';
+import { miningPress } from './mining.js';
+import { swingViewmodel } from './viewmodel.js';
 import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
@@ -101,12 +103,14 @@ export function setupInput() {
         if (e.button === 0) {
             if (state.camMode === 'player') {
                 mouseDown.left = true;
-                breakBlock();
+                // 按下瞬间：攻击怪物 / 开始挖掘（生存蓄力、创造与即挖方块直接破坏，见 js/mining.js）
+                miningPress();
             }
         } else if (e.button === 2) {
             if (state.camMode === 'player') {
                 mouseDown.right = true;
                 placeBlock();
+                swingViewmodel(); // 放置也挥一下手（照原版使用动画）
             }
         }
     });

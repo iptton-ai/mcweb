@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, ToolTypes } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -67,6 +67,10 @@ export function generateAllTextures() {
         { type: LEVER_ITEM_ID, top: 23, side: 23, bottom: 23, name: 'lever' }, // 拉杆物品图标（实际是 3D 道具）
         { type: LAMP_BASE, top: 24, side: 24, bottom: 24, name: 'lamp_off' }, // 红石灯（灭）
         { type: LAMP_BASE + 1, top: 25, side: 25, bottom: 25, name: 'lamp_lit' }, // 红石灯（亮）
+        { type: ToolTypes.PICKAXE, top: 29, side: 29, bottom: 29, name: 'pickaxe' }, // 铁镐图标（物品，非方块）
+        { type: ToolTypes.AXE, top: 30, side: 30, bottom: 30, name: 'axe' },
+        { type: ToolTypes.SHOVEL, top: 31, side: 31, bottom: 31, name: 'shovel' },
+        { type: ToolTypes.SWORD, top: 32, side: 32, bottom: 32, name: 'sword' },
     ];
 
     const drawFunctions = {
@@ -412,6 +416,71 @@ export function generateAllTextures() {
             ctx.fillStyle = '#9a9a9a';
             ctx.fillRect(x + 3, y + 5, s - 6, 2);
         },
+        // 工具图标（29..32）：竖持姿态、透明背景（物品非方块；手模型/物品栏共用）
+        29: (ctx, x, y) => { // 铁镐：横梁镐头两端下垂 + 竖直木柄
+            ctx.fillStyle = '#8a5a2a';
+            ctx.fillRect(x + 7, y + 4, 2, 10); // 柄
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 4, 1, 10); // 柄背光侧
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 13, 2, 1); // 柄尾
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(x + 3, y + 2, 10, 2); // 镐头横梁
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x + 3, y + 3, 10, 1); // 横梁下沿
+            ctx.fillStyle = '#909090';
+            ctx.fillRect(x + 3, y + 2, 1, 2);
+            ctx.fillRect(x + 12, y + 2, 1, 2); // 横梁两端
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(x + 2, y + 4, 2, 3); // 左镐尖下垂
+            ctx.fillRect(x + 12, y + 4, 2, 3); // 右镐尖下垂
+            ctx.fillStyle = '#909090';
+            ctx.fillRect(x + 2, y + 6, 2, 1);
+            ctx.fillRect(x + 12, y + 6, 2, 1);
+        },
+        30: (ctx, x, y) => { // 铁斧：单侧斧刃 + 竖直木柄
+            ctx.fillStyle = '#8a5a2a';
+            ctx.fillRect(x + 7, y + 3, 2, 11); // 柄
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 3, 1, 11); // 柄背光侧
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 13, 2, 1); // 柄尾
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(x + 5, y + 1, 7, 4); // 斧刃上半
+            ctx.fillRect(x + 4, y + 4, 8, 2); // 斧刃下半（向刃口放宽）
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x + 5, y + 1, 1, 4); // 背光侧
+            ctx.fillStyle = '#909090';
+            ctx.fillRect(x + 4, y + 5, 8, 1); // 刃口
+        },
+        31: (ctx, x, y) => { // 铁锹：铲头 + 竖直木柄
+            ctx.fillStyle = '#8a5a2a';
+            ctx.fillRect(x + 7, y + 6, 2, 8); // 柄
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 6, 1, 8); // 柄背光侧
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 7, y + 13, 2, 1); // 柄尾
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(x + 5, y + 1, 6, 5); // 铲头
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x + 5, y + 1, 1, 5); // 背光侧
+            ctx.fillStyle = '#909090';
+            ctx.fillRect(x + 6, y + 6, 4, 1); // 铲尖
+        },
+        32: (ctx, x, y) => { // 铁剑：竖直剑身 + 横护手 + 剑柄
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(x + 7, y + 0, 2, 10); // 剑身
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(x + 8, y + 0, 1, 10); // 剑脊
+            ctx.fillStyle = '#909090';
+            ctx.fillRect(x + 7, y + 1, 1, 1); // 剑尖
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(x + 5, y + 10, 6, 2); // 护手
+            ctx.fillStyle = '#8a5a2a';
+            ctx.fillRect(x + 7, y + 12, 2, 3); // 握柄
+            ctx.fillStyle = '#6a4222';
+            ctx.fillRect(x + 6, y + 15, 4, 1); // 柄首
+        },
     };
 
     for (const tile of tiles) {
@@ -578,4 +647,100 @@ export function getUVForFace(blockType, face) {
     const u1 = ((tile.x + 1) / atlasSize);
     const v1 = 1 - (tile.y / atlasSize);
     return { u0, v0, u1, v1 };
+}
+
+// ==================== 通用单 tile 纹理（手模型持物/道具用） ====================
+// 与 getDoorTileTexture 同思路：从图集裁出一个 tile 单独成纹理，透明背景保留
+const tileTextureCache = {};
+
+export function getTileTexture(name) {
+    let entry = tileTextureCache[name];
+    if (!entry) {
+        const t = tileMap[name];
+        if (!t) return null;
+        const cnv = document.createElement('canvas');
+        cnv.width = tileSize;
+        cnv.height = tileSize;
+        const ctx = cnv.getContext('2d');
+        const tex = new THREE.CanvasTexture(cnv);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        entry = { cnv, ctx, tex };
+        tileTextureCache[name] = entry;
+        redrawTileTexture(entry, name);
+        onTileOverride(() => redrawTileTexture(entry, name));
+    }
+    return entry.tex;
+}
+
+function redrawTileTexture(entry, name) {
+    const t = tileMap[name];
+    if (!t) return;
+    entry.ctx.clearRect(0, 0, tileSize, tileSize);
+    entry.ctx.drawImage(atlasCanvas, t.x * tileSize, t.y * tileSize, tileSize, tileSize, 0, 0, tileSize,
+        tileSize);
+    entry.tex.needsUpdate = true;
+}
+
+// ==================== 挖掘裂纹贴图（原版 destroy_stage 0..9） ====================
+// 累进式裂纹：预生成固定线段并按「离中心由近到远」排序，阶段 s 绘制前 (s+1)/10 ——
+// 早期是中心几条短裂纹，越挖越向外蔓延布满整面，直至碎裂（还原原版观感）。
+// 叠在目标方块表面（js/mining.js 的 overlay 网格换贴图）。
+let crackTextureList = null;
+
+export function getCrackTextures() {
+    if (crackTextureList) return crackTextureList;
+    // 固定种子生成裂纹：每条是从中心向外的一小段「拐折线」（两段折线更像裂纹），
+    // 共 16 条；按离中心的距离升序，早期只画中心两三条，后期才蔓延到整面。
+    // 实测覆盖率约束：阶段 0 ≈ 4%、阶段 5 ≈ 20%、阶段 9 ≈ 30%（对齐原版观感，别糊成一片）
+    const cracks = [];
+    for (let i = 0; i < 16; i++) {
+        const cx = 4 + hash2D(i, 1, 77) * 8;
+        const cy = 4 + hash2D(i, 2, 77) * 8;
+        const ang = hash2D(i, 3, 77) * Math.PI * 2;
+        const bend = (hash2D(i, 4, 77) - 0.5) * 1.6; // 拐折角
+        const len = 2.5 + hash2D(i, 5, 77) * 2.5; // 半长
+        const mx = cx + Math.cos(ang) * len * 0.5;
+        const my = cy + Math.sin(ang) * len * 0.5;
+        cracks.push({
+            cx,
+            cy,
+            x1: cx - Math.cos(ang) * len * 0.5,
+            y1: cy - Math.sin(ang) * len * 0.5,
+            x2: mx + Math.cos(ang + bend) * len * 0.5,
+            y2: my + Math.sin(ang + bend) * len * 0.5,
+            xm: mx,
+            ym: my,
+        });
+    }
+    // 按离中心的距离升序：先中心裂纹，后边缘蔓延
+    cracks.sort((a, b) => Math.hypot(a.cx - 8, a.cy - 8) - Math.hypot(b.cx - 8, b.cy - 8));
+    crackTextureList = [];
+    for (let stage = 0; stage < 10; stage++) {
+        const cnv = document.createElement('canvas');
+        cnv.width = tileSize;
+        cnv.height = tileSize;
+        const ctx = cnv.getContext('2d');
+        ctx.strokeStyle = 'rgba(16,12,10,0.85)';
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const n = Math.round((stage + 1) / 10 * cracks.length);
+        for (let i = 0; i < n; i++) {
+            const s = cracks[i];
+            ctx.beginPath();
+            ctx.moveTo(s.x1, s.y1);
+            ctx.lineTo(s.xm, s.ym);
+            ctx.lineTo(s.x2, s.y2);
+            ctx.stroke();
+        }
+        const tex = new THREE.CanvasTexture(cnv);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        crackTextureList.push(tex);
+    }
+    return crackTextureList;
 }

@@ -12,6 +12,10 @@ function blockPalette() {
         [BlockTypes.FLOWER]: '（非固体装饰）',
         [BlockTypes.TNT]: '（放置为惰性；右键点燃或红石信号上升沿引爆）',
         [BlockTypes.BEDROCK]: '（不可破坏）',
+        [BlockTypes.STONE]: '（生存徒手挖极慢且无掉落，破坏掉圆石；用铁镐快挖 6 倍）',
+        [BlockTypes.GRASS]: '（破坏掉泥土）',
+        [BlockTypes.GLASS]: '（破坏后无掉落，原版规则）',
+        [BlockTypes.LEAVES]: '（破坏后无掉落）',
         [DUST_ITEM_ID]: '（铺在实心方块顶面走线；信号 15 级每格 -1，0 级断；可沿斜上/斜下 1 格爬坡）',
         [RTORCH_ITEM_ID]: '（默认亮=信号源；挂靠方块被充能则熄灭=反相器，切换延迟 0.1s，粉绕回挂靠方块即成时钟）',
         [BUTTON_ITEM_ID]: '（贴面道具，右键按下 1 秒后自动弹出，期间为信号源）',
@@ -38,6 +42,8 @@ function blockPalette() {
     parts.push(`${PLATE_BASE}..${PLATE_BASE + 1}=压力板（ID=基址+pressed，摆放写 ${PLATE_ITEM_ID}；只放顶面，玩家/怪物踩住=按下）`);
     parts.push(`${LEVER_BASE}..${LEVER_BASE + LEVER_COUNT - 1}=拉杆（ID=基址+facing*2+on；右键开关，开=信号源）`);
     parts.push(`${LAMP_BASE}..${LAMP_BASE + 1}=红石灯（ID=基址+lit；6 邻有激活红石粉或激活源时点亮）`);
+    // 工具（P2：物品而非方块，ID 100..103，不在 BlockTypes 里，不能用于建造放置）
+    parts.push(`工具（物品非方块，不可放置/建造）：100=铁镐（玩家挖掘用；石头需镐才有掉落） 101=铁斧 102=铁锹 103=铁剑（攻击 6 伤害）`);
     return parts.join('，');
 }
 

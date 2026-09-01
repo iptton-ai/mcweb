@@ -1,7 +1,7 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_DISTANCE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isLeverId, isRedstoneId } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isLeverId, isRedstoneId, isToolId } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
@@ -12,7 +12,9 @@ import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
 import { damageEnemy } from './entities.js';
 import { spawnTntEntity } from './tnt.js';
+import { getHeldTool } from './mining.js';
 // 注意：ui.js 也 import 本模块的 raycastBlocks，循环依赖均为运行时函数调用，安全
+// （mining.js ↔ 本模块同理：本模块只运行时调用 getHeldTool）
 import { showTooltip, updateHotbar } from './ui.js';
 
 // 视线方向：forward = (-sin(yaw)·cos(pitch), sin(pitch), -cos(yaw)·cos(pitch))
@@ -34,11 +36,17 @@ function getPickRay() {
     return { origin: camera.position.clone(), dir, eye };
 }
 
+// 触及距离（照搬原版：创造 5.2 格 / 生存 4.5 格）
+function reachDistance() {
+    return isCreative() ? REACH_CREATIVE : REACH_SURVIVAL;
+}
+
 // ==================== 方块交互 ====================
 export function raycastBlocks() {
     const { origin: o, dir, eye } = getPickRay();
     const origin = { x: o.x, y: o.y, z: o.z };
     const direction = { x: dir.x, y: dir.y, z: dir.z };
+    const reach = reachDistance();
 
     let x = Math.floor(origin.x);
     let y = Math.floor(origin.y);
@@ -57,7 +65,7 @@ export function raycastBlocks() {
     let tMaxZ = direction.z !== 0 ? ((stepZ > 0 ? z + 1 - origin.z : origin.z - z) * tDeltaZ) : Infinity;
 
     // 第三人称下射线要先走过相机到玩家的这一段距离
-    const maxDist = REACH_DISTANCE + Math.hypot(origin.x - eye.x, origin.y - eye.y, origin.z - eye.z);
+    const maxDist = reach + Math.hypot(origin.x - eye.x, origin.y - eye.y, origin.z - eye.z);
     let lastX = x,
         lastY = y,
         lastZ = z;
@@ -81,7 +89,7 @@ export function raycastBlocks() {
             const hx = origin.x + direction.x * dist;
             const hy = origin.y + direction.y * dist;
             const hz = origin.z + direction.z * dist;
-            if (Math.hypot(hx - eye.x, hy - eye.y, hz - eye.z) > REACH_DISTANCE + 0.01) return null;
+            if (Math.hypot(hx - eye.x, hy - eye.y, hz - eye.z) > reach + 0.01) return null;
             return { x, y, z, block, face: { dx: lastX - x, dy: lastY - y, dz: lastZ - z } };
         }
         lastX = x;
@@ -103,77 +111,92 @@ function rebuildAround(x, z) {
         cx, cz + 1);
 }
 
-export function breakBlock() {
-    // 生存模式：左键优先攻击准星附近的怪物（沿准星射线判定，距离从玩家眼睛算起）
-    if (state.player.attackCooldown <= 0 && state.enemies.length > 0) {
-        const { dir, eye } = getPickRay();
-        let best = null;
-        let bestScore = 0.65;
-        for (const e of state.enemies) {
-            const to = new THREE.Vector3(e.x - eye.x, e.y + 0.6 - eye.y, e.z - eye.z);
-            const dist = to.length();
-            if (dist > 4) continue;
-            to.normalize();
-            const score = to.dot(dir);
-            if (score > bestScore) { bestScore = score; best = e; }
-        }
-        if (best) {
-            damageEnemy(best, isCreative() ? 10 : 3);
-            state.player.attackCooldown = 0.4;
-            return;
-        }
+// 左键攻击：准星附近的怪物（沿准星射线判定，距离从玩家眼睛算起）。
+// 伤害与冷却照搬原版：创造一击必杀；生存看手持武器（铁剑 6/0.6s，工具按各自数值，徒手 1/0.25s）。
+// 返回 true = 准星被怪物占据（本次按键是攻击不是挖掘，冷却未到也只挥空刀，不隔着怪挖方块）；
+// 由 mining.js 在按下与按住时调用。
+export function tryAttackEnemy() {
+    if (state.enemies.length === 0) return false;
+    const { dir, eye } = getPickRay();
+    let best = null;
+    let bestScore = 0.65;
+    for (const e of state.enemies) {
+        const to = new THREE.Vector3(e.x - eye.x, e.y + 0.6 - eye.y, e.z - eye.z);
+        const dist = to.length();
+        if (dist > 4) continue;
+        to.normalize();
+        const score = to.dot(dir);
+        if (score > bestScore) { bestScore = score; best = e; }
     }
-    const hit = raycastBlocks();
-    if (hit && hit.block !== BlockTypes.BEDROCK) {
-        // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
-        if (isRedstoneId(hit.block)) {
-            const cells = breakRedstoneAt(hit.x, hit.y, hit.z);
-            updateRedstoneNetwork();
-            for (const c of cells) {
-                spawnBreakParticles(c.x, c.y, c.z, c.id);
-                rebuildAround(c.x, c.z);
-            }
-            playBlockSound(false);
-            if (!isCreative()) updateHotbar();
-            return;
-        }
-        // 门：打掉任意半扇，整扇消失，生存模式返还一个门物品
-        if (isDoorId(hit.block)) {
-            const cells = breakDoorAt(hit.x, hit.y, hit.z);
-            for (const c of cells) {
-                spawnBreakParticles(c.x, c.y, c.z, c.id);
-                rebuildAround(c.x, c.z);
-            }
-            playBlockSound(false);
-            if (!isCreative()) updateHotbar();
-            return;
-        }
-        const idx = getBlockIndex(hit.x, hit.y, hit.z);
-        state.blocks[idx] = BlockTypes.AIR;
-        // 生存模式：采集进背包
-        if (!isCreative()) {
-            state.player.inventory[hit.block] = (state.player.inventory[hit.block] || 0) + 1;
-            updateHotbar();
-        }
-        // 支撑被拆：贴在这个面上的红石元件随之脱落
-        for (const c of popUnsupportedRedstone(hit.x, hit.y, hit.z)) {
+    if (!best) return false;
+    if (state.player.attackCooldown <= 0) {
+        const tool = getHeldTool();
+        damageEnemy(best, isCreative() ? 1000 : (tool?.damage ?? FIST_ATTACK.damage));
+        state.player.attackCooldown = tool?.attackCd ?? FIST_ATTACK.attackCd;
+    }
+    return true;
+}
+
+// 破坏一格方块（mining.js 蓄力完成/即挖时调用，hit 来自 raycastBlocks）。
+// 生存掉落规则照搬原版：石头→圆石、草方块→泥土、玻璃/树叶→无掉落（见 config.js BlockInfo.drop）。
+export function breakBlockAt(hit) {
+    if (hit.block === BlockTypes.BEDROCK) return;
+    // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
+    if (isRedstoneId(hit.block)) {
+        const cells = breakRedstoneAt(hit.x, hit.y, hit.z);
+        updateRedstoneNetwork();
+        for (const c of cells) {
             spawnBreakParticles(c.x, c.y, c.z, c.id);
             rebuildAround(c.x, c.z);
         }
-        spawnBreakParticles(hit.x, hit.y, hit.z, hit.block);
         playBlockSound(false);
-        if (hit.block === BlockTypes.TORCH) removeTorchLightAt(hit.x, hit.y, hit.z);
-        if (isCustomMesh(hit.block)) removeDroppedItemAt(hit.x, hit.y, hit.z);
-        const cx = Math.floor(hit.x / CHUNK_SIZE);
-        const cz = Math.floor(hit.z / CHUNK_SIZE);
-        rebuildChunk(cx, cz);
-        if (hit.x % CHUNK_SIZE === 0 && cx > 0) rebuildChunk(cx - 1, cz);
-        if (hit.x % CHUNK_SIZE === CHUNK_SIZE - 1 && cx < Math.ceil(WORLD_WIDTH / CHUNK_SIZE) - 1) rebuildChunk(
-            cx + 1, cz);
-        if (hit.z % CHUNK_SIZE === 0 && cz > 0) rebuildChunk(cx, cz - 1);
-        if (hit.z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < Math.ceil(WORLD_DEPTH / CHUNK_SIZE) - 1) rebuildChunk(
-            cx, cz + 1);
+        if (!isCreative()) updateHotbar();
+        return;
     }
+    // 门：打掉任意半扇，整扇消失，生存模式返还一个门物品
+    if (isDoorId(hit.block)) {
+        const cells = breakDoorAt(hit.x, hit.y, hit.z);
+        for (const c of cells) {
+            spawnBreakParticles(c.x, c.y, c.z, c.id);
+            rebuildAround(c.x, c.z);
+        }
+        playBlockSound(false);
+        if (!isCreative()) updateHotbar();
+        return;
+    }
+    const idx = getBlockIndex(hit.x, hit.y, hit.z);
+    state.blocks[idx] = BlockTypes.AIR;
+    // 生存模式按掉落映射采集（null=无掉落，缺省=自身；石头→圆石、草方块→泥土等原版规则）。
+    // needsTool 方块（石头/圆石/砖）徒手或用错工具挖开时「无掉落」——原版采集规则
+    if (!isCreative()) {
+        const info = BlockInfo[hit.block];
+        const tool = getHeldTool();
+        const harvestBlocked = info?.drop === null ||
+            (info?.needsTool && (!tool || tool.class !== info.tool));
+        if (!harvestBlocked) {
+            const itemId = info?.drop ?? hit.block;
+            state.player.inventory[itemId] = (state.player.inventory[itemId] || 0) + 1;
+        }
+        updateHotbar();
+    }
+    // 支撑被拆：贴在这个面上的红石元件随之脱落
+    for (const c of popUnsupportedRedstone(hit.x, hit.y, hit.z)) {
+        spawnBreakParticles(c.x, c.y, c.z, c.id);
+        rebuildAround(c.x, c.z);
+    }
+    spawnBreakParticles(hit.x, hit.y, hit.z, hit.block);
+    playBlockSound(false);
+    if (hit.block === BlockTypes.TORCH) removeTorchLightAt(hit.x, hit.y, hit.z);
+    if (isCustomMesh(hit.block)) removeDroppedItemAt(hit.x, hit.y, hit.z);
+    const cx = Math.floor(hit.x / CHUNK_SIZE);
+    const cz = Math.floor(hit.z / CHUNK_SIZE);
+    rebuildChunk(cx, cz);
+    if (hit.x % CHUNK_SIZE === 0 && cx > 0) rebuildChunk(cx - 1, cz);
+    if (hit.x % CHUNK_SIZE === CHUNK_SIZE - 1 && cx < Math.ceil(WORLD_WIDTH / CHUNK_SIZE) - 1) rebuildChunk(
+        cx + 1, cz);
+    if (hit.z % CHUNK_SIZE === 0 && cz > 0) rebuildChunk(cx, cz - 1);
+    if (hit.z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < Math.ceil(WORLD_DEPTH / CHUNK_SIZE) - 1) rebuildChunk(
+        cx, cz + 1);
 }
 
 export function placeBlock() {
@@ -213,6 +236,11 @@ export function placeBlock() {
         const currentBlock = getBlock(bx, by, bz);
         if (currentBlock !== BlockTypes.AIR && currentBlock !== BlockTypes.WATER) return;
         const selectedType = HotbarBlocks[state.player.selectedSlot] || BlockTypes.GRASS;
+        // 工具是「物品」不是方块，不能放置（照原版：右键持工具不与世界交互）
+        if (isToolId(selectedType)) {
+            showTooltip(`🛠️ ${BlockInfo[selectedType].name}是用来挖掘/战斗的，选个方块再放置`);
+            return;
+        }
         // 生存模式：数量不足不可放置
         if (!isCreative() && (state.player.inventory[selectedType] || 0) <= 0) {
             showTooltip(`❌ ${BlockInfo[selectedType].name}不足，先去采集吧`);
