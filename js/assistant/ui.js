@@ -8,7 +8,7 @@ import {
     createSession, deleteSession, getActiveSession, listSessions, setActiveSession,
     autoTitle, touchSession,
 } from './sessions.js';
-import { setAssistantVisible, togglePauseMenu } from '../uiModal.js';
+import { closeSettingsState, getUIState, setAssistantVisible, togglePauseMenu } from '../uiModal.js';
 
 // ---------- 样式 ----------
 const STYLE = `
@@ -89,21 +89,31 @@ const STYLE = `
 .ai-session-item .d{font-size:11px;color:#8888a8;}
 .ai-session-del{background:none;border:none;color:#8888a8;cursor:pointer;font-size:13px;}
 .ai-session-del:hover{color:#ff7a6a;}
-#ai-settings{position:absolute;inset:0;background:rgba(14,14,26,.99);z-index:7;padding:16px;
-  overflow-y:auto;font-size:13px;display:flex;flex-direction:column;gap:11px;}
-#ai-settings h3{margin:0;color:#fff;font-size:16px;}
+/* 设置页：分组卡片滚动区 + 吸底操作栏（保存生效）。
+   游戏音频（配乐风格/音量）与存档管理不在这里——它们在首屏/暂停菜单的 ⚙️ 设置浮层（settingsUI.js） */
+#ai-settings{position:absolute;inset:0;background:rgba(14,14,26,.99);z-index:7;
+  font-size:13px;display:flex;flex-direction:column;}
+.ai-set-head{flex:0 0 auto;padding:13px 16px 0;border-bottom:1px solid #26263c;}
+.ai-set-head h3{margin:0 0 9px;color:#fff;font-size:16px;}
+.ai-set-body{flex:1 1 auto;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+.ai-set-body::-webkit-scrollbar{width:8px;}
+.ai-set-body::-webkit-scrollbar-thumb{background:#3d3d5c;border-radius:4px;}
+.ai-set-body.hidden{display:none;}
+.ai-set-card{background:rgba(30,30,50,.55);border:1px solid #2d2d44;border-radius:10px;padding:12px;}
+.ai-set-card h4{margin:0 0 9px;font-size:13px;color:#cfe3b8;}
+.ai-set-card .card-desc{margin:0 0 10px;color:#77779a;font-size:11.5px;line-height:1.5;}
 #ai-settings label{color:#9ab;font-size:12px;display:block;margin-bottom:3px;}
 #ai-settings input[type=text],#ai-settings input[type=password],#ai-settings input[type=number],
 #ai-settings select,#ai-settings textarea{width:100%;background:#1c1c30;border:2px solid #3d3d5c;border-radius:6px;color:#fff;
-  padding:7px 9px;font-size:13px;font-family:inherit;outline:none;}
+  padding:7px 9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;}
 #ai-settings select option{background:#1c1c30;color:#fff;}
 #ai-settings input:focus,#ai-settings select:focus,#ai-settings textarea:focus{border-color:#7ec850;}
 #ai-settings textarea{min-height:74px;resize:vertical;line-height:1.5;}
 #ai-settings .row{display:flex;gap:10px;}
 #ai-settings .row>div{flex:1;}
-#ai-settings .check{display:flex;align-items:center;gap:6px;color:#c0c0d8;font-size:13px;cursor:pointer;}
 #ai-settings .hint{color:#77779a;font-size:11.5px;line-height:1.5;}
-.ai-settings-actions{display:flex;gap:8px;margin-top:4px;}
+.ai-set-foot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #26263c;}
+.ai-set-foot .hint{flex:1;}
 .ai-btn{background:#2d2d4a;color:#e0e0e0;border:1px solid #4a4a6a;border-radius:6px;padding:8px 16px;
   cursor:pointer;font-size:13px;font-family:inherit;}
 .ai-btn:hover{border-color:#7ec850;}
@@ -217,7 +227,7 @@ function buildDom() {
           <button id="ai-btn-new" title="新会话">＋</button>
           <button id="ai-btn-sessions" title="会话列表">🕘</button>
           <button id="ai-btn-reload" title="热重载游戏（应用文件修改）">🔄</button>
-          <button id="ai-btn-settings" title="LLM 设置">⚙️</button>
+          <button id="ai-btn-settings" title="AI 助手设置">⚙️</button>
           <button id="ai-btn-close" title="关闭（Esc / T）">✕</button>
         </div>
       </header>
@@ -232,27 +242,45 @@ function buildDom() {
         <button id="ai-send" title="发送">➤</button>
       </footer>
       <div id="ai-settings" class="hidden">
-        <h3>⚙️ LLM 设置</h3>
-        <div><label>预设服务商（快速填入地址与模型，之后仍可手动修改）</label>
-          <select id="ai-set-preset"></select></div>
-        <div><label>API 地址（OpenAI 兼容，填到 /v1）</label>
-          <input type="text" id="ai-set-baseurl" placeholder="https://api.deepseek.com/v1"></div>
-        <div><label>API Key</label>
-          <input type="password" id="ai-set-key" placeholder="sk-…"></div>
-        <div class="row">
-          <div><label>模型</label><input type="text" id="ai-set-model" list="ai-model-list" placeholder="deepseek-chat"></div>
-          <div><label>温度</label><input type="number" id="ai-set-temp" step="0.1" min="0" max="2"></div>
-          <div><label>工具轮数上限</label><input type="number" id="ai-set-iters" step="1" min="1" max="100"></div>
+        <div class="ai-set-head">
+          <h3>⚙️ AI 助手设置</h3>
         </div>
-        <datalist id="ai-model-list"></datalist>
-        <div><label>附加系统提示词（可选，追加在游戏档案之后）</label>
-          <textarea id="ai-set-extra" placeholder="例如：回复尽量简短；建造风格偏好现代简约…"></textarea></div>
-        <div class="hint">密钥仅保存在本机 localStorage；LLM 请求由浏览器直连上游接口（需上游允许跨域）。
-        选 Ollama 无需真实 Key，填任意非空值即可（如 ollama）；HTTPS 页面无法直连本机 http 接口。
-        文件读写/热重载依赖 server.py（python3 server.py 启动）。</div>
-        <div class="ai-settings-actions">
+        <div class="ai-set-body">
+          <div class="ai-set-card">
+            <h4>🔌 服务商</h4>
+            <label>预设（快速填入地址与模型，之后仍可手动修改）</label>
+            <select id="ai-set-preset"></select>
+          </div>
+          <div class="ai-set-card">
+            <h4>🔗 连接</h4>
+            <label>API 地址（OpenAI 兼容，填到 /v1）</label>
+            <input type="text" id="ai-set-baseurl" placeholder="https://api.deepseek.com/v1">
+            <label style="margin-top:9px;">API Key</label>
+            <input type="password" id="ai-set-key" placeholder="sk-…">
+            <label style="margin-top:9px;">模型</label>
+            <input type="text" id="ai-set-model" list="ai-model-list" placeholder="deepseek-chat">
+            <datalist id="ai-model-list"></datalist>
+          </div>
+          <div class="ai-set-card">
+            <h4>🎛️ 生成参数</h4>
+            <div class="row">
+              <div><label>温度</label><input type="number" id="ai-set-temp" step="0.1" min="0" max="2"></div>
+              <div><label>工具轮数上限</label><input type="number" id="ai-set-iters" step="1" min="1" max="100"></div>
+            </div>
+          </div>
+          <div class="ai-set-card">
+            <h4>✍️ 个性化</h4>
+            <label>附加系统提示词（可选，追加在游戏档案之后）</label>
+            <textarea id="ai-set-extra" placeholder="例如：回复尽量简短；建造风格偏好现代简约…"></textarea>
+          </div>
+          <div class="hint">密钥仅保存在本机 localStorage；LLM 请求由浏览器直连上游接口（需上游允许跨域）。
+          选 Ollama 无需真实 Key，填任意非空值即可（如 ollama）；HTTPS 页面无法直连本机 http 接口。
+          文件读写/热重载依赖 server.py（python3 server.py 启动）。</div>
+        </div>
+        <div class="ai-set-foot">
+          <span class="hint" id="ai-set-note"></span>
           <button class="ai-btn primary" id="ai-set-save">保存</button>
-          <button class="ai-btn" id="ai-set-cancel">取消</button>
+          <button class="ai-btn" id="ai-set-cancel">关闭</button>
         </div>
       </div>
     `;
@@ -341,6 +369,7 @@ export function handleKeydown(e) {
         e.stopPropagation();
         if (!els.settings.classList.contains('hidden')) els.settings.classList.add('hidden');
         else if (!els.sessions.classList.contains('hidden')) els.sessions.classList.add('hidden');
+        else if (getUIState() === 'settings') closeSettingsState(); // 游戏设置浮层开着：先关它
         else togglePauseMenu(); // Esc = 暂停/回到游戏，面板保持打开（z-index 高于菜单）
     } else if (e.code === 'KeyT' && document.activeElement !== els.input) {
         e.preventDefault();

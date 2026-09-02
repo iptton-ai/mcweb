@@ -13,7 +13,7 @@ import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
 import { openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
-import { getUIState, isAssistantVisible, isPlaying, isTypingTarget, onUIStateChange, requestLock, setState } from './uiModal.js';
+import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setState } from './uiModal.js';
 
 // ==================== 输入状态 ====================
 export const keys = {};
@@ -42,7 +42,16 @@ export function setupInput() {
 
         // Esc：指针锁定时浏览器截获 Esc（页面收不到 keydown），这里只处理浮层状态下的 Esc
         if (e.code === 'Escape') {
-            if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
+            if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
+            else if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
+            return;
+        }
+        // Q：Esc 的替代键（推荐在 ZCode 内嵌浏览器里用——Esc 会被宿主截获导致应用退出，Q 不会）：
+        // 锁定时释放鼠标并弹暂停菜单；暂停/背包里回游戏；设置浮层里关闭浮层
+        if (e.code === 'KeyQ') {
+            if (st === 'settings') closeSettingsState();
+            else if (st === 'pause' || st === 'inventory') setState('playing');
+            else if (st === 'playing' && mouseLocked) releasePointerToPause();
             return;
         }
         // E：打开物品选择网格（openItemPicker 负责构建网格再进入 inventory 态）；

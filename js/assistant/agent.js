@@ -6,6 +6,10 @@
 import { chatCompletion, getConfig, isConfigured } from './llm.js';
 import { buildFinalSystemPrompt } from './docs.js';
 import { executeTool, getToolSchemas } from './tools.js';
+import { setAgentHold } from '../buildQueue.js';
+
+// 建造类工具：执行其一即认为本轮对话在做施工流程，跨轮次等 LLM 期间跟拍保持取景
+const BUILD_TOOLS = new Set(['place_blocks', 'clear_area', 'build_script']);
 
 const MAX_API_MESSAGES = 60;   // 发给 LLM 的历史长度上限（按条数）
 const MAX_TOOL_RESULT = 24000; // 单条工具结果发给 LLM 的字符上限
@@ -61,56 +65,68 @@ export async function runAgentTurn({ session, signal, onStreamText, onReasoningT
     const messages = buildApiMessages(session);
     const tools = getToolSchemas();
     let lastText = '';
+    let buildStarted = false; // 本轮是否执行过建造类工具（决定收尾时是否摘掉跟拍 hold）
 
-    for (let iter = 0; iter < cfg.maxToolIterations; iter++) {
-        onStatus?.(iter === 0 ? '思考中…' : `第 ${iter + 1} 轮工具调用…`);
-        const { content, reasoning, toolCalls } = await chatCompletion({
-            messages,
-            tools,
-            signal,
-            onDelta: (full) => { lastText = full; onStreamText?.(full); },
-            onReasoning: (full) => onReasoningText?.(full),
-        });
+    try {
+        for (let iter = 0; iter < cfg.maxToolIterations; iter++) {
+            onStatus?.(iter === 0 ? '思考中…' : `第 ${iter + 1} 轮工具调用…`);
+            const { content, reasoning, toolCalls } = await chatCompletion({
+                messages,
+                tools,
+                signal,
+                onDelta: (full) => { lastText = full; onStreamText?.(full); },
+                onReasoning: (full) => onReasoningText?.(full),
+            });
 
-        const assistantMsg = {
-            role: 'assistant',
-            content,
-            // 思考文本只在本机展示（toApiMessage 不回传 LLM），超限保留末尾
-            reasoning: reasoning ? (reasoning.length > MAX_STORED_REASONING ? reasoning.slice(-MAX_STORED_REASONING) : reasoning) : undefined,
-            toolCalls: toolCalls.length ? toolCalls : undefined,
-        };
-        session.messages.push(assistantMsg);
-        onAssistantDone?.(assistantMsg);
-        messages.push(toApiMessage(assistantMsg));
-
-        if (toolCalls.length === 0) {
-            return {
-                finalText: content || '（模型返回了空回复——可能是上游接口异常或被限流，请重试）',
-                reloading: false,
+            const assistantMsg = {
+                role: 'assistant',
+                content,
+                // 思考文本只在本机展示（toApiMessage 不回传 LLM），超限保留末尾
+                reasoning: reasoning ? (reasoning.length > MAX_STORED_REASONING ? reasoning.slice(-MAX_STORED_REASONING) : reasoning) : undefined,
+                toolCalls: toolCalls.length ? toolCalls : undefined,
             };
-        }
+            session.messages.push(assistantMsg);
+            onAssistantDone?.(assistantMsg);
+            messages.push(toApiMessage(assistantMsg));
 
-        // 逐个执行工具并把结果追加到对话
-        for (const tc of toolCalls) {
-            let args = {};
-            try {
-                args = JSON.parse(tc.arguments || '{}');
-            } catch {
-                // 参数不是合法 JSON：原样作为错误回传，让模型自行纠正
+            if (toolCalls.length === 0) {
+                return {
+                    finalText: content || '（模型返回了空回复——可能是上游接口异常或被限流，请重试）',
+                    reloading: false,
+                };
             }
-            onToolCall?.(tc);
-            onStatus?.(`🔧 ${tc.name}…`);
-            const { result, isError } = await executeTool(tc.name, args);
-            const toolMsg = { role: 'tool', toolCallId: tc.id, name: tc.name, content: result, isError };
-            session.messages.push(toolMsg);
-            onToolResult?.(toolMsg);
-            messages.push(toApiMessage(toolMsg));
 
-            // 页面即将重载：终止本轮，避免继续请求 LLM
-            if (tc.name === 'reload_game') {
-                return { finalText: '🔄 正在热重载游戏以应用修改…', reloading: true };
+            // 逐个执行工具并把结果追加到对话
+            for (const tc of toolCalls) {
+                let args = {};
+                try {
+                    args = JSON.parse(tc.arguments || '{}');
+                } catch {
+                    // 参数不是合法 JSON：原样作为错误回传，让模型自行纠正
+                }
+                onToolCall?.(tc);
+                onStatus?.(`🔧 ${tc.name}…`);
+                if (BUILD_TOOLS.has(tc.name) && !buildStarted) {
+                    // 施工流程开始：两次建造调用之间隔着一次 LLM 往返（网络+思考，常超数秒），
+                    // 期间施工队列短暂为空。挂起 hold 让建造跟拍保持最后取景等下一批任务，
+                    // 不提前判「建造完成」并停录；整轮结束（含出错路径）在 finally 摘掉
+                    buildStarted = true;
+                    setAgentHold(true);
+                }
+                const { result, isError } = await executeTool(tc.name, args);
+                const toolMsg = { role: 'tool', toolCallId: tc.id, name: tc.name, content: result, isError };
+                session.messages.push(toolMsg);
+                onToolResult?.(toolMsg);
+                messages.push(toApiMessage(toolMsg));
+
+                // 页面即将重载：终止本轮，避免继续请求 LLM
+                if (tc.name === 'reload_game') {
+                    return { finalText: '🔄 正在热重载游戏以应用修改…', reloading: true };
+                }
             }
         }
+        return { finalText: lastText || '（已达最大工具调用轮数上限，任务未完成。可让我继续。）', reloading: false };
+    } finally {
+        if (buildStarted) setAgentHold(false);
     }
-    return { finalText: lastText || '（已达最大工具调用轮数上限，任务未完成。可让我继续。）', reloading: false };
 }

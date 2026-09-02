@@ -2,7 +2,7 @@
 
 import { BlockInfo, BlockTypes, CHUNK_SIZE, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT } from './config.js';
 import { isCreative, isNight, state } from './state.js';
-import { canvas } from './engine.js';
+import { canvas, camera, renderer, scene } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 import { raycastBlocks } from './interaction.js';
 import { isSolid } from './chunk.js';
@@ -12,6 +12,8 @@ import { updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 import { camModeText, toggleBuildCam } from './cameraRig.js';
 import { setState } from './uiModal.js';
+import { audioCtx, getRecAudioStream } from './audio.js';
+import { renderViewmodel } from './viewmodel.js';
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -219,6 +221,8 @@ const BUILD_WIDGET_STYLE = `
 #build-widget button:hover{border-color:#7ec850;}
 #build-rec.rec-on{color:#ff7a6a;border-color:#a03030;}
 #build-cam.cam-on{color:#8fd0ff;border-color:#3a70a0;}
+#build-save{color:#ffd88f;}
+#build-save.hidden{display:none;}
 #build-hint{color:#8888a8;font-size:11px;}
 `;
 
@@ -228,6 +232,21 @@ let rec = null;          // MediaRecorder 实例（null = 未在录；stop 即�
 let recStartAt = 0;
 let recAutoStopTimer = null; // 录像时长上限计时器
 const REC_MAX_SEC = 600;     // 录像数据块全攒在内存（约 60MB/分钟），超 10 分钟自动停录防内存失控
+let lastRecUrl = null;       // 刚停的这条录像的 blob URL：自动下载可能被浏览器拦，60 秒内可手动重存
+let lastRecName = '';
+let recSaveTimer = null;
+let saveWindow = false;      // 重存窗口是否开着（updateBuildWidget 据此保持控件可见）
+const REC_SAVE_WINDOW_SEC = 60;
+let recKeepalive = null;     // 录像补帧保活计时器（见 toggleBuildRecording 内注释）
+let recStallWarn = null;     // 「没捕到帧」告警计时器
+let recGotData = false;      // 本次录像是否已捕获到任何数据块
+
+function stopRecTimers() {
+    clearInterval(recKeepalive);
+    recKeepalive = null;
+    clearTimeout(recStallWarn);
+    recStallWarn = null;
+}
 
 export function initBuildWidget() {
     if (buildEls) return;
@@ -247,8 +266,9 @@ export function initBuildWidget() {
       <span id="build-speed">极速</span>
       <button id="build-faster" title="加速（] 键）">＋</button>
       <button id="build-pause" title="暂停/继续施工（P 键）">⏸</button>
-      <button id="build-cam" title="建造跟拍：俯视拍摄施工全过程，建完自动停录（C 键循环切换视角）">🎥</button>
-      <button id="build-rec" title="录制游戏画面（R 键），停止后存为 webm">⏺</button>
+      <button id="build-cam" title="建造跟拍：俯视拍摄施工全过程，建完自动停录（C 键循环切换视角；无任务时先挂机位等待）">🎥</button>
+      <button id="build-rec" title="录制游戏画面（R 键），含游戏声音、不含界面，停止后存为 webm">⏺</button>
+      <button id="build-save" class="hidden" title="自动下载可能被浏览器拦截，点此重新保存刚才的录像（60 秒内有效）">⬇ 保存录像</button>
       <span id="build-hint">[ ]调速 · P暂停 · C视角 · R录像 · G前往</span>`;
     document.body.appendChild(root);
     // 面板内点击不冒泡，避免触发「点击重新锁定指针」
@@ -263,6 +283,7 @@ export function initBuildWidget() {
         pause: root.querySelector('#build-pause'),
         camBtn: root.querySelector('#build-cam'),
         recBtn: root.querySelector('#build-rec'),
+        saveBtn: root.querySelector('#build-save'),
     };
     buildEls.root.querySelector('#build-goto').addEventListener('click', () => teleportToBuildSite());
     buildEls.root.querySelector('#build-slower').addEventListener('click', () => adjustBuildSpeed(-1));
@@ -270,6 +291,7 @@ export function initBuildWidget() {
     buildEls.pause.addEventListener('click', () => toggleBuildPaused());
     buildEls.camBtn.addEventListener('click', () => toggleBuildCam());
     buildEls.recBtn.addEventListener('click', () => toggleBuildRecording());
+    buildEls.saveBtn.addEventListener('click', () => { if (lastRecUrl) downloadRecording(); });
 }
 
 // 前往施工现场（G 键 / 📍 按钮）：把玩家传到施工焦点所在柱的地表上。
@@ -309,7 +331,49 @@ export function isRecording() {
     return !!rec;
 }
 
-// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频，不含声音）
+// 录像文件名：任务名（buildQueue 的 label）+ 时间戳，多段录像好区分
+function recFileName(container = 'webm') {
+    const label = (getBuildStatus().label || '').replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24);
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    return `${label || '建造录像'}-${ts}.${container}`;
+}
+
+function downloadRecording() {
+    if (!lastRecUrl) return;
+    const a = document.createElement('a');
+    a.href = lastRecUrl;
+    a.download = lastRecName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+// 重存窗口：自动下载可能被浏览器的「多文件下载」拦截（尤其连续录停几条时），
+// 60 秒内控件上保留 ⬇ 按钮，被拦的录像点一下就能补存，过期才释放 blob 内存
+function openSaveWindow() {
+    saveWindow = true;
+    buildEls.saveBtn.classList.remove('hidden');
+    clearTimeout(recSaveTimer);
+    recSaveTimer = setTimeout(() => {
+        saveWindow = false;
+        buildEls.saveBtn.classList.add('hidden');
+        if (lastRecUrl) URL.revokeObjectURL(lastRecUrl);
+        lastRecUrl = null;
+    }, REC_SAVE_WINDOW_SEC * 1000);
+}
+
+function closeSaveWindow() {
+    saveWindow = false;
+    clearTimeout(recSaveTimer);
+    recSaveTimer = null;
+    buildEls.saveBtn.classList.add('hidden');
+    if (lastRecUrl) URL.revokeObjectURL(lastRecUrl);
+    lastRecUrl = null;
+}
+
+// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频含游戏声音，不含 DOM 界面）
 export function toggleBuildRecording() {
     if (!buildEls) initBuildWidget();
     if (rec) {
@@ -317,8 +381,7 @@ export function toggleBuildRecording() {
         // 收尾（打包下载）用下方闭包捕获的实例，不依赖 rec
         const stopped = rec;
         rec = null;
-        clearTimeout(recAutoStopTimer);
-        recAutoStopTimer = null;
+        stopRecTimers();
         if (stopped.state !== 'inactive') stopped.stop();
         return;
     }
@@ -326,28 +389,51 @@ export function toggleBuildRecording() {
         showTooltip('⚠️ 当前浏览器不支持 MediaRecorder，无法录像');
         return;
     }
+    closeSaveWindow(); // 上一条的重存窗口让位：释放旧 blob，避免两条录像同时在内存里
     const stream = canvas.captureStream(60);
-    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
-        .find((m) => MediaRecorder.isTypeSupported(m)) || '';
+    // 游戏 BGM/音效走 audio.js 的统一主输出，从这里分一条音轨合成进视频。
+    // 只有音频上下文在运行时才合入：挂起的上下文不产样本，混进轨道会拖坏时长与兼容性
+    let hasAudio = false;
+    try {
+        if (audioCtx && audioCtx.state === 'running') {
+            const audioStream = getRecAudioStream();
+            if (audioStream) audioStream.getAudioTracks().forEach((t) => stream.addTrack(t));
+        }
+    } catch (e) { /* 音频栈不可用：降级为无声视频 */ }
+    hasAudio = stream.getAudioTracks().length > 0;
+    // 优先 mp4（H.264）：文件自带时长元数据、QuickTime/微信等直接能播；
+    // 不支持（旧浏览器/Safari 差异）再退回 webm
+    const mimes = hasAudio
+        ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+        : ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const mime = mimes.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+    const container = mime.includes('mp4') ? 'mp4' : 'webm';
     const mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8000000 } : undefined);
     // 数据块/起始时间收进闭包：stop 与新一次录制并发时互不污染
     const chunks = [];
-    mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    mr.ondataavailable = (e) => { if (e.data.size) { chunks.push(e.data); recGotData = true; } };
     mr.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        stopRecTimers();
+        const totalBytes = chunks.reduce((s, c) => s + c.size, 0);
+        if (totalBytes < 8192) {
+            // 全程一帧都没捕到（页面后台/最小化时画布不重绘，captureStream 无帧可录）：
+            // 不落 0 字节废片，直接丢弃并说明
+            stream.getTracks().forEach((t) => t.stop());
+            showTooltip('⚠️ 本次录像没有捕获到任何画面（页面在后台时画布不更新），已丢弃');
+            return;
+        }
+        const blob = new Blob(chunks, { type: mime.split(';')[0] || 'video/webm' });
         chunks.length = 0; // 释放录像数据块（blob 已持有数据，数组别再占着）
-        const a = document.createElement('a');
-        const d = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        a.href = URL.createObjectURL(blob);
-        a.download = `建造录像-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.webm`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        lastRecUrl = URL.createObjectURL(blob);
+        lastRecName = recFileName(container);
+        downloadRecording();
         // 停掉捕获轨道：MediaRecorder 停止后 track 仍是 live，不断开会一直占着画布捕获管线（泄漏）
         stream.getTracks().forEach((t) => t.stop());
-        showTooltip('🎥 录像已保存（webm）');
+        openSaveWindow();
+        showTooltip(hasAudio ? `🎥 录像已保存（${container}，含游戏声音）` : `🎥 录像已保存（${container}，无声）`);
     };
     rec = mr;
+    recGotData = false;
     recStartAt = Date.now();
     recAutoStopTimer = setTimeout(() => {
         if (rec !== mr) return; // 已被手动停止
@@ -355,16 +441,28 @@ export function toggleBuildRecording() {
         toggleBuildRecording();
     }, REC_MAX_SEC * 1000);
     mr.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
-    showTooltip(`🎥 开始录制游戏画面…（R 停止，最多 ${REC_MAX_SEC / 60} 分钟）`);
+    // 补帧保活：captureStream 只在画布重绘时出帧，而后台/最小化/遮挡时 rAF 停摆、画布不再
+    // 重绘 → 整段无帧，成片只有开头几秒甚至 0 字节。录制期间低频手动重绘强制出帧
+    // （可见时 2fps，后台被浏览器节流到 ~1fps），保证成片时长贴墙钟。
+    recKeepalive = setInterval(() => {
+        if (!rec) return;
+        renderer.render(scene, camera);
+        renderViewmodel(renderer);
+    }, 500);
+    recStallWarn = setTimeout(() => {
+        if (rec === mr && !recGotData) showTooltip('⚠️ 还没捕获到画面帧——页面可能在后台/被遮挡，录到的时长会缩水');
+    }, 3000);
+    showTooltip(`🎥 开始录制游戏画面…（R 停止，最多 ${REC_MAX_SEC / 60} 分钟；${hasAudio ? '含游戏声音' : '无声'}，不含界面）`);
 }
 
-// 每帧刷新控件（main.js gameLoop 调用）：有任务或录像中常显，任务结束后停留 3 秒
+// 每帧刷新控件（main.js gameLoop 调用）：有任务或录像中常显，任务结束后停留 3 秒；
+// 跟拍模式（含预挂待机）也常显——否则没任务时 🎥/暂停/调速按钮无处可点，挂机位没入口
 export function updateBuildWidget() {
     if (!buildEls) return;
     const st = getBuildStatus();
     const recOn = !!rec;
     if (st.active) wasActive = true;
-    const show = st.active || recOn || wasActive || lastFinishedAgeMs() < 3000;
+    const show = st.active || recOn || wasActive || saveWindow || state.camMode === 'build' || lastFinishedAgeMs() < 3000;
     if (!st.active && wasActive) {
         wasActive = false;
         if (!recOn) {

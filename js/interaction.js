@@ -27,7 +27,7 @@ function lookDirection() {
 }
 
 // 拾取射线：第一人称从眼睛出发；第三人称从相机出发（与屏幕准星严格一致，
-// 相机已抬升越过头顶），触及距离仍从玩家（手）算起
+// 相机在眼睛正后方同高度，照原版），触及距离仍从玩家（手）算起
 function getPickRay() {
     const p = state.player;
     const eye = new THREE.Vector3(p.x, p.y + PLAYER_EYE_HEIGHT, p.z);

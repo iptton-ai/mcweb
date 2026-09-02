@@ -1,7 +1,7 @@
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, THIRD_PERSON_FOCUS, THIRD_PERSON_LIFT, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
@@ -168,22 +168,22 @@ export function updateCamera() {
         return;
     }
 
-    // 第三人称（背后）：相机在眼睛后方并抬升越过头顶，注视眼睛前方焦点，
-    // 使屏幕准星落在手触及的位置而不是人物头上
+    // 第三人称（背后，照原版）：相机在眼睛正后方同高度后退（无抬升、无焦点），
+    // 朝向即玩家视线本身——准星指着的就是人物正前方的方块，所见即所得
     const cp = Math.cos(p.pitch);
     const fx = -Math.sin(p.yaw) * cp, fy = Math.sin(p.pitch), fz = -Math.cos(p.yaw) * cp;
 
-    // 防穿墙：沿偏移方向步进（计入抬升高度），撞到实心方块就缩回
+    // 防穿墙：沿后退方向步进，撞到实心方块就缩回
     let dist = THIRD_PERSON_DIST;
     for (let d = 0.3; d <= THIRD_PERSON_DIST; d += 0.2) {
         const bx = Math.floor(eyeX - fx * d);
-        const by = Math.floor(eyeY - fy * d + THIRD_PERSON_LIFT);
+        const by = Math.floor(eyeY - fy * d);
         const bz = Math.floor(eyeZ - fz * d);
         if (isSolid(getBlock(bx, by, bz))) { dist = Math.max(0.3, d - 0.3); break; }
     }
-    camera.position.set(eyeX - fx * dist, eyeY - fy * dist + THIRD_PERSON_LIFT, eyeZ - fz * dist);
-    camera.lookAt(eyeX + fx * THIRD_PERSON_FOCUS, eyeY + fy * THIRD_PERSON_FOCUS, eyeZ + fz * THIRD_PERSON_FOCUS);
-    camera.rotation.z = 0; // 清除 lookAt 残留的滚转，否则画面倾斜
+    camera.position.set(eyeX - fx * dist, eyeY - fy * dist, eyeZ - fz * dist);
+    camera.rotation.y = p.yaw;
+    camera.rotation.x = p.pitch;
 }
 
 // 玩家模型同步（第三人称 / 自由摄像头·跟拍视角下可见——相机离开身体后世界里能看到主角），

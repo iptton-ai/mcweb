@@ -574,11 +574,18 @@
             font-size: 14px;
             cursor: pointer;
             transition: all 0.15s;
-            margin-bottom: 20px;
         }
         .save-btn:hover {
             border-color: #7ec850;
             background: rgba(60, 70, 90, 0.95);
+        }
+        /* 保存 / 设置按钮行（首屏与暂停菜单共用） */
+        #menu-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
         }
         .mode-btn {
             background: rgba(40, 40, 66, 0.9);
@@ -640,7 +647,10 @@
                 <span class="mode-desc">有生命值 · 夜晚会刷出怪物袭击</span>
             </button>
         </div>
-        <button class="save-btn" id="btn-save">💾 保存进度（进入游戏后每 30 秒也会自动存档）</button>
+        <div id="menu-actions">
+            <button class="save-btn" id="btn-save">💾 保存进度</button>
+            <button class="save-btn" id="btn-settings">⚙️ 设置（音频 / 存档）</button>
+        </div>
         <div class="controls-info">
             <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃 &nbsp;|&nbsp; <kbd>Shift</kbd> 潜行<br>
             <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置方块<br>

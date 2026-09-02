@@ -28,7 +28,11 @@ export const FREE_CAM_SPEED_MIN = 0.25;
 export const FREE_CAM_SPEED_MAX = 8;
 export const BUILD_CAM_MARGIN = 8; // 跟拍画面四周预留余量（格）
 export const BUILD_CAM_MIN_HEIGHT = 16; // 跟拍相机最低高度（格）
-export const BUILD_CAM_DONE_DELAY = 2.5; // 建造完成后跟拍停留秒数，随后自动停录并回玩家视角
+export const BUILD_CAM_DONE_DELAY = 4; // 建造完成后跟拍停留秒数：缓慢拉远做成品展示，随后自动停录并回玩家视角
+export const BUILD_CAM_REVEAL_SCALE = 0.6; // 收官展示的拉远幅度（在取景高度基础上再抬高 60%）
+export const BUILD_CAM_HOLD_MAX_SEC = 60; // 助手工具循环未结束（跨轮次等 LLM）时跟拍保持最后取景的最长秒数，超时按完成收尾
+export const BUILD_CAM_CINEMATIC_IDX = 0; // 跟拍自动降到该档位观影（延时 20bps）：极速档建造一帧建完，录出来是静止画面
+export const BUILD_CAM_CINEMATIC_MAX_IDX = 1; // 当前档位 ≤ 此值（延时/慢速）已够慢，进跟拍不再降速
 
 // ---- 触及距离（照搬原版：创造 5.2 格 / 生存 4.5 格，raycastBlocks 按模式取用）----
 export const REACH_CREATIVE = 5.2;
@@ -79,15 +83,9 @@ export const TORCH_SPAWN_BLOCK_RADIUS = 6;
 
 // 火把 6 格内不刷（近似原版"亮度≤7才刷"）
 // ---- 视角 ----
+// 第三人称相机距离：眼睛沿视线反方向后退的距离（朝向与玩家视线一致，照原版）
 export const THIRD_PERSON_DIST = 4.5;
 
-// 第三人称相机距离
-export const THIRD_PERSON_LIFT = 0.7;
-
-// 第三人称相机抬升高度（越过头顶，准星不被人物头部遮挡）
-export const THIRD_PERSON_FOCUS = 3.5;
-
-// 第三人称相机注视点与眼睛的距离（视线方向上前方的焦点）
 export const ENEMY_SPEED = 2.6;
 
 export const ENEMY_DAMAGE = 2;

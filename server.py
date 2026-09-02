@@ -126,6 +126,16 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             return self._send_json({"error": str(e)}, 400)
         self._send_json({"error": "未知接口：" + route}, 404)
 
+    def end_headers(self):
+        # 静态文件原本不发缓存头，浏览器启发式缓存会把旧 JS 混着新 JS 一起加载，
+        # 改码后页面直接模块加载失败（线上 nginx 已按 HTML/JS/CSS no-cache 处理，
+        # 见 AGENTS.md「缓存策略」；本地服务器行为对齐）。已有 Cache-Control 的
+        # 响应（API JSON 的 no-store / SSE 的 no-cache）不重复注入。
+        buf = b" ".join(getattr(self, "_headers_buffer", []) or [])
+        if b"Cache-Control" not in buf:
+            self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     # ---------- 静态 ----------
 
     def send_entry(self):

@@ -31,6 +31,13 @@ const dirtyChunks = new Set();             // 已写入但网格未重建的区�
 let finishedJob = null;                    // 刚完成的任务，供 HUD 短暂显示结果
 let finishedAt = 0;
 
+// 助手施工流程进行中（agent.js 在本轮工具循环里执行过建造类工具即置位，整轮结束才清）：
+// 两次建造工具调用之间隔着一次 LLM 往返（网络+思考，常超数秒），队列短暂为空不算建造完成，
+// 建造跟拍据此保持最后取景等待下一批任务，不再提前弹「建造完成」并停录
+let agentHold = false;
+export function setAgentHold(v) { agentHold = !!v; }
+export function isAgentHold() { return agentHold; }
+
 // 入队时一次性算出任务的操作范围（建造跟拍相机按它取景），避免每帧遍历大 ops
 function computeBounds(ops) {
     let minX = Infinity, minY = Infinity, minZ = Infinity;
@@ -82,6 +89,21 @@ export function enqueueBuildOps(label, ops) {
         }
         jobQueue.push({ label, ops, total: ops.length, cursor: 0, applied: 0, skipped: [], startedAt: 0, resolve, bounds: computeBounds(ops) });
     });
+}
+
+// 切世界（读档 / 覆盖重开）时清空施工队列：旧世界的待放方块绝不能写进新世界（幽灵建筑）。
+// 挂起的 enqueueBuildOps Promise 以「世界已切换」结果兑现，助手的工具调用不悬死，LLM 可据此收尾。
+export function clearBuildQueue() {
+    const pending = [activeJob, ...jobQueue].filter(Boolean);
+    jobQueue = [];
+    activeJob = null;
+    finishedJob = null;
+    finishedAt = 0;
+    dirtyChunks.clear();
+    budgetCarry = 0;
+    for (const job of pending) {
+        job.resolve({ label: job.label, total: job.total, applied: job.applied, skipped: ['世界已切换，剩余操作作废'], 秒: 0 });
+    }
 }
 
 // 每帧驱动：应用方块（受速度档/暂停控制）→ 按预算重建脏区块网格

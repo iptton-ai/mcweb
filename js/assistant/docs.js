@@ -88,8 +88,9 @@ export function buildSystemPrompt() {
 ${gameStateJson()}
 
 ═══ 工作流 A：在游戏里建造 ═══
-推荐步骤：1) get_game_context 拿玩家位置 → 2) scan_terrain 探地面高度、选平坦锚点（通常在玩家前方 8~15 格）→ 3) 需要时可 set_build_speed 调施工速度 → 4) run_build_script 写程序化建造代码（推荐，适合重复结构；一次调用内可写几千格）或 place_blocks 放精确小块（单次 ≤4000 格）→ 5) read_blocks 抽查校验。
-建造是「渐进施工」：方块按当前施工速度逐格出现（延时20/慢速80/中速300/快速1200/极速6000格每秒/瞬间），工具会等全部放完才返回，建造期间可随时调速。用户想看建造过程或录制延时摄影时，先调到 延时/慢速 再开始建造，建完可调回 极速/瞬间。
+推荐步骤：1) get_game_context 拿玩家位置 → 2) scan_terrain 探地面高度、选平坦锚点（通常在玩家前方 8~15 格）→ 3) 开始建造前先 set_build_speed 调施工速度（见下）→ 4) run_build_script 写程序化建造代码（推荐，适合重复结构；一次调用内可写几千格）或 place_blocks 放精确小块（单次 ≤4000 格）→ 5) read_blocks 抽查校验。
+建造是「渐进施工」：方块按当前施工速度逐格出现（延时20/慢速80/中速300/快速1200/极速6000格每秒/瞬间），工具会等全部放完才返回，建造期间可随时调速。
+施工速度规则：用户的请求大多是「展示型」（建给我看/录下来/欣赏过程都算）——这类请求必须在开始建造前 set_build_speed 调到 延时（推荐，20格/秒，用户按 🎥 跟拍效果最好），建完恢复 极速；只有用户明确要「快点建好/不用看过程」才用 快速及以上。极速档下一帧就建完，用户根本看不到过程，也别在用户跟拍/录像期间调速度（跟拍系统会自己管理档位）。
 建造要领：
 - 地基先 clear_area 清场并整平；房屋地板抬高 1 格防进水；
 - 墙高 3~4 格；留门洞（宽1~2、高2）；窗户用玻璃；屋顶可悬挑；隔墙分房间；火把照明间距 ≤10 格防刷怪；
@@ -118,6 +119,7 @@ run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS；动力�
 - playerPhysics.js：移动、碰撞、相机；playerLife.js：生命、死亡重生、掉落物
 - entities.js：僵尸生成与 AI、玩家第三人称模型；tnt.js：TNT；particles.js：粒子；daynight.js：昼夜光照；highlight.js：选中框；audio.js：WebAudio 音效
 - input.js：键鼠输入（指针锁定与浮层状态由 uiModal.js 状态机管理；新键位写在 setupInput 的 keydown，游戏键用 isPlaying() 门控、施工控制键用状态判断，打字中的输入框用 isTypingTarget(e) 让路；用 e.code，避开浏览器默认键并 preventDefault）
+- settingsUI.js：游戏设置浮层（首屏/暂停菜单的 ⚙️ 进入，显隐走 uiModal 的 settings 态）：「🎵 音频」=BGM 风格包+音乐/音效音量（即时生效），「💾 存档」=保存/切换/开新/删除（动作经 initSettingsUI 回调 main.js 编排）；槽位行渲染 renderSlotRows 与首屏列表共用
 - ui.js：物品栏/HUD/模式切换；engine.js：three 场景/相机/渲染器；main.js：装配与主循环 gameLoop
 - js/assistant/*：本助手自身代码，除非用户明确要求，不要修改；*.bak* 为历史备份，禁止读写
 

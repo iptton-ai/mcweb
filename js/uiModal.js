@@ -6,6 +6,7 @@
 //   playing   游戏中（期望指针锁定）
 //   pause     ESC 暂停菜单（游戏中按 Esc / 指针被系统夺走时进入）
 //   inventory 背包（E 开关）
+//   settings  设置浮层（首屏/暂停菜单的 ⚙️ 进入：音频与存档；关闭回到进入前的状态）
 //   dead      死亡界面
 // 另有一个独立于游戏状态的布尔：AI 助手面板可见（T 开关，侧栏浮层，不阻塞游戏——
 // 面板打开时游戏键照常，只有鼠标归面板，指针锁因此让位）。
@@ -25,6 +26,7 @@ export let mouseLocked = false;
 
 let uiState = 'title';
 let assistantVisible = false;       // AI 助手面板可见（独立于游戏状态的侧栏）
+let settingsReturn = 'title';       // 设置浮层的来路（只能从 title/pause 进入），关闭时回去
 let expectUnlock = false;           // 本模块主动解锁时置位，用于区分「用户按 Esc 解锁」
 let wantLock = false;               // playing 状态下等待锁定成功
 let lockPending = false;            // 请求已在途，避免同一手势内重复请求
@@ -106,6 +108,27 @@ export function togglePauseMenu() {
     else if (uiState === 'playing') setState('pause');
 }
 
+// 设置浮层（音频/存档，见 settingsUI.js）：只能从首屏/暂停菜单进入，关闭回原状态
+export function openSettingsState() {
+    if (uiState !== 'title' && uiState !== 'pause') return;
+    settingsReturn = uiState;
+    setState('settings');
+}
+
+export function closeSettingsState() {
+    if (uiState === 'settings') setState(settingsReturn);
+}
+
+// Q 键（Esc 替代，见 input.js）：释放指针并弹暂停菜单，效果与用户按 Esc 一致。
+// 指针锁定时按 Esc 会被浏览器/宿主截获（ZCode 内嵌浏览器里还会导致应用退出），
+// 页面收不到也拦不住，只能提供一个不碰 Esc 的替代入口。
+export function releasePointerToPause() {
+    if (!mouseLocked) return;
+    expectUnlock = true; // 主动释放：解锁事件不再自动弹菜单（这里直接切状态）
+    document.exitPointerLock();
+    setState('pause');
+}
+
 function emit(prev, next) {
     for (const cb of listeners) {
         try { cb(prev, next); } catch (e) { console.error(e); }
@@ -119,6 +142,9 @@ function syncOverlays() {
     if (screen) screen.classList.toggle('hidden', !menuVisible);
     const inv = document.getElementById('inventory-panel');
     if (inv) inv.classList.toggle('open', uiState === 'inventory');
+    // 设置浮层（DOM 由 settingsUI.js 注入，本模块只管显隐）
+    const gs = document.getElementById('game-settings');
+    if (gs) gs.classList.toggle('hidden', uiState !== 'settings');
     // 准星只在「正在操作」时显示，让玩家一眼看出当前能否操作
     const cross = document.getElementById('crosshair');
     if (cross) cross.style.display = isPlaying() ? '' : 'none';
