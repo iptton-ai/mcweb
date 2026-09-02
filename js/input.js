@@ -12,7 +12,7 @@ import { swingViewmodel } from './viewmodel.js';
 import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
-import { buildInventoryGrid, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
+import { openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
 import { getUIState, isAssistantVisible, isPlaying, isTypingTarget, onUIStateChange, requestLock, setState } from './uiModal.js';
 
 // ==================== 输入状态 ====================
@@ -45,9 +45,11 @@ export function setupInput() {
             if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
             return;
         }
-        // E：开关背包（开着背包也能按 E 关闭）
+        // E：打开物品选择网格（openItemPicker 负责构建网格再进入 inventory 态）；
+        // 背包开着时按 E 收起（点选物品也会自动收起，无需再按）
         if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
-            setState(st === 'playing' ? 'inventory' : 'playing');
+            if (st === 'playing') openItemPicker();
+            else setState('playing');
             return;
         }
         if (st !== 'playing') {

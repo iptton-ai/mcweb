@@ -57,65 +57,79 @@ export function toggleGameMode() {
 }
 
 // ==================== UI ====================
+// 底部手持指示胶囊：HotbarBlocks 已达 38 项，单行平铺必溢出屏幕，
+// 完整选择走 E 打开的可滚动网格（openItemPicker），这里只常显当前手持。
 export function updateHotbar() {
     const hotbar = document.getElementById('hotbar');
     hotbar.innerHTML = '';
-    HotbarBlocks.forEach((blockType, index) => {
-        const slot = document.createElement('div');
-        slot.className = 'hotbar-slot' + (index === state.player.selectedSlot ? ' selected' : '');
-        const canvas = document.createElement('canvas');
-        canvas.width = 16;
-        canvas.height = 16;
-        const ctx = canvas.getContext('2d');
-        const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
-        const tile = uv.top || { x: 0, y: 0 };
-        const sx = tile.x * tileSize;
-        const sy = tile.y * tileSize;
-        ctx.drawImage(atlasCanvas, sx, sy, tileSize, tileSize, 0, 0, 16, 16);
-        slot.appendChild(canvas);
-        const numSpan = document.createElement('span');
-        numSpan.className = 'slot-number';
-        numSpan.textContent = index + 1;
-        slot.appendChild(numSpan);
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'block-name';
-        nameSpan.textContent = BlockInfo[blockType].name;
-        slot.appendChild(nameSpan);
-        // 生存模式：显示数量角标，数量为 0 灰显
-        if (!isCreative()) {
-            const count = state.player.inventory[blockType] || 0;
-            const countSpan = document.createElement('span');
-            countSpan.className = 'slot-count';
-            countSpan.textContent = count;
-            slot.appendChild(countSpan);
-            if (count === 0) slot.classList.add('empty');
-        }
-        slot.addEventListener('click', (e) => {
-            e.stopPropagation(); // 不触发「点击重新锁定指针」兜底
-            state.player.selectedSlot = index;
-            updateHotbar();
-            showTooltip(BlockInfo[blockType].name);
-        });
-        hotbar.appendChild(slot);
-    });
+    const index = state.player.selectedSlot;
+    const blockType = HotbarBlocks[index] ?? BlockTypes.GRASS;
+    const slot = document.createElement('div');
+    slot.className = 'hotbar-slot';
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
+    const tile = uv.top || { x: 0, y: 0 };
+    ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, 16, 16);
+    slot.appendChild(canvas);
+    const numSpan = document.createElement('span');
+    numSpan.className = 'slot-number';
+    numSpan.textContent = index + 1;
+    slot.appendChild(numSpan);
+    // 生存模式：显示数量角标，数量为 0 灰显
+    if (!isCreative()) {
+        const count = state.player.inventory[blockType] || 0;
+        const countSpan = document.createElement('span');
+        countSpan.className = 'slot-count';
+        countSpan.textContent = count;
+        slot.appendChild(countSpan);
+        if (count === 0) slot.classList.add('empty');
+    }
+    hotbar.appendChild(slot);
+    const info = document.createElement('div');
+    info.className = 'hotbar-info';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'hotbar-name';
+    nameSpan.textContent = BlockInfo[blockType].name;
+    info.appendChild(nameSpan);
+    const hintSpan = document.createElement('span');
+    hintSpan.className = 'hotbar-hint';
+    hintSpan.textContent = 'E 或点击 · 选择物品';
+    info.appendChild(hintSpan);
+    hotbar.appendChild(info);
+    // 点击胶囊 = 打开选择网格（指针锁定时无光标点不到，主入口是 E 键；
+    // 助手面板打开等指针自由的场景可直接点）
+    hotbar.onclick = (e) => {
+        e.stopPropagation(); // 不触发「点击重新锁定指针」兜底
+        openItemPicker();
+    };
 }
 
+// 物品选择网格（E 打开）：全部物品一格一物，可滚动，点选即选中并自动收起。
+// 每次打开重建，保证数量角标/选中高亮与当前状态一致。
 export function buildInventoryGrid() {
     const grid = document.getElementById('inventory-grid');
     grid.innerHTML = '';
-    HotbarBlocks.forEach((blockType) => {
+    HotbarBlocks.forEach((blockType, index) => {
         const slot = document.createElement('div');
-        slot.className = 'inv-slot';
+        slot.className = 'inv-slot' + (index === state.player.selectedSlot ? ' selected' : '');
         const canvas = document.createElement('canvas');
         canvas.width = 24;
         canvas.height = 24;
         const ctx = canvas.getContext('2d');
         const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
         const tile = uv.top || { x: 0, y: 0 };
-        const sx = tile.x * tileSize;
-        const sy = tile.y * tileSize;
-        ctx.drawImage(atlasCanvas, sx, sy, tileSize, tileSize, 0, 0, 24, 24);
+        ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, 24, 24);
         slot.appendChild(canvas);
+        // 前 9 格标注数字键位（1-9 直达）
+        if (index < 9) {
+            const numSpan = document.createElement('span');
+            numSpan.className = 'slot-number';
+            numSpan.textContent = index + 1;
+            slot.appendChild(numSpan);
+        }
         const nameSpan = document.createElement('span');
         nameSpan.className = 'inv-name';
         nameSpan.textContent = BlockInfo[blockType].name;
@@ -130,13 +144,20 @@ export function buildInventoryGrid() {
             if (count === 0) slot.classList.add('empty');
         }
         slot.addEventListener('click', () => {
-            state.player.selectedSlot = HotbarBlocks.indexOf(blockType);
+            state.player.selectedSlot = index;
             updateHotbar();
-            setState('playing'); // 选中方块后关闭背包（状态机负责恢复指针锁定）
+            setState('playing'); // 选中即收起，不需要再按 E（状态机负责恢复指针锁定）
             showTooltip(BlockInfo[blockType].name);
         });
         grid.appendChild(slot);
     });
+}
+
+// 打开物品选择网格的唯一入口（E 键与点击手持胶囊共用）
+export function openItemPicker() {
+    if (state.player.dead) return; // 死亡界面优先，不开背包
+    buildInventoryGrid();
+    setState('inventory');
 }
 
 export let tooltipTimeout = null;
