@@ -155,14 +155,6 @@ function popBlockAt(x, y, z) {
     return [{ x, y, z, id: bt }];
 }
 
-// 生存模式往物品栏返还一格方块（推出世界边界时销毁补偿）
-function dropItem(bt) {
-    if (isCreative()) return;
-    if (BlockInfo[bt]?.drop === null) return;
-    const itemId = BlockInfo[bt]?.drop ?? bt;
-    state.player.inventory[itemId] = (state.player.inventory[itemId] || 0) + 1;
-}
-
 // ==================== 区块重建收集 ====================
 // 收集受影响区块（含贴边相邻），动作末尾一次性重建
 function markChunkAround(set, x, z) {
@@ -234,8 +226,10 @@ function planExtend(px, py, pz, f) {
             const dk = pushKind(getBlock(dx, dy, dz));
             if (dk === PUSH_FIXED) return null;
             if (dk === PUSH_POP) popped.push({ x: dx, y: dy, z: dz });
-            else if (dk === PUSH_MOVE) queue.push({ x: dx, y: dy, z: dz });
-        } // 出界：这块会被推出世界，执行时销毁并返还物品
+            else if (dk === PUSH_MOVE) queue.push({ x: dx, y: dy, dz });
+        } else {
+            return null; // 目的格出界：这块会被推出世界 → 整个伸出动作失败（对齐原版，同上方活塞头格越界的语义）
+        }
         if (bt === BlockTypes.SLIME) {
             // 粘液块拖动它粘着的方块（不含活塞自己），粘着不可推块 = 整体推不动
             for (const [mx, my, mz] of FACING_NORMALS) {
@@ -279,7 +273,7 @@ function doExtend(x, y, z) {
         [nx, ny, nz],
     );
 
-    // 方块位移：从最远端开始挪避免覆盖；推出世界边界的销毁并返还
+    // 方块位移：从最远端开始挪避免覆盖（目的格必在界内——planExtend 出界即失败已保证）
     const proj = (c) => (c.x - x) * nx + (c.y - y) * ny + (c.z - z) * nz;
     plan.moved.sort((a, b) => proj(b) - proj(a));
     for (const c of plan.moved) {
@@ -289,8 +283,6 @@ function doExtend(x, y, z) {
         if (inBounds(dx, dy, dz)) {
             setBlockSafe(dx, dy, dz, bt);
             markChunkAround(chunks, dx, dz);
-        } else {
-            dropItem(bt);
         }
         markChunkAround(chunks, c.x, c.z);
         // 原格支撑没了：贴在上面的红石元件连锁脱落
