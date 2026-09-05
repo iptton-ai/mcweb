@@ -258,8 +258,21 @@ export function buildInventoryGrid() {
             for (const r of recipes) section.appendChild(buildRecipeRow(r, stations));
         }
     } else {
-        title.textContent = '🎒 选择物品';
-        document.getElementById('crafting-section').innerHTML = '';
+        title.textContent = '🎒 选择物品（创造模式）';
+        // 创造模式没有配方（物品无限），说明条替代配方区：告诉玩家合成玩法在生存模式
+        const section = document.getElementById('crafting-section');
+        section.innerHTML = '';
+        const tip = document.createElement('div');
+        tip.className = 'creative-note';
+        tip.textContent = '🧪 创造模式：物品无限、任意选择，无需合成。按 M 切换到生存模式，E 面板就有合成配方（撸树 → 木板 → 工作台 → 工具 → 挖矿 → 熔炉）。';
+        section.appendChild(tip);
+    }
+    // 底部提示随模式走：生存才有「点配方 = 合成一次」，创造模式别再误导
+    const hint = document.getElementById('inventory-close-hint');
+    if (hint) {
+        hint.innerHTML = survival
+            ? '点物品 = 选中并关闭 &nbsp;|&nbsp; 点配方 = 合成一次 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起'
+            : '点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起';
     }
     // 物品格
     HotbarBlocks.forEach((blockType, index) => {
