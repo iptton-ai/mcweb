@@ -33,6 +33,7 @@ import {
     WORLD_DEPTH,
     WORLD_HEIGHT,
     WORLD_WIDTH,
+    isBeltId,
     isDoorId,
     isObserverId,
     isPistonHeadId,
@@ -135,6 +136,7 @@ function pushKind(bt) {
     if (bt === BlockTypes.BEDROCK) return PUSH_FIXED;
     if (isPistonHeadId(bt)) return PUSH_FIXED;
     if (isPistonId(bt)) return pistonExtended(bt) === 1 ? PUSH_FIXED : PUSH_MOVE;
+    if (isBeltId(bt)) return PUSH_POP; // 传送带是贴面薄板（Create-lite L1 链 2，差异 8）：被推=压碎返还
     if (isDoorId(bt) || isRedstoneId(bt) || bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER) return PUSH_POP;
     return PUSH_MOVE; // 其余实心立方体（石头/木板/TNT/红石灯/粘液块…）
 }

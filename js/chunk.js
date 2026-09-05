@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, doorHalf, dustLit, isButtonId, isClutchId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -412,6 +412,9 @@ function buildObserverMesh(blockType) {
 const AXIS_TO_NORMAL = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
 
 function buildKineticMesh(blockType) {
+    // 传送带：贴顶面的静止薄板（照压力板入缓存、按 dir 旋转箭头贴图）——不挂
+    // userData.kinetic、不进 spinner 层级：带不转，物品移动本身就是方向反馈（差异 4）
+    if (isBeltId(blockType)) return buildBeltMesh(blockType);
     const spinner = new THREE.Group(); // 几何一律沿局部 +Y 构建（= 旋转轴）
     const orient = new THREE.Group();
     orient.add(spinner); // spinner 必须是第一个子节点（见上方约定）
@@ -541,6 +544,25 @@ function buildClutchMesh(spinner, engaged) {
         );
         spinner.add(dot);
     }
+}
+
+// 传送带（Create-lite L1 链 2）：1×0.12×1 贴图薄板——顶面 tile 73（箭头指向贴图上方
+// = 局部 -Z=北 为基准），整板绕 Y 随 dir 旋转（北 0 / 东 -90° / 南 180° / 西 +90°），
+// 侧面 tile 74 带沿。几何模块级共享，4 个 dir 变体各自入 propMeshCache（照压力板模式）。
+const beltPlateGeo = makeTexturedBoxGeo(1, 0.12, 1, {
+    py: 'belt', ny: 'belt_side',
+    px: 'belt_side', nx: 'belt_side', pz: 'belt_side', nz: 'belt_side',
+});
+
+function buildBeltMesh(blockType) {
+    const group = new THREE.Group();
+    const plate = new THREE.Mesh(beltPlateGeo, pistonAtlasMat);
+    plate.position.y = 0.06; // 原点在格底面中心，薄板贴地
+    group.add(plate);
+    // 基准 tile 的箭头指向贴图上方，BoxGeometry 顶面(+Y)的贴图上向对应局部 +Z（南）——
+    // 故先转 π 再按 dir 旋转（北 180° / 东 90° / 南 0° / 西 -90°），使箭头 = BELT_DIRS[dir]
+    group.rotation.y = Math.PI - beltDir(blockType) * Math.PI / 2;
+    return group;
 }
 
 // 机械锯：圆锯片（进 spinner 随机旋转）+ 背面固定机身（挂 orient 不转）
