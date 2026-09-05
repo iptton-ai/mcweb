@@ -253,6 +253,11 @@ export function updateKineticNetwork() {
     }
     kineticMap = newMap;
     components = comps;
+
+    // 机器进度兜底：机器被活塞推走/配对解除后，旧格子的进度 key 不再属于任何机器，清掉
+    for (const k of crushProgress.keys()) if (!crusherPaired.has(k)) crushProgress.delete(k);
+    const sawKeys = new Set(sawCells.map((c) => keyOf(c.x, c.y, c.z)));
+    for (const k of sawProgress.keys()) if (!sawKeys.has(k)) sawProgress.delete(k);
 }
 
 // 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
