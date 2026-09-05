@@ -17,6 +17,10 @@
 //   方向/转向 BFS 不穿越（相位绝缘，防两条独立产线经带桥被误判卡死）；每格带计入
 //   应力负载 BELT_SU_LOAD。带上的物品转运（carried）在 js/items.js、玩家骑带在
 //   js/playerPhysics.js，本模块只负责求解与 isBeltRunningAt 查询。
+//   投料器（L1 链 3）是 solid 动力块，邻接照机械锯——正面（朝向邻格）是被投目标不
+//   传动、只有背面接传动；负载 DEPLOYER_SU_LOAD/台。通电后每 DEPLOYER_SEC 秒把捕获
+//   三格 {朝向格 T, T+up, 头顶 D+up} 里的可放置方块物品变回方块塞进 T（守卫全套与
+//   帧末聚合见下方 updateDeployers），是「粉碎→产出→回流→再投料」无人值守闭环的钥匙。
 // 求解照 updateRedstoneNetwork 的事件触发全量重算骨架，派生态写进本模块的运行时 Map
 // （不占方块 ID、不进存档），读档/开新世界后 initKinetic() 重算。
 //
@@ -39,9 +43,14 @@ import {
     CRUSH_SEC,
     CRUSHER_ITEM_ID,
     CRUSHER_SU_LOAD,
+    DEPLOYER_ITEM_ID,
+    DEPLOYER_SEC,
+    DEPLOYER_SU_LOAD,
     FACING_NORMALS,
     KINETIC_RECIPES,
     KINETIC_SPIN_VIS,
+    PLAYER_HEIGHT,
+    PLAYER_WIDTH,
     SAW_ITEM_ID,
     SAW_SPEED,
     SAW_SU_LOAD,
@@ -59,13 +68,21 @@ import {
     cogId,
     crusherAxis,
     crusherId,
+    deployerFacing,
+    deployerId,
     isBeltId,
     isClutchId,
     isCogId,
     isCrusherId,
+    isDeployerId,
+    isDoorId,
     isKineticId,
+    isPistonGroupId,
+    isPistonHeadId,
+    isRedstoneId,
     isSawId,
     isShaftId,
+    isToolId,
     isWaterwheelId,
     kineticAxisOf,
     kineticItemId,
@@ -84,6 +101,7 @@ import { spawnBreakParticles } from './particles.js';
 import { playBlockSound, playCrushSound, playSawSound } from './audio.js';
 import { spawnItemDrop } from './items.js';
 import { facingFromYaw } from './door.js';
+import { scene } from './engine.js'; // 消耗物品实体时 scene.remove（items.js 的 removeDrop 未导出，等价公开操作）
 
 const keyOf = (x, y, z) => `${x},${y},${z}`;
 
@@ -110,7 +128,17 @@ let kineticMap = new Map(); // key -> { compId, dir }（dir ±1 = 相对自身�
 let components = []; // 分量聚合：{ capacity, load, wheels, poweredWheels, jammed, overstressed, running, spin }
 let crusherCells = []; // 配对成功的粉碎轮（机器 tick 与负载统计用）
 const crusherPaired = new Set(); // 配对粉碎轮 key 集（投料口校验/HUD 未配对提示用）
-let sawCells = []; // 全部机械锯（Commit C 的锯切 tick 用）
+let sawCells = []; // 全部机械锯（锯切 tick 用）
+let deployerCells = []; // 全部投料器（Create-lite L1 链 3，投放 tick 用）
+const deployerCool = new Map(); // 投料器 key -> 剩余冷却秒（照 crushProgress 模式，重算兜底清理）
+
+// front-blocked 方块（机械锯/投料器）的正面朝向向量：正面（朝向邻格）是工作目标不参与传动，
+// 只有「本格正好在它背面」才接通（neighborsOf 统一按 front 特判——投料器照锯，plan §3.1）
+function frontNormalOf(id) {
+    if (isSawId(id)) return FACING_NORMALS[sawFacing(id)];
+    if (isDeployerId(id)) return FACING_NORMALS[deployerFacing(id)];
+    return null;
+}
 
 // ==================== 放置 ====================
 // 轴类方块朝所点击面的法线方向放置（点顶面 = 立轴，贴墙 = 横轴垂直墙面）；
@@ -128,6 +156,9 @@ export function placeKinetic(bx, by, bz, itemId, face) {
         id = beltId(facingFromYaw(state.player.yaw));
     } else if (itemId === SAW_ITEM_ID) {
         id = sawId(facingFromNormalLocal(face.dx, face.dy, face.dz));
+    } else if (itemId === DEPLOYER_ITEM_ID) {
+        // 投料器朝向 = 所点击面的外法线（照锯/活塞：贴着目标面放，面向「要投料的位置」）
+        id = deployerId(facingFromNormalLocal(face.dx, face.dy, face.dz));
     } else {
         const axis = normalAxis(face.dx, face.dy, face.dz);
         id = itemId === SHAFT_ITEM_ID ? shaftId(axis)
@@ -175,7 +206,7 @@ export function updateKineticNetwork() {
             for (let x = 0; x < WORLD_WIDTH; x++, idx++) {
                 const id = blocks[idx];
                 if (!isKineticId(id)) continue;
-                cells.push({ x, y, z, id, axis: kineticAxisOf(id), saw: isSawId(id) });
+                cells.push({ x, y, z, id, axis: kineticAxisOf(id), saw: isSawId(id), front: frontNormalOf(id) });
             }
         }
     }
@@ -201,6 +232,7 @@ export function updateKineticNetwork() {
         }
     }
     sawCells = cells.filter((c) => c.saw);
+    deployerCells = cells.filter((c) => isDeployerId(c.id));
 
     const byKey = new Map(cells.map((c) => [keyOf(c.x, c.y, c.z), c]));
     const newMap = new Map();
@@ -225,8 +257,8 @@ export function updateKineticNetwork() {
             }
         }
 
-        // 2) 应力统计：容量 = Σ有水水车×64；负载 = Σ配对粉碎轮×32 + Σ锯×24 + Σ带×4
-        //    （传动轴与离合器是纯传动件不计负载，CLUTCH_SU_LOAD=0；带是分量内全部带格计数）
+        // 2) 应力统计：容量 = Σ有水水车×64；负载 = Σ配对粉碎轮×32 + Σ锯×24 + Σ带×4 +
+        //    Σ投料器×16（传动轴与离合器是纯传动件不计负载，CLUTCH_SU_LOAD=0；带是分量内全部带格计数）
         let capacity = 0, load = 0, wheels = 0, poweredWheels = 0;
         for (const c of members) {
             if (isWaterwheelId(c.id)) {
@@ -241,6 +273,8 @@ export function updateKineticNetwork() {
                 load += CRUSHER_SU_LOAD;
             } else if (isSawId(c.id)) {
                 load += SAW_SU_LOAD;
+            } else if (isDeployerId(c.id)) {
+                load += DEPLOYER_SU_LOAD;
             }
         }
 
@@ -291,6 +325,8 @@ export function updateKineticNetwork() {
     for (const k of crushProgress.keys()) if (!crusherPaired.has(k)) crushProgress.delete(k);
     const sawKeys = new Set(sawCells.map((c) => keyOf(c.x, c.y, c.z)));
     for (const k of sawProgress.keys()) if (!sawKeys.has(k)) sawProgress.delete(k);
+    const deployerKeys = new Set(deployerCells.map((c) => keyOf(c.x, c.y, c.z)));
+    for (const k of deployerCool.keys()) if (!deployerKeys.has(k)) deployerCool.delete(k);
 }
 
 // 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
@@ -326,15 +362,13 @@ function* neighborsOf(c, byKey) {
         const other = byKey.get(keyOf(nx, ny, nz));
         if (!other) continue;
         if (isClutchId(other.id) && clutchEngaged(other.id) === 0) continue; // 对方断开：不可被跨过
-        if (c.saw) {
-            // 锯的正面（朝向邻格）是被锯目标，不参与传动
-            const [fx, fy, fz] = FACING_NORMALS[sawFacing(c.id)];
-            if (nx === c.x + fx && ny === c.y + fy && nz === c.z + fz) continue;
+        if (c.front) {
+            // front-blocked 方块（锯/投料器）的正面（朝向邻格）是工作目标，不参与传动
+            if (nx === c.x + c.front[0] && ny === c.y + c.front[1] && nz === c.z + c.front[2]) continue;
         }
-        if (other.saw) {
-            // 对方是锯：只有本格正好在它背面时才接通
-            const [fx, fy, fz] = FACING_NORMALS[sawFacing(other.id)];
-            if (other.x - fx === c.x && other.y - fy === c.y && other.z - fz === c.z) yield { other, mesh: false };
+        if (other.front) {
+            // 对方是锯/投料器：只有本格正好在它背面时才接通
+            if (other.x - other.front[0] === c.x && other.y - other.front[1] === c.y && other.z - other.front[2] === c.z) yield { other, mesh: false };
             continue;
         }
         if (other.axis === c.axis) yield { other, mesh: false }; // 带的 axis 为 null，不会走进同轴分支
@@ -371,7 +405,7 @@ function* neighborsOf(c, byKey) {
 }
 
 // ==================== 每帧驱动 ====================
-// 旋转动画（零区块重建）+ 终端机器计时（粉碎/锯切，见文末）。
+// 旋转动画（零区块重建）+ 终端机器计时（粉碎/锯切/投料，见文末）。
 export function updateKineticTick(dt) {
     if (!state.blocks) return;
     for (const it of state.droppedItems) {
@@ -385,6 +419,7 @@ export function updateKineticTick(dt) {
     }
     updateCrushers(dt);
     updateSaws(dt);
+    updateDeployers(dt);
 }
 
 // ==================== 外部查询（HUD / 交互提示用） ====================
@@ -422,7 +457,9 @@ export function kineticStatusAt(x, y, z) {
     if (c.jammed) return `⚙️ ${name} · ${prefix}⛔ 卡死（传动转向冲突）`;
     if (c.overstressed) return `⚙️ ${name} · ${prefix}⛔ 过载（应力 ${c.load}/${c.capacity}，再加一台水车）`;
     if (c.poweredWheels === 0) return `⚙️ ${name} · ${prefix}静止（需要水车驱动）`;
-    return `⚙️ ${name} · ${prefix}转速 ${WHEEL_RPM} RPM · 应力 ${c.load}/${c.capacity}`;
+    // 投料器：运转态附投料节拍（0.5s/次把捕获格物品变方块塞进朝向格，链 3 闭环的钥匙）
+    const suffix = isDeployerId(id) ? ` · 投料节拍 ${DEPLOYER_SEC}s` : '';
+    return `⚙️ ${name} · ${prefix}转速 ${WHEEL_RPM} RPM · 应力 ${c.load}/${c.capacity}${suffix}`;
 }
 
 // ==================== 终端机器 A：粉碎轮 ====================
@@ -537,6 +574,151 @@ function sawSeconds(id) {
     return Math.max(0.05, (BlockInfo[id]?.hardness ?? 0) * 1.5 / SAW_SPEED);
 }
 
+// ==================== 终端机器 C：投料器（Create-lite L1 链 3）====================
+// 部署器-lite：只做「放置」动词（plan §5 差异 5）。通电分量里的投料器每 DEPLOYER_SEC 秒
+// 扫描捕获三格 {T=朝向格, T+up, D+up=投料器头顶} 内的物品实体（feet 探针 = floor(y-0.15)，
+// 与 items.js 落地公式同源——静止物只会停在这三格：产出回流在 T、带送落料在 D+up，差异 10），
+// 把第一个通过全套守卫的「可放置方块物品」变回方块塞进 T（count>1 减一保留实体）：
+//   ① 可放置方块域：BlockInfo 注册 && 非 item 材料/食物 && 非工具 && 非 customMesh 贴面道具
+//     （直放贴面道具会产出无支撑红石/半扇门等非法状态，差异 11；水可投——水车选址彩蛋）
+//   ② T 界内（防界外格 getBlock=AIR 骗过守卫而 setBlockSafe 越界 no-op 的「静默销毁机」，N10）
+//   ③ T 为 AIR 或 WATER（被占 = 跳过不消耗，冷却照走等待清空，E08）
+//   ④ 水投水排除（N21）⑤ crusherIntakeError(T, itemId) 为空（投料口不收配方外方块，N16）
+//   ⑥ T 不与玩家 AABB（照 placeBlock 先例）/怪物 AABB（照 piston.js 格内实体查找）重叠（差异 14）
+// 停转（断水/过载/离合器断开）冷却冻结不动；未命中目标冷却保持 0（T 一空立即投）。
+//
+// 性能守卫（G2 裁决 R4-02/03——必然而非可选：D=10 台持续供料若无守卫会超性能门 5 倍）：
+//   · 动力重算仅当投的是 WATER（普通方块不改动力图——水车供电判定读世界，水是唯一例外）；
+//   · 红石重算仅当 T 的切比雪夫距离 2 内（5×5×5=125 格扫描）存在红石网络关心的方块；
+//   · 帧末聚合：迭代循环内只置 dirty 标志 + 收集待重建区块（去重），循环结束后统一
+//     重算一次 + rebuildChunk——消除 D 台同帧风暴与嵌套重算。
+// 【不变量】迭代循环内绝不调用 updateKineticNetwork/updateRedstoneNetwork/rebuildChunk：
+//   重算会整体 rebind deployerCells（cells 数组重建），正在遍历的引用全部作废（R4-06）。
+function updateDeployers(dt) {
+    if (deployerCells.length === 0 || state.itemDrops.length === 0) return; // 快速出零
+    const chunksToRebuild = new Set();
+    let redstoneDirty = false;
+    let kineticDirty = false;
+    const usedDrops = new Set(); // 本帧已被某台投料器消耗的实体（一帧一实体最多一次，防两台同帧复制消耗）
+    for (const c of deployerCells) {
+        const k = keyOf(c.x, c.y, c.z);
+        const comp = componentAt(k);
+        if (!comp || !comp.running) continue; // 分量停转：冷却冻结不动
+        const cool = deployerCool.get(k) || 0;
+        if (cool > 0) {
+            deployerCool.set(k, Math.max(0, cool - dt));
+            continue;
+        }
+        const [fx, fy, fz] = FACING_NORMALS[deployerFacing(c.id)];
+        const tx = c.x + fx, ty = c.y + fy, tz = c.z + fz; // T = 朝向格
+        const capT = keyOf(tx, ty, tz), capTU = keyOf(tx, ty + 1, tz), capD = keyOf(c.x, c.y + 1, c.z);
+        const tIn = tx >= 0 && tx < WORLD_WIDTH && ty >= 0 && ty < WORLD_HEIGHT && tz >= 0 && tz < WORLD_DEPTH;
+        if (!tIn) continue; // ② 界外：不扫描不消耗不放置（N10）——守卫与实体无关，前置出循环
+        const cur = getBlock(tx, ty, tz);
+        if (cur !== BlockTypes.AIR && cur !== BlockTypes.WATER) continue; // ③ T 被占：等待清空（E08）
+        let hit = null;
+        for (const d of state.itemDrops) {
+            if (usedDrops.has(d)) continue;
+            // feet 探针 = floor(y - 0.15)，与 items.js 落地公式同源（物品中心离支撑面 0.15）
+            const feet = keyOf(Math.floor(d.x), Math.floor(d.y - 0.15), Math.floor(d.z));
+            if (feet !== capT && feet !== capTU && feet !== capD) continue;
+            if (!isDeployableItem(d.itemId)) continue; // ① 普通方块域（材料/食物/工具/贴面道具忽略）
+            if (cur === BlockTypes.WATER && d.itemId === BlockTypes.WATER) continue; // ④ 水投水（N21）
+            if (crusherIntakeError(tx, ty, tz, d.itemId)) continue; // ⑤ 投料口守卫（N16）
+            if (cellOverlapsEntity(tx, ty, tz)) continue; // ⑥ 玩家/怪物 AABB（差异 14）
+            hit = d;
+            break; // 找第一个满足全部守卫的实体
+        }
+        if (!hit) continue; // 无可投目标：冷却保持 0，T 一清空/实体一进捕获格即投
+        // 命中：消耗一个 + 放方块；重算/重建副作用只置标志，帧末统一 flush（见上方不变量）
+        usedDrops.add(hit);
+        hit.count -= 1; // count>1 减一保留实体；count 归 0 帧末移除
+        setBlockSafe(tx, ty, tz, hit.itemId);
+        markChunksAroundLocal(chunksToRebuild, tx, tz);
+        if (hit.itemId === BlockTypes.WATER) kineticDirty = true; // 水例外：可能改变水车顶面供水
+        if (!redstoneDirty && hasRedstoneNear(tx, ty, tz)) redstoneDirty = true; // 5×5×5 邻接守卫
+        deployerCool.set(k, DEPLOYER_SEC);
+    }
+    // ---- 帧末聚合 flush：以下全部移出迭代循环（性能守卫第三条）----
+    if (usedDrops.size > 0) {
+        // 消耗实体：scene.remove + 移出 state.itemDrops（items.js 的 removeDrop 未导出，等价公开操作）
+        for (let i = state.itemDrops.length - 1; i >= 0; i--) {
+            const d = state.itemDrops[i];
+            if (!usedDrops.has(d) || d.count > 0) continue;
+            scene.remove(d.mesh);
+            state.itemDrops.splice(i, 1);
+        }
+    }
+    if (chunksToRebuild.size > 0) {
+        for (const ck of chunksToRebuild) rebuildChunk(Math.floor(ck / 1000), ck % 1000);
+    }
+    if (redstoneDirty) updateRedstoneNetwork(); // 仅 T 附近有红石才重算（守卫二）
+    if (kineticDirty) updateKineticNetwork();   // 仅投水才重算（守卫一）
+}
+
+// 可放置方块域（差异 11）：普通方块（石/圆石/沙砾/沙/木板/原木/玻璃/TNT/水/羊毛…）。
+// customMesh 的门/红石元件/火把/花/动力族一律排除；工具与材料/食物（item: true）排除
+function isDeployableItem(id) {
+    const info = BlockInfo[id];
+    if (!info || info.item) return false;
+    if (isToolId(id)) return false;
+    return !info.customMesh;
+}
+
+// 目标格是否与玩家/怪物 AABB 重叠：玩家照 interaction.js placeBlock 先例（连续 AABB 相交测试），
+// 怪物照 piston.js shoveEntities 的格内实体查找（feet/head 双探针，身高 1.8）——差异 14
+function cellOverlapsEntity(tx, ty, tz) {
+    const p = state.player;
+    if (!p.dead) {
+        const halfW = PLAYER_WIDTH / 2;
+        if (tx + 1 > p.x - halfW && tx < p.x + halfW &&
+            ty + 1 > p.y && ty < p.y + PLAYER_HEIGHT &&
+            tz + 1 > p.z - halfW && tz < p.z + halfW) return true;
+    }
+    for (const e of state.enemies) {
+        if (Math.floor(e.x) !== tx || Math.floor(e.z) !== tz) continue;
+        if (Math.floor(e.y + 0.1) === ty || Math.floor(e.y + 1.8 - 0.1) === ty) return true;
+    }
+    return false;
+}
+
+// T 的切比雪夫距离 2 内（5×5×5）是否存在红石网络关心的方块（红石元件/门/活塞组——
+// 观察者的侦测走 updatePistonTick 每帧 diff 不依赖重算，一并纳入保守正确且成本可忽略）
+function hasRedstoneNear(x, y, z) {
+    for (let dy = -2; dy <= 2; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= WORLD_HEIGHT) continue;
+        for (let dz = -2; dz <= 2; dz++) {
+            const zz = z + dz;
+            if (zz < 0 || zz >= WORLD_DEPTH) continue;
+            for (let dx = -2; dx <= 2; dx++) {
+                const xx = x + dx;
+                if (xx < 0 || xx >= WORLD_WIDTH) continue;
+                const id = getBlock(xx, yy, zz);
+                if (isRedstoneId(id) || isDoorId(id) || isPistonGroupId(id) || isPistonHeadId(id)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 收集受影响区块（含贴边相邻，照 piston.js markChunkAround），帧末统一重建（去重）
+const CHUNKS_X_LOCAL = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
+const CHUNKS_Z_LOCAL = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
+
+function markChunksAroundLocal(set, x, z) {
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    const add = (a, b) => {
+        if (a >= 0 && a < CHUNKS_X_LOCAL && b >= 0 && b < CHUNKS_Z_LOCAL) set.add(a * 1000 + b);
+    };
+    add(cx, cz);
+    if (x % CHUNK_SIZE === 0) add(cx - 1, cz);
+    if (x % CHUNK_SIZE === CHUNK_SIZE - 1) add(cx + 1, cz);
+    if (z % CHUNK_SIZE === 0) add(cx, cz - 1);
+    if (z % CHUNK_SIZE === CHUNK_SIZE - 1) add(cx, cz + 1);
+}
+
 // 锯完一格：清格、掉落（原版映射 + 原木特例）、支撑上的红石元件连锁脱落、网络刷新
 function finishSaw(tx, ty, tz, target) {
     setBlockSafe(tx, ty, tz, BlockTypes.AIR);
@@ -578,6 +760,7 @@ function dropMachineProgressAt(x, y, z) {
     const k = keyOf(x, y, z);
     crushProgress.delete(k);
     sawProgress.delete(k);
+    deployerCool.delete(k);
 }
 
 // 读档/开新世界后调用：清机器进度并重算全网（派生态不存档，现场恢复）
@@ -589,4 +772,5 @@ export function initKinetic() {
 function dropAllMachineProgress() {
     crushProgress.clear();
     sawProgress.clear();
+    deployerCool.clear();
 }
