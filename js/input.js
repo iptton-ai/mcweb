@@ -6,7 +6,7 @@
 import { BlockInfo, HotbarBlocks } from './config.js';
 import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
-import { placeBlock } from './interaction.js';
+import { dropHeldItem, pickBlockUnderCrosshair, placeBlock } from './interaction.js';
 import { miningPress } from './mining.js';
 import { swingViewmodel } from './viewmodel.js';
 import { cycleViewMode } from './playerPhysics.js';
@@ -17,6 +17,23 @@ import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTyping
 
 // ==================== 输入状态 ====================
 export const keys = {};
+
+let lastSpaceAt = -Infinity; // 上次空格按下时间（创造模式双击 = 切换飞行）
+
+// F2 截图：画布转 PNG 下载（纯净画面，不含 DOM 界面）
+function takeScreenshot() {
+    try {
+        const a = document.createElement('a');
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        a.download = `截图-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        showTooltip('📸 截图已保存');
+    } catch (err) {
+        showTooltip('⚠️ 截图失败：' + err.message);
+    }
+}
 
 export let mouseDown = { left: false, right: false };
 
@@ -67,6 +84,49 @@ export function setupInput() {
             return;
         }
         // ---- 以下为 playing 状态的游戏键 ----
+        // Z：丢弃手持物品（对齐参考版的 Q 键——本作 Q 被 Esc 替代键占用）
+        if (e.code === 'KeyZ') {
+            dropHeldItem();
+        }
+        // 空格双击（创造）：切换飞行
+        if (e.code === 'Space' && isCreative() && !e.repeat) {
+            const now = performance.now();
+            if (now - lastSpaceAt < 300) {
+                state.player.flying = !state.player.flying;
+                state.player.vy = 0;
+                showTooltip(state.player.flying ? '🕊️ 飞行开启' : '🚶 飞行关闭');
+            }
+            lastSpaceAt = now;
+        }
+        // F1 隐藏界面（截图/录屏用）| F2 截图 | F3 调试信息开关 | F6 昼夜切换（创造）
+        if (e.code === 'F1') {
+            e.preventDefault();
+            document.body.classList.toggle('hud-hidden');
+            showTooltip(document.body.classList.contains('hud-hidden') ? '🙈 界面已隐藏（F1 恢复）' : '👁️ 界面已恢复');
+        }
+        if (e.code === 'F2') {
+            e.preventDefault();
+            takeScreenshot();
+        }
+        if (e.code === 'F3') {
+            e.preventDefault();
+            const dbg = document.getElementById('debug-info');
+            const show = dbg.style.display === 'none';
+            dbg.style.display = show ? '' : 'none';
+            showTooltip(show ? '📊 调试信息已显示' : '📊 调试信息已隐藏');
+        }
+        if (e.code === 'F6') {
+            e.preventDefault();
+            if (!isCreative()) {
+                showTooltip('☀️ 只有建造模式可以调整昼夜');
+            } else {
+                const dayLen = state.dayLength;
+                const progress = (state.time % dayLen) / dayLen;
+                const sunUp = Math.sin(progress * Math.PI * 2 - Math.PI * 0.5) > 0;
+                state.time = Math.floor(state.time / dayLen) * dayLen + (sunUp ? dayLen * 0.95 : dayLen * 0.5);
+                showTooltip(sunUp ? '🌙 夜幕降临' : '☀️ 天亮了');
+            }
+        }
         if (e.code === 'KeyF') {
             if (isCreative()) {
                 state.player.flying = !state.player.flying;
@@ -117,6 +177,9 @@ export function setupInput() {
                 // 按下瞬间：攻击怪物 / 开始挖掘（生存蓄力、创造与即挖方块直接破坏，见 js/mining.js）
                 miningPress();
             }
+        } else if (e.button === 1) {
+            e.preventDefault(); // 挡掉浏览器中键自动滚动
+            if (state.camMode === 'player' && isCreative()) pickBlockUnderCrosshair();
         } else if (e.button === 2) {
             if (state.camMode === 'player') {
                 mouseDown.right = true;

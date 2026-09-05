@@ -1,7 +1,7 @@
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
@@ -10,16 +10,31 @@ import { playerMesh } from './entities.js';
 import { keys } from './input.js';
 import { showTooltip } from './ui.js';
 import { isGameActive } from './uiModal.js';
+import { damagePlayer } from './playerLife.js';
 
 // ==================== 玩家物理 ====================
 export function updatePlayerPhysics(dt) {
     const p = state.player;
-    const speed = p.flying ? FLY_SPEED : WALK_SPEED;
 
     // 移动输入（仅 playing 状态读取按键：暂停/背包/死亡时世界照常运行但玩家不响应按键；
     // 自由摄像头/建造跟拍视角下键位归摄像头，玩家原地站立；
     // AI 助手面板打开不影响——面板开着也能用键盘继续玩，聊天框打字由输入焦点天然隔离）
     const k = (isGameActive() && state.camMode === 'player') ? keys : {};
+
+    // 水体判定（游泳物理与氧气系统，见下方与 playerLife.js）：
+    // inWater = 腰腹泡水（浮力/减速）；underwater = 眼睛没入（氧气倒数 + 挖掘 ×5 惩罚）
+    const waistBlock = getBlock(Math.floor(p.x), Math.floor(p.y + 0.6), Math.floor(p.z));
+    const eyeBlock = getBlock(Math.floor(p.x), Math.floor(p.y + PLAYER_EYE_HEIGHT), Math.floor(p.z));
+    p.inWater = !p.flying && (waistBlock === BlockTypes.WATER || eyeBlock === BlockTypes.WATER);
+    p.underwater = !p.flying && eyeBlock === BlockTypes.WATER;
+
+    // 潜行（Shift：×0.35，不飞行时）与疾跑（Ctrl+W：×1.5，饥饿消耗 ×2.7 见 playerLife.js）
+    const sneak = !p.flying && !!(k['ShiftLeft'] || k['ShiftRight']);
+    const sprint = !p.flying && !p.inWater && !!(k['ControlLeft'] || k['ControlRight']) && !!k['KeyW'];
+    p.sprinting = sprint;
+    const speed = p.flying ? FLY_SPEED : WALK_SPEED *
+        (sneak ? 0.35 : 1) * (sprint ? 1.5 : 1) * (p.inWater ? 0.6 : 1);
+
     const forward = new THREE.Vector3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
     const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
     const moveDir = new THREE.Vector3(0, 0, 0);
@@ -38,11 +53,18 @@ export function updatePlayerPhysics(dt) {
     p.vx += (targetVx - p.vx) * Math.min(1, accel * dt);
     p.vz += (targetVz - p.vz) * Math.min(1, accel * dt);
 
+    const wasOnGround = p.onGround;
+
     if (p.flying) {
         p.vy = 0;
         if (k['Space']) p.vy = FLY_SPEED;
         if (k['ShiftLeft'] || k['ShiftRight']) p.vy = -FLY_SPEED;
         p.onGround = false;
+    } else if (p.inWater) {
+        // 游泳：空格上浮、松手下沉，指数阻尼（水中不摔伤，fallStartY 清空）
+        p.vy += ((k['Space'] ? 16 : -6) * dt);
+        p.vy *= Math.exp(-3.2 * dt);
+        p.fallStartY = null;
     } else {
         p.vy += GRAVITY * dt;
         p.vy = Math.max(p.vy, -40);
@@ -141,6 +163,20 @@ export function updatePlayerPhysics(dt) {
     p.x = Math.max(halfW, Math.min(WORLD_WIDTH - halfW, p.x));
     p.y = Math.max(0, Math.min(WORLD_HEIGHT - 0.1, p.y));
     p.z = Math.max(halfW, Math.min(WORLD_DEPTH - halfW, p.z));
+
+    // 摔落伤害（对齐参考版：落差 > 3.5 格开始扣血，damage = floor(落差 - 3)；水中/飞行豁免）：
+    // 空中持续抬高 fallStartY 记录最高点，落地瞬间结算
+    if (p.flying || p.inWater) {
+        p.fallStartY = null;
+    } else if (p.onGround) {
+        if (!wasOnGround && p.fallStartY !== null) {
+            const drop = p.fallStartY - p.y;
+            if (drop > FALL_DAMAGE_MIN) damagePlayer(Math.floor(drop - 3));
+        }
+        p.fallStartY = p.y;
+    } else {
+        p.fallStartY = Math.max(p.fallStartY ?? p.y, p.y);
+    }
 
     // 更新相机（含第一/第三人称）
     updateCamera();

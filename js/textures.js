@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -22,10 +22,12 @@ export function createTexture(width, height, drawFn) {
 }
 
 // ==================== 纹理图集 ====================
-export const atlasSize = 8;
+// 2026-09-05 从 8×8 扩到 16×16（256 tile）：生存进度组的矿石/合成站/食物/四档工具
+// 新增 28 个 tile（45..72），8×8 的 64 格已放不下。所有 UV 计算都动态读 atlasSize，
+// 扩容对区块/物品/手部模型零影响；旧 tile 编号 0..44 不变（TILE_OVERRIDES 与存档无涉）。
+export const atlasSize = 16;
 
-// 8x8 图集（红石组之后又加了活塞组：粘液/活塞三面/机身/观察者，tile 33..38 追加在尾部保序）
-export const tileSize = 16;
+export const tileSize = 16; // tile 像素尺寸（16×16）
 
 export const atlasCanvas = document.createElement('canvas');
 
@@ -38,6 +40,100 @@ export const atlasCtx = atlasCanvas.getContext('2d');
 export const blockUVs = {};
 
 export const tileMap = {};
+
+// ---- 生存进度组贴图辅助（tile 45..72 共用）：矿石 = 石底 + 彩斑，工具 = 木柄 + 换色工具头 ----
+function drawStoneBase(ctx, x, y, s) {
+    ctx.fillStyle = '#7a7a7a';
+    ctx.fillRect(x, y, s, s);
+    for (let i = 0; i < 22; i++) {
+        const px = x + Math.floor(hash2D(i, 31, 3) * s);
+        const py = y + Math.floor(hash2D(i, 32, 3) * s);
+        ctx.fillStyle = hash2D(i, 33, 3) > 0.5 ? '#6a6a6a' : '#8a8a8a';
+        ctx.fillRect(px, py, 1 + Math.floor(hash2D(i, 34, 3) * 2), 1 + Math.floor(hash2D(i, 35, 3) * 2));
+    }
+}
+
+function drawPlanksBase(ctx, x, y, s) {
+    ctx.fillStyle = '#c8a050';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = '#a87c38';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x, y + i * 4 + 3, s, 1); // 板缝
+    ctx.fillStyle = '#d8b060';
+    for (let i = 0; i < 10; i++) {
+        const px = x + Math.floor(hash2D(i, 41, 4) * s);
+        const py = y + Math.floor(hash2D(i, 42, 4) * s);
+        ctx.fillRect(px, py, 1 + Math.floor(hash2D(i, 43, 4) * 3), 1);
+    }
+}
+
+function drawOre(ctx, x, y, s, main, hi, blobs) {
+    drawStoneBase(ctx, x, y, s);
+    for (let i = 0; i < blobs; i++) {
+        const px = x + 2 + Math.floor(hash2D(i, 51, 7) * (s - 6));
+        const py = y + 2 + Math.floor(hash2D(i, 52, 7) * (s - 6));
+        ctx.fillStyle = main;
+        ctx.fillRect(px, py, 3, 2);
+        ctx.fillStyle = hi;
+        ctx.fillRect(px, py, 1, 1);
+    }
+}
+
+// 工具图标（形状与铁质 29..32 一致，工具头换色：木/石/钻三档）
+function drawTool(ctx, x, y, kind, head, headDark) {
+    const stick = '#8a5a2a', stickDark = '#6a4222';
+    if (kind === 'pickaxe') {
+        ctx.fillStyle = stick;
+        ctx.fillRect(x + 7, y + 4, 2, 10);
+        ctx.fillStyle = stickDark;
+        ctx.fillRect(x + 7, y + 4, 1, 10);
+        ctx.fillRect(x + 7, y + 13, 2, 1);
+        ctx.fillStyle = head;
+        ctx.fillRect(x + 3, y + 2, 10, 2);
+        ctx.fillRect(x + 2, y + 4, 2, 3);
+        ctx.fillRect(x + 12, y + 4, 2, 3);
+        ctx.fillStyle = headDark;
+        ctx.fillRect(x + 3, y + 3, 10, 1);
+        ctx.fillRect(x + 2, y + 6, 2, 1);
+        ctx.fillRect(x + 12, y + 6, 2, 1);
+    } else if (kind === 'axe') {
+        ctx.fillStyle = stick;
+        ctx.fillRect(x + 7, y + 3, 2, 11);
+        ctx.fillStyle = stickDark;
+        ctx.fillRect(x + 7, y + 3, 1, 11);
+        ctx.fillRect(x + 7, y + 13, 2, 1);
+        ctx.fillStyle = head;
+        ctx.fillRect(x + 5, y + 1, 7, 4);
+        ctx.fillRect(x + 4, y + 4, 8, 2);
+        ctx.fillStyle = headDark;
+        ctx.fillRect(x + 5, y + 1, 1, 4);
+        ctx.fillRect(x + 4, y + 5, 8, 1);
+    } else if (kind === 'shovel') {
+        ctx.fillStyle = stick;
+        ctx.fillRect(x + 7, y + 6, 2, 8);
+        ctx.fillStyle = stickDark;
+        ctx.fillRect(x + 7, y + 6, 1, 8);
+        ctx.fillRect(x + 7, y + 13, 2, 1);
+        ctx.fillStyle = head;
+        ctx.fillRect(x + 5, y + 1, 6, 5);
+        ctx.fillStyle = headDark;
+        ctx.fillRect(x + 5, y + 1, 1, 5);
+        ctx.fillRect(x + 6, y + 6, 4, 1);
+    } else { // sword
+        ctx.fillStyle = stick;
+        ctx.fillRect(x + 7, y + 10, 2, 4); // 柄
+        ctx.fillStyle = stickDark;
+        ctx.fillRect(x + 7, y + 13, 2, 1);
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(x + 4, y + 9, 8, 1); // 护手
+        ctx.fillStyle = head;
+        ctx.fillRect(x + 7, y + 1, 2, 8); // 剑身
+        ctx.fillRect(x + 6, y + 2, 1, 6);
+        ctx.fillStyle = headDark;
+        ctx.fillRect(x + 9, y + 2, 1, 6);
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(x + 7, y + 1, 1, 6); // 剑脊高光
+    }
+}
 
 export function generateAllTextures() {
     const tiles = [
@@ -80,6 +176,33 @@ export function generateAllTextures() {
         { type: WATERWHEEL_ITEM_ID, top: 42, side: 42, bottom: 42, name: 'waterwheel' }, // 水车（实际是 3D 大轮盘）
         { type: CRUSHER_ITEM_ID, top: 43, side: 43, bottom: 43, name: 'crusher' }, // 粉碎轮（实际是 3D 轮盘）
         { type: SAW_ITEM_ID, top: 44, side: 44, bottom: 44, name: 'saw' }, // 机械锯（实际是 3D 圆锯片）
+        // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛/物品/四档工具，tile 45..72 ----
+        { type: BlockTypes.COAL_ORE, top: 45, side: 45, bottom: 45, name: 'coal_ore' },
+        { type: BlockTypes.IRON_ORE, top: 46, side: 46, bottom: 46, name: 'iron_ore' },
+        { type: BlockTypes.DIAMOND_ORE, top: 47, side: 47, bottom: 47, name: 'diamond_ore' },
+        { type: BlockTypes.CRAFTING_TABLE, top: 48, side: 49, bottom: 12, name: 'crafting_table' }, // 顶面网格 + 侧面工具痕
+        { type: BlockTypes.FURNACE, top: 51, side: 50, bottom: 51, name: 'furnace' }, // 四面都是炉口（无朝向状态）
+        { type: BlockTypes.WOOL, top: 52, side: 52, bottom: 52, name: 'wool' },
+        { type: ItemTypes.STICK, top: 53, side: 53, bottom: 53, name: 'stick' },
+        { type: ItemTypes.COAL, top: 54, side: 54, bottom: 54, name: 'coal' },
+        { type: ItemTypes.IRON_INGOT, top: 55, side: 55, bottom: 55, name: 'iron_ingot' },
+        { type: ItemTypes.DIAMOND, top: 56, side: 56, bottom: 56, name: 'diamond' },
+        { type: ItemTypes.APPLE, top: 57, side: 57, bottom: 57, name: 'apple' },
+        { type: ItemTypes.RAW_PORK, top: 58, side: 58, bottom: 58, name: 'raw_pork' },
+        { type: ItemTypes.COOKED_PORK, top: 59, side: 59, bottom: 59, name: 'cooked_pork' },
+        { type: ItemTypes.GUNPOWDER, top: 60, side: 60, bottom: 60, name: 'gunpowder' },
+        { type: ToolTypes.WOOD_PICKAXE, top: 61, side: 61, bottom: 61, name: 'wood_pickaxe' },
+        { type: ToolTypes.STONE_PICKAXE, top: 62, side: 62, bottom: 62, name: 'stone_pickaxe' },
+        { type: ToolTypes.DIAMOND_PICKAXE, top: 63, side: 63, bottom: 63, name: 'diamond_pickaxe' },
+        { type: ToolTypes.WOOD_AXE, top: 64, side: 64, bottom: 64, name: 'wood_axe' },
+        { type: ToolTypes.STONE_AXE, top: 65, side: 65, bottom: 65, name: 'stone_axe' },
+        { type: ToolTypes.DIAMOND_AXE, top: 66, side: 66, bottom: 66, name: 'diamond_axe' },
+        { type: ToolTypes.WOOD_SHOVEL, top: 67, side: 67, bottom: 67, name: 'wood_shovel' },
+        { type: ToolTypes.STONE_SHOVEL, top: 68, side: 68, bottom: 68, name: 'stone_shovel' },
+        { type: ToolTypes.DIAMOND_SHOVEL, top: 69, side: 69, bottom: 69, name: 'diamond_shovel' },
+        { type: ToolTypes.WOOD_SWORD, top: 70, side: 70, bottom: 70, name: 'wood_sword' },
+        { type: ToolTypes.STONE_SWORD, top: 71, side: 71, bottom: 71, name: 'stone_sword' },
+        { type: ToolTypes.DIAMOND_SWORD, top: 72, side: 72, bottom: 72, name: 'diamond_sword' },
     ];
 
     const drawFunctions = {
@@ -708,6 +831,142 @@ export function generateAllTextures() {
             ctx.fillStyle = '#3a3e48';
             ctx.fillRect(x + c - 1, y + c - 1, 2, 2); // 中心孔
         },
+        // ---- 生存进度组 tile 45..72 ----
+        45: (ctx, x, y, s) => drawOre(ctx, x, y, s, '#26262a', '#3c3c44', 9), // 窗煤矿石：石底 + 黑煤斑
+        46: (ctx, x, y, s) => drawOre(ctx, x, y, s, '#c99e76', '#a87e58', 7), // 铁矿石：石底 + 铁锈斑
+        47: (ctx, x, y, s) => drawOre(ctx, x, y, s, '#4fded0', '#8af5ea', 5), // 钻石矿石：石底 + 青钻斑
+        48: (ctx, x, y, s) => { // 工作台顶面：木板底 + 深色网格 + 角落划痕
+            drawPlanksBase(ctx, x, y, s);
+            ctx.fillStyle = '#5a3c18';
+            ctx.fillRect(x + 2, y + 2, s - 4, 1);
+            ctx.fillRect(x + 2, y + s - 3, s - 4, 1);
+            ctx.fillRect(x + 2, y + 2, 1, s - 4);
+            ctx.fillRect(x + s - 3, y + 2, 1, s - 4);
+            ctx.fillStyle = '#7a5228';
+            ctx.fillRect(x + 4, y + 4, 4, 1);
+            ctx.fillRect(x + 9, y + 8, 3, 1);
+        },
+        49: (ctx, x, y, s) => { // 工作台侧面：木板底 + 上沿台面 + 挂着的锯/锤轮廓
+            drawPlanksBase(ctx, x, y, s);
+            ctx.fillStyle = '#8a5f30';
+            ctx.fillRect(x, y, s, 3); // 台面边
+            ctx.fillStyle = '#4a3014';
+            ctx.fillRect(x + 2, y + 6, 5, 2); // 工具横放痕迹
+            ctx.fillRect(x + 9, y + 10, 4, 2);
+        },
+        50: (ctx, x, y, s) => { // 熔炉正面：石底 + 黑炉口 + 橙红火光
+            drawStoneBase(ctx, x, y, s);
+            ctx.fillStyle = '#1c1c1e';
+            ctx.fillRect(x + 3, y + 7, s - 6, 6); // 炉口
+            ctx.fillStyle = '#ff8830';
+            ctx.fillRect(x + 4, y + 10, s - 8, 2); // 火光
+            ctx.fillStyle = '#ffc040';
+            ctx.fillRect(x + 6, y + 11, 2, 1);
+            ctx.fillStyle = '#55555c';
+            ctx.fillRect(x + 2, y + 2, s - 4, 2); // 顶部收边
+        },
+        51: (ctx, x, y, s) => { // 熔炉顶/底：石底 + 膛盖纹
+            drawStoneBase(ctx, x, y, s);
+            ctx.fillStyle = '#4c4c54';
+            ctx.fillRect(x + 4, y + 4, s - 8, s - 8);
+            ctx.fillStyle = '#6a6a72';
+            ctx.fillRect(x + 5, y + 5, s - 10, s - 10);
+        },
+        52: (ctx, x, y, s) => { // 白色羊毛：卷曲噪点
+            ctx.fillStyle = '#e8e6dc';
+            ctx.fillRect(x, y, s, s);
+            for (let i = 0; i < 26; i++) {
+                const px = x + Math.floor(hash2D(i, 71, 5) * (s - 2));
+                const py = y + Math.floor(hash2D(i, 72, 5) * (s - 2));
+                ctx.fillStyle = hash2D(i, 73, 5) > 0.5 ? '#d8d5c8' : '#f6f4ec';
+                ctx.fillRect(px, py, 2, 2);
+            }
+        },
+        53: (ctx, x, y, s) => { // 木棍：斜放短棍
+            ctx.fillStyle = '#9c6a30';
+            for (let i = 0; i < 8; i++) ctx.fillRect(x + 3 + i, y + 12 - i, 2, 2);
+            ctx.fillStyle = '#7a4e20';
+            for (let i = 0; i < 8; i++) ctx.fillRect(x + 5 + i, y + 12 - i, 1, 1);
+        },
+        54: (ctx, x, y, s) => { // 煤炭：黑亮块煤
+            ctx.fillStyle = '#26262a';
+            ctx.fillRect(x + 3, y + 4, 10, 9);
+            ctx.fillRect(x + 5, y + 2, 6, 2);
+            ctx.fillStyle = '#3e3e46';
+            ctx.fillRect(x + 4, y + 5, 3, 2);
+            ctx.fillRect(x + 9, y + 9, 2, 2);
+            ctx.fillStyle = '#101014';
+            ctx.fillRect(x + 9, y + 5, 3, 2);
+            ctx.fillRect(x + 4, y + 10, 2, 2);
+        },
+        55: (ctx, x, y, s) => { // 铁锭：梯形锭
+            ctx.fillStyle = '#d3d9df';
+            ctx.fillRect(x + 3, y + 6, 10, 6);
+            ctx.fillRect(x + 5, y + 4, 6, 2);
+            ctx.fillStyle = '#f0f4f8';
+            ctx.fillRect(x + 4, y + 6, 8, 1);
+            ctx.fillStyle = '#9aa4ae';
+            ctx.fillRect(x + 3, y + 11, 10, 1);
+        },
+        56: (ctx, x, y, s) => { // 钻石：青色菱形宝石
+            ctx.fillStyle = '#4fded0';
+            ctx.fillRect(x + 6, y + 3, 4, 2);
+            ctx.fillRect(x + 4, y + 5, 8, 4);
+            ctx.fillRect(x + 6, y + 9, 4, 2);
+            ctx.fillRect(x + 7, y + 11, 2, 1);
+            ctx.fillStyle = '#8af5ea';
+            ctx.fillRect(x + 6, y + 5, 2, 2);
+            ctx.fillStyle = '#2aa89c';
+            ctx.fillRect(x + 9, y + 7, 2, 2);
+        },
+        57: (ctx, x, y, s) => { // 苹果：红果 + 叶柄
+            ctx.fillStyle = '#e04a3a';
+            ctx.fillRect(x + 4, y + 5, 8, 8);
+            ctx.fillRect(x + 3, y + 7, 10, 4);
+            ctx.fillStyle = '#f07a5a';
+            ctx.fillRect(x + 5, y + 6, 2, 3); // 高光
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(x + 7, y + 2, 2, 3); // 柄
+            ctx.fillStyle = '#4a9e3d';
+            ctx.fillRect(x + 9, y + 3, 3, 2); // 叶
+        },
+        58: (ctx, x, y, s) => { // 生猪肉：粉红肉块
+            ctx.fillStyle = '#e89c96';
+            ctx.fillRect(x + 3, y + 5, 10, 7);
+            ctx.fillStyle = '#f4c1bc';
+            ctx.fillRect(x + 5, y + 6, 4, 3); // 脂肪纹
+            ctx.fillStyle = '#c97a74';
+            ctx.fillRect(x + 9, y + 9, 3, 2);
+        },
+        59: (ctx, x, y, s) => { // 熟猪排：焦褐排
+            ctx.fillStyle = '#b06a3a';
+            ctx.fillRect(x + 3, y + 5, 10, 7);
+            ctx.fillStyle = '#d8925a';
+            ctx.fillRect(x + 5, y + 6, 4, 3);
+            ctx.fillStyle = '#8a4e26';
+            ctx.fillRect(x + 9, y + 9, 3, 2);
+        },
+        60: (ctx, x, y, s) => { // 火药：灰粉堆
+            ctx.fillStyle = '#5e5e66';
+            ctx.fillRect(x + 4, y + 8, 8, 4);
+            ctx.fillRect(x + 6, y + 6, 4, 2);
+            ctx.fillStyle = '#8a8a94';
+            for (let i = 0; i < 8; i++) {
+                ctx.fillRect(x + 4 + Math.floor(hash2D(i, 81, 6) * 8), y + 6 + Math.floor(hash2D(i, 82, 6) * 6), 1, 1);
+            }
+        },
+        61: (ctx, x, y, s) => drawTool(ctx, x, y, 'pickaxe', '#a8864c', '#7c5e2e'),
+        62: (ctx, x, y, s) => drawTool(ctx, x, y, 'pickaxe', '#8a8d90', '#63666a'),
+        63: (ctx, x, y, s) => drawTool(ctx, x, y, 'pickaxe', '#51dec7', '#2fa89c'),
+        64: (ctx, x, y, s) => drawTool(ctx, x, y, 'axe', '#a8864c', '#7c5e2e'),
+        65: (ctx, x, y, s) => drawTool(ctx, x, y, 'axe', '#8a8d90', '#63666a'),
+        66: (ctx, x, y, s) => drawTool(ctx, x, y, 'axe', '#51dec7', '#2fa89c'),
+        67: (ctx, x, y, s) => drawTool(ctx, x, y, 'shovel', '#a8864c', '#7c5e2e'),
+        68: (ctx, x, y, s) => drawTool(ctx, x, y, 'shovel', '#8a8d90', '#63666a'),
+        69: (ctx, x, y, s) => drawTool(ctx, x, y, 'shovel', '#51dec7', '#2fa89c'),
+        70: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#a8864c', '#7c5e2e'),
+        71: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#8a8d90', '#63666a'),
+        72: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#51dec7', '#2fa89c'),
     };
 
     for (const tile of tiles) {

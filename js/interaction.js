@@ -1,7 +1,7 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDoorId, isKineticId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isRedstoneId, isToolId } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, isKineticId, isLampId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, pistonSticky } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
@@ -14,10 +14,12 @@ import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
 import { damageEnemy } from './entities.js';
 import { spawnTntEntity } from './tnt.js';
-import { getHeldTool } from './mining.js';
+import { spawnItemDrop } from './items.js';
+import { addXp, doEat } from './playerLife.js';
+import { damageHeldTool, getHeldTool } from './mining.js';
 // 注意：ui.js 也 import 本模块的 raycastBlocks，循环依赖均为运行时函数调用，安全
 // （mining.js ↔ 本模块同理：本模块只运行时调用 getHeldTool）
-import { showTooltip, updateHotbar } from './ui.js';
+import { openItemPicker, showTooltip, updateHotbar } from './ui.js';
 
 // 视线方向：forward = (-sin(yaw)·cos(pitch), sin(pitch), -cos(yaw)·cos(pitch))
 function lookDirection() {
@@ -135,6 +137,7 @@ export function tryAttackEnemy() {
         const tool = getHeldTool();
         damageEnemy(best, isCreative() ? 1000 : (tool?.damage ?? FIST_ATTACK.damage));
         state.player.attackCooldown = tool?.attackCd ?? FIST_ATTACK.attackCd;
+        damageHeldTool(); // 武器打怪也磨损（徒手/创造无损耗）
     }
     return true;
 }
@@ -196,16 +199,25 @@ export function breakBlockAt(hit) {
     const idx = getBlockIndex(hit.x, hit.y, hit.z);
     state.blocks[idx] = BlockTypes.AIR;
     // 生存模式按掉落映射采集（null=无掉落，缺省=自身；石头→圆石、草方块→泥土等原版规则）。
-    // needsTool 方块（石头/圆石/砖）徒手或用错工具挖开时「无掉落」——原版采集规则
+    // needsTool 方块（石头/圆石/砖/矿石）徒手或用错/低档工具挖开时「无掉落」——原版采集规则；
+    // 树叶特例：不掉自身，12% 概率掉苹果（食物来源）；矿石采到给经验（煤/铁 +2、钻 +7）
     if (!isCreative()) {
         const info = BlockInfo[hit.block];
-        const tool = getHeldTool();
-        const harvestBlocked = info?.drop === null ||
-            (info?.needsTool && (!tool || tool.class !== info.tool));
-        if (!harvestBlocked) {
-            const itemId = info?.drop ?? hit.block;
-            state.player.inventory[itemId] = (state.player.inventory[itemId] || 0) + 1;
+        let itemId = null;
+        if (hit.block === BlockTypes.LEAVES) {
+            if (Math.random() < LEAVES_APPLE_CHANCE) itemId = ItemTypes.APPLE;
+        } else {
+            const tool = getHeldTool();
+            const tierOk = !info?.minTier || (tool?.class === info.tool && (tool.tier || 0) >= info.minTier);
+            const harvestBlocked = info?.drop === null ||
+                (info?.needsTool && (!tool || tool.class !== info.tool || !tierOk));
+            if (!harvestBlocked) itemId = info?.drop ?? hit.block;
         }
+        if (itemId !== null) {
+            state.player.inventory[itemId] = (state.player.inventory[itemId] || 0) + 1;
+            if (info?.xp) addXp(info.xp);
+        }
+        damageHeldTool(); // 挖掘磨损工具（徒手/创造无损耗）
         updateHotbar();
     }
     // 支撑被拆：贴在这个面上的红石元件随之脱落
@@ -230,6 +242,26 @@ export function breakBlockAt(hit) {
 
 export function placeBlock() {
     const hit = raycastBlocks();
+    // 右键手持食物 = 进食（饥饿未满才吃得下；创造模式没有饥饿，提示一下）
+    const heldId = HotbarBlocks[state.player.selectedSlot];
+    if (BlockInfo[heldId]?.food) {
+        const eaten = doEat(heldId);
+        if (eaten === 'full') showTooltip('🍖 你现在还不饿');
+        else if (eaten) {
+            swingViewmodel();
+            showTooltip(`🍴 吃掉了${BlockInfo[heldId].name}（+${BlockInfo[heldId].food} 饱食）`);
+        }
+        return;
+    }
+    // 右键工作台/熔炉 = 打开合成面板（潜行+右键则照常放方块，对齐原版「Shift 绕过交互」）
+    if (hit && !keys['ShiftLeft'] && !keys['ShiftRight']) {
+        const station = BlockInfo[hit.block]?.station;
+        if (station) {
+            openItemPicker(station);
+            showTooltip(station === 'crafting' ? '▦ 已连接工作台 · 进阶配方已解锁' : '♨ 已连接熔炉 · 添加原料与燃料');
+            return;
+        }
+    }
     // 右键门 = 开/关整扇门（原版交互），不放置方块
     if (hit && isDoorId(hit.block)) {
         toggleDoorAt(hit.x, hit.y, hit.z);
@@ -265,9 +297,14 @@ export function placeBlock() {
         const currentBlock = getBlock(bx, by, bz);
         if (currentBlock !== BlockTypes.AIR && currentBlock !== BlockTypes.WATER) return;
         const selectedType = HotbarBlocks[state.player.selectedSlot] || BlockTypes.GRASS;
-        // 工具是「物品」不是方块，不能放置（照原版：右键持工具不与世界交互）
+        // 工具/材料/食物是「物品」不是方块，不能放置（照原版：右键持物品不与世界交互；
+        // 食物在入口处已按进食处理，能走到这里说明刚才吃不下——提示换成去吃）
         if (isToolId(selectedType)) {
             showTooltip(`🛠️ ${BlockInfo[selectedType].name}是用来挖掘/战斗的，选个方块再放置`);
+            return;
+        }
+        if (BlockInfo[selectedType]?.item) {
+            showTooltip(`🎒 ${BlockInfo[selectedType].name}是材料/食物，不能放置`);
             return;
         }
         // 生存模式：数量不足不可放置
@@ -360,4 +397,56 @@ export function placeBlock() {
         if (bz % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < Math.ceil(WORLD_DEPTH / CHUNK_SIZE) - 1) rebuildChunk(cx,
             cz + 1);
     }
+}
+
+
+// ==================== 丢弃与吸取（Z / 鼠标中键，键位在 input.js）====================
+// 丢弃手持物品（生存）：朝视线方向弹出真物品实体（可捡回；工具耐久保留在本把上）
+export function dropHeldItem() {
+    const p = state.player;
+    const id = HotbarBlocks[p.selectedSlot];
+    if (!id) return;
+    if (isCreative()) {
+        showTooltip('🧪 创造模式物品无限，无需丢弃');
+        return;
+    }
+    if ((p.inventory[id] || 0) <= 0) {
+        showTooltip('手里没有这个物品');
+        return;
+    }
+    p.inventory[id]--;
+    const dir = lookDirection();
+    spawnItemDrop(p.x + dir.x * 1.2, p.y + 1.3, p.z + dir.z * 1.2, id, 1);
+    updateHotbar();
+}
+
+// 方块 ID → 物品栏对应物品（中键吸取用）：有状态方块映射回各自的 *_ITEM_ID 代表变体
+export function pickBlockItem(blockId) {
+    if (isDoorId(blockId)) return DOOR_ITEM_ID;
+    if (isDustId(blockId)) return DUST_ITEM_ID;
+    if (isRTorchId(blockId)) return RTORCH_ITEM_ID;
+    if (isButtonId(blockId)) return BUTTON_ITEM_ID;
+    if (isPlateId(blockId)) return PLATE_ITEM_ID;
+    if (isLeverId(blockId)) return LEVER_ITEM_ID;
+    if (isLampId(blockId)) return LAMP_ITEM_ID;
+    if (isPistonId(blockId)) return pistonSticky(blockId) ? STICKY_PISTON_ITEM_ID : PISTON_ITEM_ID;
+    if (isPistonHeadId(blockId)) return PISTON_ITEM_ID;
+    if (isObserverId(blockId)) return OBSERVER_ITEM_ID;
+    if (isKineticId(blockId)) return kineticItemId(blockId);
+    return blockId;
+}
+
+// 创造模式中键吸取：准星方块对应的物品直接选中（物品栏没有的会提示）
+export function pickBlockUnderCrosshair() {
+    const hit = raycastBlocks();
+    if (!hit) return;
+    const itemId = pickBlockItem(hit.block);
+    const idx = HotbarBlocks.indexOf(itemId);
+    if (idx < 0) {
+        showTooltip(`📦 ${BlockInfo[itemId]?.name || '该方块'}不在物品栏里`);
+        return;
+    }
+    state.player.selectedSlot = idx;
+    updateHotbar();
+    showTooltip(`🖱️ 已吸取：${BlockInfo[itemId].name}`);
 }

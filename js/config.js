@@ -143,7 +143,29 @@ export const BlockTypes = {
     FLOWER: 17,
     TNT: 18,
     SLIME: 97, // 粘液块（普通实心立方体，ID 排在红石组之后；活塞组的基础组件）
+    // ---- 生存进度组（2026-09-05 对齐 Voxelcraft 参考版）：矿石 + 合成站 ----
+    COAL_ORE: 170, // 煤矿石：掉煤炭（燃料/火把原料），y<44 常见
+    IRON_ORE: 171, // 铁矿石：掉自身，熔炉炼铁锭（石镐起步）
+    DIAMOND_ORE: 172, // 钻石矿石：掉钻石（y<12 稀有，需铁镐起步）
+    CRAFTING_TABLE: 173, // 工作台：放置后右键（或站在旁边按 E）解锁工具等进阶配方
+    FURNACE: 174, // 熔炉：放置后右键解锁烧制配方（玻璃/铁锭/熟猪排/木炭，煤炭为燃料）
+    WOOL: 175, // 白色羊毛：绵羊掉落，建材
 };
+
+// ==================== 生存物品（非方块：只进物品栏，绝不写进 state.blocks）====================
+// 与工具共用「BlockInfo 注册 + HotbarBlocks 列表」的物品体系；ID 选在动力组之后的空闲区间。
+export const ItemTypes = {
+    STICK: 180, // 木棍（合成材料）
+    COAL: 181, // 煤炭（燃料/火把；木炭同效）
+    IRON_INGOT: 182, // 铁锭（熔炉产物，铁质工具材料）
+    DIAMOND: 183, // 钻石（钻石矿石直接掉落）
+    APPLE: 184, // 苹果（食物 +4）：打树叶 12% 概率掉落
+    RAW_PORK: 185, // 生猪肉（食物 +3）：猪/牛掉落，熔炉可烧熟
+    COOKED_PORK: 186, // 熟猪排（食物 +8）
+    GUNPOWDER: 187, // 火药：苦力怕掉落，合成 TNT 的原料
+};
+
+export const ItemIds = new Set(Object.values(ItemTypes));
 
 // ==================== 有状态方块：门 ====================
 // 参考 Minecraft Wiki（Door/BS）：一扇门占上下两格，方块状态有
@@ -551,6 +573,7 @@ export const KINETIC_RECIPES = {
     [BlockTypes.LOG]: { item: BlockTypes.PLANKS, count: 4 }, // 树干 → 木板×4
 };
 
+
 // ==================== 方块挖掘属性（照搬原版 hardness/工具类别/掉落）====================
 // hardness：原版硬度值；-1 = 不可破坏（基岩）。tool：原版「最佳工具」类别（镐/斧/锹，徒手=无）。
 // needsTool：true = 必须用对应类别工具挖才有掉落（原版石质方块的规则，如石头手挖 7.5s 还不掉落）。
@@ -577,6 +600,22 @@ export const BlockInfo = {
     [BlockTypes.FLOWER]: { name: '花', solid: false, transparent: true, customMesh: true, color: '#e04a5a', hardness: 0 },
     [BlockTypes.TNT]: { name: 'TNT', solid: true, transparent: false, tnt: true, color: '#c03020', hardness: 0 },
     [BlockTypes.SLIME]: { name: '粘液块', solid: true, transparent: false, color: '#6ec84e', hardness: 0 }, // 原版粘液块硬度 0（空手秒挖）；可被活塞推拉并拖动附着方块
+    // ---- 生存进度组：矿石（硬度/采集门槛照原版：三种矿石都是 3，钻石需铁镐、铁需石镐）----
+    [BlockTypes.COAL_ORE]: { name: '煤矿石', solid: true, transparent: false, color: '#4a4a4a', hardness: 3.0, tool: 'pickaxe', needsTool: true, minTier: 1, drop: ItemTypes.COAL, xp: 2 },
+    [BlockTypes.IRON_ORE]: { name: '铁矿石', solid: true, transparent: false, color: '#c8a582', hardness: 3.0, tool: 'pickaxe', needsTool: true, minTier: 2, xp: 2 }, // 掉自身，熔炉炼铁锭
+    [BlockTypes.DIAMOND_ORE]: { name: '钻石矿石', solid: true, transparent: false, color: '#5fd8ce', hardness: 3.0, tool: 'pickaxe', needsTool: true, minTier: 3, drop: ItemTypes.DIAMOND, xp: 7 },
+    [BlockTypes.CRAFTING_TABLE]: { name: '工作台', solid: true, transparent: false, color: '#a06a2c', hardness: 2.5, tool: 'axe', station: 'crafting' }, // 右键打开合成（解锁工具等进阶配方）
+    [BlockTypes.FURNACE]: { name: '熔炉', solid: true, transparent: false, color: '#6e6e6e', hardness: 3.5, tool: 'pickaxe', needsTool: true, station: 'furnace' }, // 右键打开烧制（煤炭为燃料）
+    [BlockTypes.WOOL]: { name: '白色羊毛', solid: true, transparent: false, color: '#e8e6dc', hardness: 0.8 }, // 绵羊掉落
+    // ---- 生存物品（非方块：solid 未定义即不可放置，interaction.js 会拦）----
+    [ItemTypes.STICK]: { item: true, name: '木棍', color: '#9c6a30' },
+    [ItemTypes.COAL]: { item: true, name: '煤炭', color: '#2a2a2a' },
+    [ItemTypes.IRON_INGOT]: { item: true, name: '铁锭', color: '#d8d8d8' },
+    [ItemTypes.DIAMOND]: { item: true, name: '钻石', color: '#51dec7' },
+    [ItemTypes.APPLE]: { item: true, name: '苹果', color: '#e04a3a', food: 4 }, // 右键进食 +4 饥饿
+    [ItemTypes.RAW_PORK]: { item: true, name: '生猪肉', color: '#e89c96', food: 3 },
+    [ItemTypes.COOKED_PORK]: { item: true, name: '熟猪排', color: '#b06a3a', food: 8 },
+    [ItemTypes.GUNPOWDER]: { item: true, name: '火药', color: '#7a7a7a' },
 };
 
 // 门变体批量注册：solid 随开合变化（关门挡路、开门可通行，近似原版碰撞），
@@ -601,36 +640,145 @@ for (let half = 0; half < 2; half++) {
     }
 }
 
-// ==================== 工具（P2：照搬原版工具策略，铁质一档）====================
-// 原版工具分级（木2/石4/铁6/钻8/金12）依赖合成系统做出层级推进，本作没有合成台，
-// 因此只引入铁质一档（速度×6，正好是原版中位），生存开局直接配备（见 ui.js setGameMode）。
-// 工具是「物品」不是方块：ID 从 100 起、绝不写进 state.blocks，只出现在物品栏/HotbarBlocks
-// （故本块必须定义在 HotbarBlocks 之前）。
-// tool.class 命中方块的 BlockInfo.tool 才有速度加成；攻击数值照搬原版铁质武器
-// （剑 6 伤害·冷却 0.6s；徒手 1 伤害·冷却 0.25s；创造模式一击必杀）。
+// ==================== 工具（照搬原版工具分级：木2/石4/铁6/钻8）====================
+// 2026-09-05 起有合成系统（见下方 RECIPES），工具靠「撸树→木板→木棍→工作台」逐级做出来，
+// 铁质一档不再是开局赠送。工具是「物品」不是方块：ID 绝不写进 state.blocks，只出现在
+// 物品栏/HotbarBlocks。tool.class 命中方块的 BlockInfo.tool 才有速度加成；tool.tier 是
+// 采集门槛（矿石需要 minTier ≤ 手持工具档位才有掉落，照原版 harvestLevels）。
+// 攻击数值照搬原版（剑伤害 4/5/6/7 · 冷却 0.6s；徒手 1 伤害 · 0.25s；创造一击必杀）。
 export const TOOL_BASE = 100;
 
 export const ToolTypes = {
-    PICKAXE: 100, // 铁镐：石质方块（石头/圆石/砖）快速挖掘 + 采集掉落
+    PICKAXE: 100, // 铁镐：石质方块（石头/圆石/砖/矿石）快速挖掘 + 采集掉落
     AXE: 101,     // 铁斧：木质方块（原木/木板/门）快速挖掘
     SHOVEL: 102,  // 铁锹：泥土/沙/沙砾/雪快速挖掘
     SWORD: 103,   // 铁剑：不加速挖掘，攻击 6 伤害
+    // 木/石/钻石档（铁质沿用上面 100..103 的旧 ID，旧存档物品栏无缝兼容）
+    WOOD_PICKAXE: 190,
+    STONE_PICKAXE: 191,
+    DIAMOND_PICKAXE: 192,
+    WOOD_AXE: 193,
+    STONE_AXE: 194,
+    DIAMOND_AXE: 195,
+    WOOD_SHOVEL: 196,
+    STONE_SHOVEL: 197,
+    DIAMOND_SHOVEL: 198,
+    WOOD_SWORD: 199,
+    STONE_SWORD: 200,
+    DIAMOND_SWORD: 201,
 };
 
+export const TOOL_EXTRA_BASE = 190; // 木/石/钻石档工具 ID 起点（铁档沿用 100..103）
+
 export function isToolId(id) {
-    return id >= TOOL_BASE && id <= TOOL_BASE + 3;
+    return (id >= TOOL_BASE && id <= TOOL_BASE + 3) ||
+        (id >= TOOL_EXTRA_BASE && id <= TOOL_EXTRA_BASE + 11);
 }
 
-BlockInfo[ToolTypes.PICKAXE] = { name: '铁镐', color: '#d8d8d8', tool: { class: 'pickaxe', speed: 6, damage: 4, attackCd: 0.9 } };
-BlockInfo[ToolTypes.AXE] = { name: '铁斧', color: '#d8d8d8', tool: { class: 'axe', speed: 6, damage: 5, attackCd: 0.9 } };
-BlockInfo[ToolTypes.SHOVEL] = { name: '铁锹', color: '#d8d8d8', tool: { class: 'shovel', speed: 6, damage: 3, attackCd: 0.9 } };
-BlockInfo[ToolTypes.SWORD] = { name: '铁剑', color: '#d8d8d8', tool: { class: 'sword', speed: 1.5, damage: 6, attackCd: 0.6 } };
+// 工具分级表（下标 = tier-1）：速度/耐久照搬原版（木 59 / 石 131 / 铁 250 / 钻 1561）
+export const TOOL_TIER_NAMES = ['木', '石', '铁', '钻石'];
+export const TOOL_TIER_SPEED = [2, 4, 6, 8];
+export const TOOL_TIER_DURABILITY = [59, 131, 250, 1561];
+
+// 注册一件工具：cls=工具类别 tier=1..4，damage/attackCd 为攻击数值
+function registerTool(id, cls, tier, damage, attackCd = 0.9, color) {
+    BlockInfo[id] = {
+        name: `${TOOL_TIER_NAMES[tier - 1]}${{ pickaxe: '镐', axe: '斧', shovel: '锹', sword: '剑' }[cls]}`,
+        color,
+        tool: { class: cls, speed: TOOL_TIER_SPEED[tier - 1], tier, damage, attackCd },
+        maxDurability: TOOL_TIER_DURABILITY[tier - 1],
+    };
+}
+
+registerTool(ToolTypes.WOOD_PICKAXE, 'pickaxe', 1, 2, 0.9, '#a8864c');
+registerTool(ToolTypes.STONE_PICKAXE, 'pickaxe', 2, 3, 0.9, '#858789');
+registerTool(ToolTypes.PICKAXE, 'pickaxe', 3, 4, 0.9, '#d3d9df');
+registerTool(ToolTypes.DIAMOND_PICKAXE, 'pickaxe', 4, 5, 0.9, '#51dec7');
+registerTool(ToolTypes.WOOD_AXE, 'axe', 1, 3, 0.9, '#a8864c');
+registerTool(ToolTypes.STONE_AXE, 'axe', 2, 4, 0.9, '#858789');
+registerTool(ToolTypes.AXE, 'axe', 3, 5, 0.9, '#d3d9df');
+registerTool(ToolTypes.DIAMOND_AXE, 'axe', 4, 6, 0.9, '#51dec7');
+registerTool(ToolTypes.WOOD_SHOVEL, 'shovel', 1, 2, 0.9, '#a8864c');
+registerTool(ToolTypes.STONE_SHOVEL, 'shovel', 2, 3, 0.9, '#858789');
+registerTool(ToolTypes.SHOVEL, 'shovel', 3, 4, 0.9, '#d3d9df');
+registerTool(ToolTypes.DIAMOND_SHOVEL, 'shovel', 4, 5, 0.9, '#51dec7');
+registerTool(ToolTypes.WOOD_SWORD, 'sword', 1, 4, 0.6, '#a8864c');
+registerTool(ToolTypes.STONE_SWORD, 'sword', 2, 5, 0.6, '#858789');
+registerTool(ToolTypes.SWORD, 'sword', 3, 6, 0.6, '#d3d9df');
+registerTool(ToolTypes.DIAMOND_SWORD, 'sword', 4, 7, 0.6, '#51dec7');
 
 // 徒手攻击（原版拳头：1 伤害，攻击速度 4/s = 冷却 0.25s）
 export const FIST_ATTACK = { damage: 1, attackCd: 0.25 };
 
 // 怪物血量对齐原版僵尸（20 = 10 颗心）
 export const ENEMY_HEALTH = 20;
+
+// ==================== 合成配方（2026-09-05 对齐 Voxelcraft 参考版）====================
+// 纯数据表：cost = 材料消耗（itemId -> 数量），out = 产物，station = 所需合成站：
+//   null = 徒手合成（背包里随时可做）；'crafting' = 需要工作台（放置后右键，或站在旁边 4 格内按 E）；
+//   'furnace' = 需要熔炉（同上），且每条烧制配方都把煤炭算作燃料成本（木炭同效：烧制木炭配方本身不需要煤）。
+// 数值参照参考版与原版直觉：木板 1 木出 4、木棍 2 板出 4、火把 1 煤 1 棍出 4、
+// 镐/斧 3 材 2 棍、锹 1 材 2 棍、剑 2 材 1 棍、熔炉 8 圆石。
+const R = (id, out, outCount, cost, station = null) => ({ id, out, outCount, cost, station });
+
+export const RECIPES = [
+    // ---- 徒手合成（生存第一步：撸树）----
+    R('planks', BlockTypes.PLANKS, 4, { [BlockTypes.WOOD]: 1 }),
+    R('log_planks', BlockTypes.PLANKS, 4, { [BlockTypes.LOG]: 1 }),
+    R('sticks', ItemTypes.STICK, 4, { [BlockTypes.PLANKS]: 2 }),
+    R('crafting_table', BlockTypes.CRAFTING_TABLE, 1, { [BlockTypes.PLANKS]: 4 }),
+    R('torch', BlockTypes.TORCH, 4, { [ItemTypes.COAL]: 1, [ItemTypes.STICK]: 1 }),
+    // ---- 工作台合成（工具四档：木→石→铁→钻）----
+    R('wood_pickaxe', ToolTypes.WOOD_PICKAXE, 1, { [BlockTypes.PLANKS]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('stone_pickaxe', ToolTypes.STONE_PICKAXE, 1, { [BlockTypes.COBBLESTONE]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('iron_pickaxe', ToolTypes.PICKAXE, 1, { [ItemTypes.IRON_INGOT]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('diamond_pickaxe', ToolTypes.DIAMOND_PICKAXE, 1, { [ItemTypes.DIAMOND]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('wood_axe', ToolTypes.WOOD_AXE, 1, { [BlockTypes.PLANKS]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('stone_axe', ToolTypes.STONE_AXE, 1, { [BlockTypes.COBBLESTONE]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('iron_axe', ToolTypes.AXE, 1, { [ItemTypes.IRON_INGOT]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('diamond_axe', ToolTypes.DIAMOND_AXE, 1, { [ItemTypes.DIAMOND]: 3, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('wood_shovel', ToolTypes.WOOD_SHOVEL, 1, { [BlockTypes.PLANKS]: 1, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('stone_shovel', ToolTypes.STONE_SHOVEL, 1, { [BlockTypes.COBBLESTONE]: 1, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('iron_shovel', ToolTypes.SHOVEL, 1, { [ItemTypes.IRON_INGOT]: 1, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('diamond_shovel', ToolTypes.DIAMOND_SHOVEL, 1, { [ItemTypes.DIAMOND]: 1, [ItemTypes.STICK]: 2 }, 'crafting'),
+    R('wood_sword', ToolTypes.WOOD_SWORD, 1, { [BlockTypes.PLANKS]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
+    R('stone_sword', ToolTypes.STONE_SWORD, 1, { [BlockTypes.COBBLESTONE]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
+    R('iron_sword', ToolTypes.SWORD, 1, { [ItemTypes.IRON_INGOT]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
+    R('diamond_sword', ToolTypes.DIAMOND_SWORD, 1, { [ItemTypes.DIAMOND]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
+    R('furnace', BlockTypes.FURNACE, 1, { [BlockTypes.COBBLESTONE]: 8 }, 'crafting'),
+    R('brick', BlockTypes.BRICK, 4, { [BlockTypes.STONE]: 4 }, 'crafting'),
+    R('tnt', BlockTypes.TNT, 1, { [ItemTypes.GUNPOWDER]: 5, [BlockTypes.SAND]: 4 }, 'crafting'),
+    // ---- 熔炉烧制（每条含煤炭×1 燃料成本；木炭例外——两根原木自燃出炭，是缺煤时的引子）----
+    R('glass', BlockTypes.GLASS, 1, { [BlockTypes.SAND]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
+    R('iron_ingot', ItemTypes.IRON_INGOT, 1, { [BlockTypes.IRON_ORE]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
+    R('cooked_pork', ItemTypes.COOKED_PORK, 1, { [ItemTypes.RAW_PORK]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
+    R('charcoal', ItemTypes.COAL, 1, { [BlockTypes.WOOD]: 2 }, 'furnace'),
+    R('charcoal_log', ItemTypes.COAL, 1, { [BlockTypes.LOG]: 2 }, 'furnace'),
+];
+
+// ==================== 生存数值（饥饿/氧气/摔落/经验，见 js/playerLife.js）====================
+export const MAX_HUNGER = 20; // 20 = 10 个鸡腿（与生命同刻度，照原版）
+export const HUNGER_DRAIN_SEC = 45; // 移动时每耗 1 点饥饿需要的秒数（疾跑 ×2.7，站立 ×0.2）
+export const HUNGER_REGEN_SEC = 5; // 每 5 秒判定一次：饥饿 ≥17 回 1 血（并额外计 8 秒饥饿消耗），=0 扣 1 血（最低扣到 1）
+export const HUNGER_REGEN_MIN = 17; // 回血所需的最低饥饿值
+export const MAX_AIR = 10; // 氧气秒数：头部没入水开始倒数，归零每 1.5 秒扣 2 血（出水 3 倍速恢复）
+export const FALL_DAMAGE_MIN = 3.5; // 摔落超过此格数才开始扣血：damage = floor(落差 - 3)
+export const XP_PER_CRAFT = 1; // 每次合成 +1 经验（矿石见 BlockInfo.xp：煤/铁 +2、钻 +7）
+
+// ---- 生物图鉴（js/entities.js）：speed 格/秒，drops 为 [itemId, 概率, 概率命中时的额外数量上限] ----
+export const MOB_TYPES = {
+    zombie: { name: '僵尸', hostile: true, hp: 20, speed: 2.6, damage: 2, drops: [[ItemTypes.COAL, 0.5, 0]] },
+    creeper: { name: '苦力怕', hostile: true, hp: 20, speed: 1.8, damage: 0, fuseSec: 1.8, fuseDist: 2.8, drops: [[ItemTypes.GUNPOWDER, 1.0, 1]] },
+    pig: { name: '猪', hostile: false, hp: 10, speed: 1.2, damage: 0, drops: [[ItemTypes.RAW_PORK, 1.0, 1]] },
+    sheep: { name: '绵羊', hostile: false, hp: 8, speed: 1.2, damage: 0, drops: [[BlockTypes.WOOL, 1.0, 0]] },
+    cow: { name: '牛', hostile: false, hp: 10, speed: 1.2, damage: 0, drops: [[ItemTypes.RAW_PORK, 1.0, 0]] },
+};
+export const MAX_PASSIVE_MOBS = 10; // 被动生物（猪/羊/牛）数量上限：白天在草地上随机补充
+export const XP_PER_HOSTILE_KILL = 3; // 击杀敌对生物经验
+
+// 树叶掉苹果的概率（参考版 12%：一棵树 ~30 叶 ≈ 3 个苹果，生存食物的主要来源）
+export const LEAVES_APPLE_CHANCE = 0.12;
+
 
 export const HotbarBlocks = [
     BlockTypes.GRASS,
@@ -667,10 +815,39 @@ export const HotbarBlocks = [
     CRUSHER_ITEM_ID, // 粉碎轮：水平相邻两轮同轴配对，上方格投料碾碎（石头→圆石→沙砾→沙）
     SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
-    ToolTypes.PICKAXE, // 铁镐：石质方块快速挖掘 + 采集掉落（物品，不能放置）
+    // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛 ----
+    BlockTypes.COAL_ORE, // 煤矿石：掉煤炭（燃料/火把）
+    BlockTypes.IRON_ORE, // 铁矿石：熔炉炼铁锭
+    BlockTypes.DIAMOND_ORE, // 钻石矿石：掉钻石
+    BlockTypes.CRAFTING_TABLE, // 工作台：放置后右键解锁进阶配方
+    BlockTypes.FURNACE, // 熔炉：放置后右键解锁烧制配方
+    BlockTypes.WOOL, // 白色羊毛：绵羊掉落
+    // ---- 生存物品（材料/食物，非方块不可放置）----
+    ItemTypes.STICK, // 木棍
+    ItemTypes.COAL, // 煤炭（燃料）
+    ItemTypes.IRON_INGOT, // 铁锭
+    ItemTypes.DIAMOND, // 钻石
+    ItemTypes.APPLE, // 苹果（右键进食）
+    ItemTypes.RAW_PORK, // 生猪肉
+    ItemTypes.COOKED_PORK, // 熟猪排
+    ItemTypes.GUNPOWDER, // 火药（苦力怕掉落，合成 TNT）
+    // ---- 工具四档（铁档沿用旧 ID；工具是「物品」，不能放置）----
+    ToolTypes.WOOD_PICKAXE, // 木镐：生存起步（撸树→合成）
+    ToolTypes.STONE_PICKAXE, // 石镐：可采铁
+    ToolTypes.PICKAXE, // 铁镐：可采钻石
+    ToolTypes.DIAMOND_PICKAXE, // 钻石镐：顶级采集
+    ToolTypes.WOOD_AXE, // 木斧
+    ToolTypes.STONE_AXE, // 石斧
     ToolTypes.AXE, // 铁斧：木质方块快速挖掘
+    ToolTypes.DIAMOND_AXE, // 钻石斧
+    ToolTypes.WOOD_SHOVEL, // 木锹
+    ToolTypes.STONE_SHOVEL, // 石锹
     ToolTypes.SHOVEL, // 铁锹：泥土/沙快速挖掘
+    ToolTypes.DIAMOND_SHOVEL, // 钻石锹
+    ToolTypes.WOOD_SWORD, // 木剑
+    ToolTypes.STONE_SWORD, // 石剑
     ToolTypes.SWORD, // 铁剑：攻击 6 伤害（原版铁剑数值）
+    ToolTypes.DIAMOND_SWORD, // 钻石剑：攻击 7 伤害
 ];
 
 // 红石组变体批量注册（思路同上门）：贴面/贴地元件都是 customMesh 道具（非固体不挡路），

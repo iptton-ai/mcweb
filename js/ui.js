@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BlockInfo, BlockTypes, CHUNK_SIZE, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { canvas, camera, renderer, scene } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -8,7 +8,7 @@ import { raycastBlocks } from './interaction.js';
 import { isSolid } from './chunk.js';
 import { getBlock } from './world.js';
 import { killEnemySilent, mobSpawnTick } from './entities.js';
-import { updateHealthUI } from './playerLife.js';
+import { addXp, updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 import { camModeText, toggleBuildCam } from './cameraRig.js';
 import { setState } from './uiModal.js';
@@ -21,14 +21,15 @@ export function setGameMode(mode) {
     const p = state.player;
     if (mode === GameModes.SURVIVAL) {
         p.flying = false;
-        // 首次进入生存：赠送火把 + 铁质工具一套（原版靠「撸树→合成」获得工具，本作无合成系统，
-        // 开局直配铁质一档：镐挖石、斧伐木、锹掘土、剑战斗——石头徒手挖极慢且无掉落，工具是生存刚需）
+        // 首次进入生存（2026-09-05 合成系统上线后对齐原版节奏）：木器三件 + 苹果 + 火把 + 原木，
+        // 石器/铁器/钻石全靠「撸树→木板→木棍→工作台→挖矿→熔炉」逐级合成（config.js RECIPES）
         if (Object.keys(state.player.inventory).length === 0) {
-            state.player.inventory[BlockTypes.TORCH] = 10;
-            state.player.inventory[ToolTypes.PICKAXE] = 1;
-            state.player.inventory[ToolTypes.AXE] = 1;
-            state.player.inventory[ToolTypes.SHOVEL] = 1;
-            state.player.inventory[ToolTypes.SWORD] = 1;
+            state.player.inventory[ToolTypes.WOOD_PICKAXE] = 1;
+            state.player.inventory[ToolTypes.WOOD_AXE] = 1;
+            state.player.inventory[ToolTypes.WOOD_SWORD] = 1;
+            state.player.inventory[ItemTypes.APPLE] = 5;
+            state.player.inventory[BlockTypes.TORCH] = 8;
+            state.player.inventory[BlockTypes.WOOD] = 6; // 原木：开局就能搓木板/木棍/工作台
             // 活塞组套装（同上：无合成系统的补偿，够搭自动门/陷阱/飞行机器玩起来）
             state.player.inventory[BlockTypes.SLIME] = 16;
             state.player.inventory[PISTON_ITEM_ID] = 2;
@@ -46,8 +47,10 @@ export function setGameMode(mode) {
             for (let i = 0; i < 3; i++) mobSpawnTick();
         }
     } else {
-        // 切回建造：清空怪物
-        for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
+        // 切回建造：清掉敌对生物（猪/羊/牛这些被动家畜留着——风景与食物来源）
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+            if (state.enemies[i].hostile) killEnemySilent(state.enemies[i]);
+        }
     }
     updateHealthUI();
     updateHotbar(); // 模式切换后刷新数量角标显示
@@ -80,7 +83,7 @@ export function updateHotbar() {
     numSpan.className = 'slot-number';
     numSpan.textContent = index + 1;
     slot.appendChild(numSpan);
-    // 生存模式：显示数量角标，数量为 0 灰显
+    // 生存模式：显示数量角标，数量为 0 灰显；工具显示耐久条
     if (!isCreative()) {
         const count = state.player.inventory[blockType] || 0;
         const countSpan = document.createElement('span');
@@ -88,6 +91,7 @@ export function updateHotbar() {
         countSpan.textContent = count;
         slot.appendChild(countSpan);
         if (count === 0) slot.classList.add('empty');
+        appendDurabilityBar(slot, blockType, count);
     }
     hotbar.appendChild(slot);
     const info = document.createElement('div');
@@ -109,23 +113,161 @@ export function updateHotbar() {
     };
 }
 
-// 物品选择网格（E 打开）：全部物品一格一物，可滚动，点选即选中并自动收起。
-// 每次打开重建，保证数量角标/选中高亮与当前状态一致。
+// ==================== 背包 + 合成面板（E 打开；2026-09-05 对齐参考版）====================
+// 创造模式 = 物品调色盘（可搜索）；生存模式 = 配方列表 + 物品网格：
+//   徒手配方随时可做；工作台/熔炉配方需要「右键打开」或「站在旁边 4 格内按 E」（自动探测）。
+// 点物品格 = 选中并收起；点配方 = 合成一次（消耗材料给产物 +1 经验）。
+
+let craftStation = null; // 右键工作台/熔炉打开时强制的合成站（'crafting' | 'furnace' | null）
+let invSearch = '';      // 搜索框关键字（按名称过滤物品与配方）
+
+// 画一个物品图标（从图集裁 tile 到 canvas）
+function makeItemIcon(id, size = 24) {
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext('2d');
+    const uv = blockUVs[id] || blockUVs[BlockTypes.STONE];
+    const tile = uv.top || { x: 0, y: 0 };
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, size, size);
+    return c;
+}
+
+// 工具耐久条（剩余比例 <40% 黄、<15% 红）
+function appendDurabilityBar(slotEl, id, count) {
+    const max = BlockInfo[id]?.maxDurability;
+    if (!max || count <= 0) return;
+    const wear = state.player.toolWear[id] || 0;
+    const frac = Math.max(0, 1 - wear / max);
+    const bar = document.createElement('div');
+    bar.className = 'dur-bar' + (frac < 0.15 ? ' crit' : frac < 0.4 ? ' low' : '');
+    const fill = document.createElement('i');
+    fill.style.width = `${Math.round(frac * 100)}%`;
+    bar.appendChild(fill);
+    slotEl.appendChild(bar);
+}
+
+// 探测可用合成站：右键强制打开的算数 + 玩家周围 4 格内实际放置的工作台/熔炉
+function availableStations() {
+    const res = { crafting: craftStation === 'crafting', furnace: craftStation === 'furnace' };
+    const p = state.player;
+    const r = 4;
+    for (let x = Math.floor(p.x) - r; x <= Math.floor(p.x) + r; x++) {
+        for (let y = Math.max(0, Math.floor(p.y) - 2); y <= Math.floor(p.y) + 3; y++) {
+            for (let z = Math.floor(p.z) - r; z <= Math.floor(p.z) + r; z++) {
+                const b = getBlock(x, y, z);
+                if (b === BlockTypes.CRAFTING_TABLE) res.crafting = true;
+                else if (b === BlockTypes.FURNACE) res.furnace = true;
+            }
+        }
+    }
+    return res;
+}
+
+// 执行一次合成：校验材料与合成站 → 消耗 → 给产物（新工具满耐久）→ +1 经验。
+// 返回错误文案（null = 成功），面板据此提示
+export function craftRecipe(recipe) {
+    const inv = state.player.inventory;
+    const st = availableStations();
+    if (recipe.station && !st[recipe.station]) {
+        return recipe.station === 'crafting' ? '需要先放置并靠近工作台' : '需要先放置并靠近熔炉';
+    }
+    for (const idStr of Object.keys(recipe.cost)) {
+        const id = Number(idStr);
+        if ((inv[id] || 0) < recipe.cost[id]) return '材料不足';
+    }
+    for (const idStr of Object.keys(recipe.cost)) {
+        const id = Number(idStr);
+        inv[id] -= recipe.cost[id];
+    }
+    inv[recipe.out] = (inv[recipe.out] || 0) + recipe.outCount;
+    if (BlockInfo[recipe.out]?.maxDurability) delete state.player.toolWear[recipe.out]; // 新工具满耐久
+    addXp(XP_PER_CRAFT);
+    return null;
+}
+
+// 配方一行：产物图标×数量 + 材料清单 + 站点徽标；灰显 = 当前做不了（点一下提示原因）
+function buildRecipeRow(recipe, stations) {
+    const inv = state.player.inventory;
+    const outInfo = BlockInfo[recipe.out] || {};
+    const enough = Object.keys(recipe.cost).every((idStr) => (inv[Number(idStr)] || 0) >= recipe.cost[Number(idStr)]);
+    const stationOk = !recipe.station || stations[recipe.station];
+    const row = document.createElement('div');
+    row.className = 'recipe-row' + ((enough && stationOk) ? '' : ' disabled');
+    const out = document.createElement('span');
+    out.className = 'recipe-out';
+    out.appendChild(makeItemIcon(recipe.out, 22));
+    out.appendChild(document.createTextNode(`${outInfo.name || '?'} ×${recipe.outCount}`));
+    row.appendChild(out);
+    const ings = document.createElement('span');
+    ings.className = 'recipe-ing';
+    for (const idStr of Object.keys(recipe.cost)) {
+        const id = Number(idStr);
+        const ing = document.createElement('span');
+        ing.className = 'recipe-ing-item';
+        ing.appendChild(makeItemIcon(id, 16));
+        ing.appendChild(document.createTextNode(`×${recipe.cost[id]}`));
+        if ((inv[id] || 0) < recipe.cost[id]) ing.classList.add('lack');
+        ings.appendChild(ing);
+    }
+    row.appendChild(ings);
+    const st = document.createElement('span');
+    st.className = 'recipe-station';
+    st.textContent = !recipe.station ? '✋ 徒手' : recipe.station === 'crafting' ? '▦ 工作台' : '♨ 熔炉';
+    row.appendChild(st);
+    row.addEventListener('click', () => {
+        const err = craftRecipe(recipe);
+        if (err) {
+            showTooltip(`❌ ${outInfo.name}：${err}`);
+        } else {
+            showTooltip(`✅ 已合成 ${outInfo.name} ×${recipe.outCount}（+1 ✨）`);
+            buildInventoryGrid(); // 刷新数量角标与配方可用态
+        }
+    });
+    return row;
+}
+
+// 物品网格（可被搜索框过滤）
 export function buildInventoryGrid() {
     const grid = document.getElementById('inventory-grid');
+    const panel = document.getElementById('inventory-panel');
     grid.innerHTML = '';
+    const survival = !isCreative();
+    const stations = survival ? availableStations() : null;
+    // 标题与合成区（生存才有配方）
+    const title = panel.querySelector('h2');
+    if (survival) {
+        const opened = craftStation === 'crafting' ? '（▦ 已连接工作台）' : craftStation === 'furnace' ? '（♨ 已连接熔炉）' : '';
+        title.textContent = `🎒 背包与合成${opened}`;
+        const section = document.getElementById('crafting-section');
+        section.innerHTML = '';
+        const groups = [
+            ['✋ 徒手合成', (r) => !r.station],
+            ['▦ 工作台配方', (r) => r.station === 'crafting'],
+            ['♨ 熔炉烧制（煤炭 = 燃料）', (r) => r.station === 'furnace'],
+        ];
+        for (const [label, match] of groups) {
+            const recipes = RECIPES.filter(match).filter((r) =>
+                !invSearch || (BlockInfo[r.out]?.name || '').includes(invSearch));
+            if (!recipes.length) continue;
+            const h = document.createElement('div');
+            h.className = 'recipe-group-title';
+            h.textContent = label;
+            section.appendChild(h);
+            for (const r of recipes) section.appendChild(buildRecipeRow(r, stations));
+        }
+    } else {
+        title.textContent = '🎒 选择物品';
+        document.getElementById('crafting-section').innerHTML = '';
+    }
+    // 物品格
     HotbarBlocks.forEach((blockType, index) => {
+        const name = BlockInfo[blockType]?.name || '未知';
+        if (invSearch && !name.includes(invSearch)) return;
         const slot = document.createElement('div');
         slot.className = 'inv-slot' + (index === state.player.selectedSlot ? ' selected' : '');
-        const canvas = document.createElement('canvas');
-        canvas.width = 24;
-        canvas.height = 24;
-        const ctx = canvas.getContext('2d');
-        const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
-        const tile = uv.top || { x: 0, y: 0 };
-        ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, 24, 24);
-        slot.appendChild(canvas);
-        // 前 9 格标注数字键位（1-9 直达）
+        slot.appendChild(makeItemIcon(blockType, 24));
         if (index < 9) {
             const numSpan = document.createElement('span');
             numSpan.className = 'slot-number';
@@ -134,9 +276,9 @@ export function buildInventoryGrid() {
         }
         const nameSpan = document.createElement('span');
         nameSpan.className = 'inv-name';
-        nameSpan.textContent = BlockInfo[blockType].name;
+        nameSpan.textContent = name;
         slot.appendChild(nameSpan);
-        // 生存模式：显示数量角标，数量为 0 灰显
+        // 生存模式：数量角标 + 工具耐久条
         if (!isCreative()) {
             const count = state.player.inventory[blockType] || 0;
             const countSpan = document.createElement('span');
@@ -144,6 +286,7 @@ export function buildInventoryGrid() {
             countSpan.textContent = count;
             slot.appendChild(countSpan);
             if (count === 0) slot.classList.add('empty');
+            appendDurabilityBar(slot, blockType, count);
         }
         slot.addEventListener('click', () => {
             state.player.selectedSlot = index;
@@ -155,9 +298,25 @@ export function buildInventoryGrid() {
     });
 }
 
-// 打开物品选择网格的唯一入口（E 键与点击手持胶囊共用）
-export function openItemPicker() {
+// 打开背包+合成面板的唯一入口（E 键与点击手持胶囊共用）。
+// station：右键工作台/熔炉时传入，解锁对应站点的配方；普通打开传 null（自动探测附近有没有台/炉）
+let invSearchInit = false; // 搜索框监听只挂一次（input 在 HTML 里，不随网格重建）
+
+export function openItemPicker(station = null) {
     if (state.player.dead) return; // 死亡界面优先，不开背包
+    craftStation = station;
+    invSearch = '';
+    const search = document.getElementById('inv-search');
+    if (search) {
+        search.value = '';
+        if (!invSearchInit) {
+            invSearchInit = true;
+            search.addEventListener('input', (e) => {
+                invSearch = e.target.value.trim();
+                buildInventoryGrid();
+            });
+        }
+    }
     buildInventoryGrid();
     setState('inventory');
 }

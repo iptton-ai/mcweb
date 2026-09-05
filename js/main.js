@@ -1,6 +1,6 @@
 // ==================== main.js ====================
 
-import { BlockTypes, CHUNK_SIZE, GameModes, MAX_HEALTH, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, CHUNK_SIZE, GameModes, MAX_AIR, MAX_HEALTH, MAX_HUNGER, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
@@ -16,7 +16,7 @@ import { initKinetic, updateKineticTick } from './kinetic.js';
 import { clearItemDrops, updateItemDrops } from './items.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
-import { respawn, updateDroppedItems, updateHealthUI } from './playerLife.js';
+import { respawn, updateDroppedItems, updateHealthUI, updateSurvivalStats } from './playerLife.js';
 import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
 import { mouseDown, mouseMoveDelta, setupInput } from './input.js';
 import { getUIState, initUIModal, mouseLocked, onUIStateChange, setState } from './uiModal.js';
@@ -27,7 +27,7 @@ import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { resetCamMode } from './cameraRig.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
-import { initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
+import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
 
 // ==================== 游戏循环 ====================
 let lastTime = 0;
@@ -49,7 +49,8 @@ function gameLoop(timestamp) {
     // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）。
     // 自由摄像头时鼠标转的是摄像头朝向（freeCam），玩家视角保持不动
     if (mouseLocked) {
-        const sensitivity = 0.0022;
+        // 灵敏度倍率来自设置浮层「🎛 画面」页（默认 1 = 原手感）
+        const sensitivity = 0.0022 * getMouseSensitivity();
         if (state.camMode === 'free') {
             const fc = state.freeCam;
             fc.yaw -= mouseMoveDelta.x * sensitivity;
@@ -76,6 +77,9 @@ function gameLoop(timestamp) {
 
     // 玩家物理
     updatePlayerPhysics(dt);
+
+    // 生存状态（饥饿/氧气/回血——仅生存模式生效，见 playerLife.js）
+    updateSurvivalStats(dt);
 
     // 玩家模型（第三人称 / 自由·跟拍视角下可见）
     updatePlayerMesh(dt);
@@ -131,6 +135,8 @@ function gameLoop(timestamp) {
 // ==================== 初始化 ====================
 // 生成全新世界：地形 + 出生点 + 出生点火把（无存档启动、或开始界面选「新世界」时调用）
 function freshWorld() {
+    // 每个新世界随机取种（进存档；同种子同地形，见 js/world.js）
+    state.worldSeed = (Math.random() * 0x7fffffff) | 0;
     generateWorld();
 
     // 渲染所有区块
@@ -170,14 +176,21 @@ function freshWorld() {
     // 重建出生点所在区块让火把生效
     rebuildChunk(Math.floor(spawnX / CHUNK_SIZE), Math.floor(spawnZ / CHUNK_SIZE));
 
-    // 重置到初始进度（可能刚从读档状态选择重开新世界）
-    state.time = 0;
+    // 重置到初始进度（可能刚从读档状态选择重开新世界）。
+    // 从清晨开局（dayLength×0.3）：旧版从午夜开局，生存模式一落地就挨打——现在有一整个白天安家
+    state.time = state.dayLength * 0.3;
     const p = state.player;
     p.health = MAX_HEALTH;
     p.dead = false;
     p.flying = false;
     p.selectedSlot = 0;
     p.inventory = {};
+    p.hunger = MAX_HUNGER;
+    p.air = MAX_AIR;
+    p.xp = 0;
+    p.toolWear = {};
+    p.fallStartY = null;
+    p.sprinting = false;
 
     // 红石组：清按钮/火把延迟队列与门/TNT 边沿基线（新世界不该残留旧世界电平）
     initRedstone();
@@ -348,7 +361,11 @@ function init() {
     initBuildWidget();
     initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）
 
-    // 游戏设置浮层（音频/存档）：切世界/开新/删档等动作回调到本文件的编排函数
+    // 视野（FOV）来自设置浮层「🎛 画面」页（默认 75）
+    camera.fov = getFov();
+    camera.updateProjectionMatrix();
+
+    // 游戏设置浮层（音频/画面/存档）：切世界/开新/删档等动作回调到本文件的编排函数
     initSettingsUI({
         onEnter: loadSlot,
         onNew: (mode, i) => startNewWorld(mode, newWorldTip(mode, i), i),

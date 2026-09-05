@@ -10,7 +10,9 @@
 
 import {
     CHUNK_SIZE,
+    MAX_AIR,
     MAX_HEALTH,
+    MAX_HUNGER,
     PLAYER_EYE_HEIGHT,
     SAVE_AUTOSAVE_SEC,
     SAVE_SLOTS,
@@ -170,8 +172,13 @@ export function saveGame() {
                 health: p.dead ? MAX_HEALTH : p.health,
                 selectedSlot: p.selectedSlot,
                 inventory: p.inventory,
+                hunger: p.hunger ?? MAX_HUNGER, // 生存进度组（2026-09-05）：饱食/氧气/经验/工具耐久
+                air: p.air ?? MAX_AIR,
+                xp: p.xp || 0,
+                toolWear: p.toolWear || {},
             },
             gameMode: state.gameMode,
+            worldSeed: state.worldSeed | 0,
             viewMode: state.viewMode,
             time: state.time,
             spawn: { ...state.spawn },
@@ -262,7 +269,12 @@ export function loadGame(slot = state.saveSlot) {
         dead: false,
         selectedSlot: p.selectedSlot || 0,
         inventory: p.inventory || {},
+        hunger: p.hunger ?? MAX_HUNGER,
+        air: p.air ?? MAX_AIR,
+        xp: p.xp || 0,
+        toolWear: p.toolWear || {},
     });
+    state.worldSeed = save.worldSeed | 0;
     if (save.gameMode) state.gameMode = save.gameMode;
     if (typeof save.time === 'number') state.time = save.time;
     if (save.spawn) state.spawn = save.spawn;
@@ -273,6 +285,44 @@ export function loadGame(slot = state.saveSlot) {
     updateHotbar();
     updateHealthUI();
     return true;
+}
+
+// ==================== 存档导出/导入（2026-09-05 对齐参考版：文件级备份）====================
+// 导出 = 当前槽位的原始存档 JSON 字符串；导入 = 校验后整槽覆盖写入（建议随后整页刷新加载）。
+
+// 导出指定槽位（默认当前槽）。返回 null = 该槽没有存档
+export function exportSlotJson(slot = state.saveSlot) {
+    try {
+        return localStorage.getItem(SLOT_KEY_PREFIX + clampSlot(slot));
+    } catch {
+        return null;
+    }
+}
+
+// 导入存档 JSON 覆盖写入指定槽位并更新索引。成功返回 null，失败返回错误文案。
+// 注意：会整槽覆盖（调用方需二次确认），且不刷新内存中的当前世界——由调用方决定何时 reload。
+export function importSlotJson(text, slot = state.saveSlot) {
+    let save;
+    try {
+        save = JSON.parse(text);
+    } catch {
+        return '不是有效的存档文件（JSON 解析失败）';
+    }
+    if (!save || !LOADABLE_VERSIONS.includes(save.version) ||
+        typeof save.blocks !== 'string' || typeof save.player !== 'object') {
+        return '不是有效的本作世界存档';
+    }
+    const i = clampSlot(slot);
+    try {
+        localStorage.setItem(SLOT_KEY_PREFIX + i, JSON.stringify(save));
+    } catch {
+        return '写入失败：浏览器存储空间不足';
+    }
+    const idx = readIndex();
+    idx.slots[i] = { savedAt: save.savedAt || Date.now(), gameMode: save.gameMode || null };
+    idx.current = i;
+    writeIndex(idx);
+    return null;
 }
 
 // 自动存档：定时 + 页面隐藏/关闭兜底（开始界面停留时存的是当前世界，无害）

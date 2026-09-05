@@ -18,6 +18,7 @@ import { breakBlockAt, raycastBlocks, tryAttackEnemy } from './interaction.js';
 import { getCrackTextures } from './textures.js';
 import { playHitSound } from './audio.js';
 import { swingViewmodel } from './viewmodel.js';
+import { showTooltip, updateHotbar } from './ui.js';
 
 // 当前手持的工具（BlockInfo[id].tool，非工具返回 null；selectedSlot 指向 HotbarBlocks）
 export function getHeldTool() {
@@ -25,13 +26,40 @@ export function getHeldTool() {
     return info?.tool || null;
 }
 
-// 方块是否可「采集」（破坏有掉落）：needsTool 方块必须持对应类别工具（原版 harvest 规则，
-// 本作无矿石层级，只需类别匹配）
+// 当前手持工具的剩余耐久（0..maxDurability；非工具/全新返回 null = 无需显示）
+export function getHeldDurability() {
+    const id = HotbarBlocks[state.player.selectedSlot];
+    const max = BlockInfo[id]?.maxDurability;
+    if (!max) return null;
+    return { left: max - (state.player.toolWear[id] || 0), max };
+}
+
+// 方块是否可「采集」（破坏有掉落）：needsTool 方块必须持对应类别工具且档位够高
+// （原版 harvestLevels：铁矿要石镐+、钻石要铁镐+，工具档位见 config.js TOOL_TIER_*）
 function canHarvest(blockId) {
     const info = BlockInfo[blockId];
     if (!info || !info.needsTool) return true;
     const tool = getHeldTool();
-    return !!tool && tool.class === info.tool;
+    if (!tool || tool.class !== info.tool) return false;
+    return !info.minTier || (tool.tier || 0) >= info.minTier;
+}
+
+// 手持工具磨损 1 点（破坏方块/攻击生物后调用，仅生存）：
+// 耐久按「该类型当前在用的这一把」计（toolWear = 已用次数），用坏扣 1 把并重置
+export function damageHeldTool() {
+    if (isCreative()) return;
+    const id = HotbarBlocks[state.player.selectedSlot];
+    const max = BlockInfo[id]?.maxDurability;
+    if (!max) return;
+    const wear = (state.player.toolWear[id] || 0) + 1;
+    if (wear >= max) {
+        delete state.player.toolWear[id];
+        state.player.inventory[id] = Math.max(0, (state.player.inventory[id] || 0) - 1);
+        showTooltip(`⚠️ ${BlockInfo[id].name}已经损坏`);
+    } else {
+        state.player.toolWear[id] = wear;
+    }
+    updateHotbar();
 }
 
 // 破坏一格方块需要的秒数（公式照搬原版，见文件头注释）。Infinity = 不可破坏，0 = 即挖。

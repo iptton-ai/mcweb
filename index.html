@@ -355,11 +355,107 @@
             margin-top: 16px;
             font-size: 13px;
         }
+        /* 合成配方区（生存模式的 E 面板顶部） */
+        #crafting-section {
+            margin-bottom: 12px;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        .recipe-group-title {
+            font-size: 13px;
+            color: #9ad24a;
+            margin: 8px 0 6px;
+            letter-spacing: 1px;
+        }
+        .recipe-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 10px;
+            background: #3d3d5c;
+            border: 2px solid #5a5a7a;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .recipe-row:hover {
+            border-color: #7ec850;
+            background: #4a4a6e;
+        }
+        .recipe-row.disabled {
+            opacity: 0.42;
+        }
+        .recipe-row .recipe-out {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 170px;
+            font-size: 13px;
+            color: #fff;
+        }
+        .recipe-row .recipe-out canvas {
+            image-rendering: pixelated;
+            border-radius: 3px;
+        }
+        .recipe-row .recipe-ing {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .recipe-ing-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .recipe-ing-item.lack {
+            color: #ff8a7a;
+        }
+        .recipe-ing-item canvas {
+            image-rendering: pixelated;
+        }
+        .recipe-row .recipe-station {
+            font-size: 11px;
+            color: #9a9ab8;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        /* 搜索框 */
+        #inv-toolbar {
+            margin-bottom: 10px;
+        }
+        #inv-search {
+            width: 100%;
+            padding: 7px 12px;
+            font-size: 14px;
+            background: #26263e;
+            border: 2px solid #5a5a7a;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+        }
+        #inv-search:focus {
+            border-color: #7ec850;
+        }
+        /* F1 隐藏 HUD：把主要界面元素一起藏掉（截图/录屏用） */
+        body.hud-hidden #hotbar,
+        body.hud-hidden #health-bar,
+        body.hud-hidden #hunger-bar,
+        body.hud-hidden #air-bar,
+        body.hud-hidden #xp-badge,
+        body.hud-hidden #mode-badge,
+        body.hud-hidden #crosshair,
+        body.hud-hidden #debug-info {
+            display: none !important;
+        }
 
         /* 生命值红心 */
         #health-bar {
             position: fixed;
-            bottom: 86px;
+            bottom: 108px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 20;
@@ -374,10 +470,89 @@
             display: flex;
         }
 
+        /* 饥饿鸡腿条（生存模式，红心下方） */
+        #hunger-bar {
+            position: fixed;
+            bottom: 86px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none;
+            gap: 2px;
+            font-size: 18px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+        #hunger-bar.visible {
+            display: flex;
+        }
+
+        /* 氧气泡（潜水时显示在鸡腿条上方） */
+        #air-bar {
+            position: fixed;
+            bottom: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none;
+            gap: 1px;
+            font-size: 14px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+        #air-bar.visible {
+            display: flex;
+        }
+
+        /* 经验分（红心右侧，合成/挖矿/杀怪累积） */
+        #xp-badge {
+            position: fixed;
+            bottom: 108px;
+            left: calc(50% + 150px);
+            z-index: 20;
+            display: none;
+            font-size: 14px;
+            color: #ffe97a;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 10px;
+            border-radius: 10px;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        #xp-badge.visible {
+            display: block;
+        }
+
+        /* 工具耐久条（物品格底部小条：绿→黄→红） */
+        .dur-bar {
+            position: absolute;
+            bottom: 3px;
+            left: 4px;
+            right: 4px;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        .dur-bar i {
+            display: block;
+            height: 100%;
+            background: #7ec850;
+            border-radius: 2px;
+        }
+        .dur-bar.low i {
+            background: #e0a030;
+        }
+        .dur-bar.crit i {
+            background: #e05040;
+        }
+
         /* 模式标识 */
         #mode-badge {
             position: fixed;
-            bottom: 108px;
+            bottom: 130px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 19;
@@ -652,12 +827,13 @@
             <button class="save-btn" id="btn-settings">⚙️ 设置（音频 / 存档）</button>
         </div>
         <div class="controls-info">
-            <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃 &nbsp;|&nbsp; <kbd>Shift</kbd> 潜行<br>
-            <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置方块<br>
-            <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换方块 &nbsp;|&nbsp; <kbd>E</kbd> 打开物品栏（点选即关闭）<br>
-            <kbd>F</kbd> 切换飞行（建造模式）&nbsp;|&nbsp; <kbd>M</kbd> 切换游戏模式 &nbsp;|&nbsp; <kbd>Esc</kbd> 释放鼠标<br>
-            <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角：第一人称 ↔ 第三人称(背后)<br>
-            <kbd>C</kbd> 自由摄像头（WASD飞行 · 滚轮调速）↔ 建造跟拍（AI 施工时俯视自动录像）
+            <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃（创造双击 = 飞行）&nbsp;|&nbsp; <kbd>Shift</kbd> 潜行 / 水中下沉 &nbsp;|&nbsp; <kbd>Ctrl</kbd> 疾跑<br>
+            <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置 / 进食 / 打开工作台·熔炉 &nbsp;|&nbsp; <kbd>中键</kbd> 吸取方块（创造）<br>
+            <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换手持 &nbsp;|&nbsp; <kbd>E</kbd> 背包与合成（点配方 = 合成）&nbsp;|&nbsp; <kbd>Z</kbd> 丢弃手持<br>
+            <kbd>F</kbd> 切换飞行（建造模式）&nbsp;|&nbsp; <kbd>M</kbd> 切换游戏模式 &nbsp;|&nbsp; <kbd>Esc</kbd>/<kbd>Q</kbd> 释放鼠标<br>
+            <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角 &nbsp;|&nbsp; <kbd>F1</kbd> 隐藏界面 &nbsp;|&nbsp; <kbd>F2</kbd> 截图 &nbsp;|&nbsp; <kbd>F3</kbd> 调试信息 &nbsp;|&nbsp; <kbd>F6</kbd> 昼夜切换（创造）<br>
+            <kbd>C</kbd> 自由摄像头（WASD飞行 · 滚轮调速）↔ 建造跟拍（AI 施工时俯视自动录像）<br>
+            <span style="color:#9ad24a">⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。</span>
         </div>
         <div class="click-hint">🖱 点击空白处可直接进入当前世界</div>
     </div>
@@ -680,15 +856,18 @@
     <!-- 提示 -->
     <div id="tooltip"></div>
 
-    <!-- 生命值（生存模式显示） -->
+    <!-- 生命值/饥饿/氧气/经验（生存模式显示） -->
     <div id="health-bar"></div>
+    <div id="hunger-bar"></div>
+    <div id="air-bar"></div>
+    <div id="xp-badge"></div>
     <div id="mode-badge"></div>
     <div id="damage-flash"></div>
 
     <!-- 死亡界面 -->
     <div id="death-screen">
         <h1>☠ 你死了！</h1>
-        <p>被黑暗中的怪物击败了……</p>
+        <p>被黑暗中的怪物击败了……背包物品保留，在出生点重生</p>
         <button id="respawn-btn">🔥 重生</button>
     </div>
 
@@ -698,8 +877,11 @@
     <!-- 物品选择网格：E 或点击底部手持胶囊打开，点选物品即选中并收起 -->
     <div id="inventory-panel">
         <h2>🎒 选择物品</h2>
+        <!-- 合成配方区（生存模式：徒手 / 工作台 / 熔炉三组；ui.js 动态渲染） -->
+        <div id="crafting-section"></div>
+        <div id="inv-toolbar"><input id="inv-search" type="text" placeholder="🔍 搜索方块或物品…" autocomplete="off"></div>
         <div id="inventory-grid"></div>
-        <div id="inventory-close-hint">点击物品即选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起</div>
+        <div id="inventory-close-hint">点物品 = 选中并关闭 &nbsp;|&nbsp; 点配方 = 合成一次 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起</div>
     </div>
 
     <!-- 游戏画布 -->

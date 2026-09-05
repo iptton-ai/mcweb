@@ -13,9 +13,28 @@ import { state } from './state.js';
 import { closeSettingsState, getUIState, openSettingsState } from './uiModal.js';
 import { BGM_PACKS, getBgmStyle, getBgmVolume, setBgmStyle, setBgmVolume } from './bgm.js';
 import { getSfxVolume, setSfxVolume } from './audio.js';
-import { listSaves, savedAtText } from './saveGame.js';
+import { exportSlotJson, importSlotJson, listSaves, savedAtText } from './saveGame.js';
+import { camera } from './engine.js';
 
 const TAB_KEY = 'mcweb.gameSettings.tab'; // 记住上次停留的页签
+const SENS_KEY = 'mcweb.mouseSensitivity';
+const FOV_KEY = 'mcweb.fov';
+
+export function getMouseSensitivity() {
+    const v = Number(localStorage.getItem(SENS_KEY));
+    return Number.isFinite(v) && v > 0 ? v : 1; // 倍率：1 = 默认手感
+}
+
+export function getFov() {
+    const v = Number(localStorage.getItem(FOV_KEY));
+    return Number.isFinite(v) && v >= 50 && v <= 110 ? v : 75;
+}
+
+function applyFov(v) {
+    localStorage.setItem(FOV_KEY, String(v));
+    camera.fov = v;
+    camera.updateProjectionMatrix();
+}
 
 // ---------- 样式 ----------
 const STYLE = `
@@ -100,6 +119,7 @@ export function initSettingsUI(injected) {
           <h3>⚙️ 设置</h3>
           <div class="gs-tabs">
             <button class="gs-tab" data-tab="audio">🎵 音频</button>
+            <button class="gs-tab" data-tab="video">🎛 画面</button>
             <button class="gs-tab" data-tab="saves">💾 存档</button>
           </div>
           <button class="gs-close" title="关闭（Esc）">✕</button>
@@ -119,6 +139,19 @@ export function initSettingsUI(injected) {
           <div class="gs-hint">配乐为本地生成；若静态托管未附带音频文件，新包曲目会自动回退经典包，再缺则静默。
             <span class="gs-note" id="gs-audio-note"></span></div>
         </div>
+        <div class="gs-body hidden" data-page="video">
+          <div class="gs-card">
+            <h4>🖱️ 鼠标灵敏度</h4>
+            <p class="card-desc">倍率 1 = 默认手感；调大转视角更快。即时生效并记忆。</p>
+            <div class="vol-row"><label>灵敏度</label><input type="range" id="gs-sens" min="20" max="300" step="10"><span class="val" id="gs-sens-val"></span></div>
+          </div>
+          <div class="gs-card">
+            <h4>🔭 视野（FOV）</h4>
+            <p class="card-desc">数值越大视野越广（原版默认 70，本作默认 75）。即时生效并记忆。</p>
+            <div class="vol-row"><label>视野</label><input type="range" id="gs-fov" min="50" max="110" step="1"><span class="val" id="gs-fov-val"></span></div>
+          </div>
+          <div class="gs-hint">画面设置保存在本机浏览器（localStorage），换设备不跟随。</div>
+        </div>
         <div class="gs-body hidden" data-page="saves">
           <div class="gs-card">
             <div class="gs-save-row">
@@ -126,6 +159,16 @@ export function initSettingsUI(injected) {
               <button class="gs-btn" id="gs-btn-save">💾 保存进度</button>
             </div>
             <p class="gs-note" id="gs-save-note"></p>
+          </div>
+          <div class="gs-card">
+            <h4>📦 世界备份（导出 / 导入）</h4>
+            <p class="card-desc">导出 = 把当前世界存成 .json 文件（换浏览器/换电脑带走）；导入 = 用备份文件覆盖当前槽位（需再点一次确认，导入后自动刷新页面加载）。</p>
+            <div class="gs-save-row">
+              <button class="gs-btn" id="gs-btn-export">⬇ 导出当前世界</button>
+              <button class="gs-btn" id="gs-btn-import">⬆ 导入存档到当前槽位</button>
+              <input type="file" id="gs-import-file" accept=".json,application/json" style="display:none">
+            </div>
+            <p class="gs-note" id="gs-transfer-note"></p>
           </div>
           <div id="gs-slot-list"></div>
           <div class="gs-hint">点击有档槽位切换世界（当前世界会先自动保存）；空槽位可开新世界；✕ 删除需再点一次确认。</div>
@@ -140,6 +183,7 @@ export function initSettingsUI(injected) {
         saveNote: modal.querySelector('#gs-save-note'),
         audioNote: modal.querySelector('#gs-audio-note'),
         slotList: modal.querySelector('#gs-slot-list'),
+        transferNote: modal.querySelector('#gs-transfer-note'),
     };
 
     // 关闭：✕ / 点空白（面板内点击不受影响）
@@ -162,6 +206,74 @@ export function initSettingsUI(injected) {
     };
     bindVolume('#gs-vol-bgm', '#gs-vol-bgm-val', setBgmVolume);
     bindVolume('#gs-vol-sfx', '#gs-vol-sfx-val', setSfxVolume);
+    // 画面页：灵敏度 / 视野滑块（即时生效 + localStorage 记忆）
+    const sensRange = modal.querySelector('#gs-sens');
+    const sensVal = modal.querySelector('#gs-sens-val');
+    sensRange.addEventListener('input', () => {
+        const v = Number(sensRange.value) / 100;
+        sensVal.textContent = `${v.toFixed(1)}×`;
+        localStorage.setItem(SENS_KEY, String(v));
+    });
+    const fovRange = modal.querySelector('#gs-fov');
+    const fovVal = modal.querySelector('#gs-fov-val');
+    fovRange.addEventListener('input', () => {
+        fovVal.textContent = fovRange.value;
+        applyFov(Number(fovRange.value));
+    });
+    // 导出当前世界：先保存最新进度，再下载槽位原始 JSON
+    modal.querySelector('#gs-btn-export').addEventListener('click', () => {
+        if (handlers.onSave) handlers.onSave(); // 落盘最新进度再导出
+        const json = exportSlotJson();
+        if (!json) {
+            flashNote(els.transferNote, '⚠️ 当前槽位没有存档可导出');
+            return;
+        }
+        const a = document.createElement('a');
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        a.download = `mcweb-世界${state.saveSlot + 1}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+        a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        flashNote(els.transferNote, '✅ 世界已导出为 JSON 文件（请留意浏览器的下载拦截面板）');
+    });
+    // 导入：选文件 → 校验 → 二次确认覆盖当前槽 → 写入并刷新页面
+    const importBtn = modal.querySelector('#gs-btn-import');
+    const importFile = modal.querySelector('#gs-import-file');
+    let importArmed = false;
+    importBtn.addEventListener('click', () => {
+        if (!importArmed) {
+            importArmed = true;
+            importBtn.textContent = '⚠️ 再点一次：选择文件并覆盖当前槽';
+            setTimeout(() => {
+                if (importArmed) {
+                    importArmed = false;
+                    importBtn.textContent = '⬆ 导入存档到当前槽位';
+                }
+            }, 4000);
+            return;
+        }
+        importArmed = false;
+        importBtn.textContent = '⬆ 导入存档到当前槽位';
+        importFile.click(); // 唤起文件选择（选择后走 change 事件）
+    });
+    importFile.addEventListener('change', () => {
+        const file = importFile.files && importFile.files[0];
+        importFile.value = ''; // 允许连续导入同一文件
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const err = importSlotJson(String(reader.result));
+            if (err) {
+                flashNote(els.transferNote, `❌ 导入失败：${err}`);
+                return;
+            }
+            flashNote(els.transferNote, '✅ 导入成功，正在刷新页面加载新世界…');
+            setTimeout(() => window.location.reload(), 800);
+        };
+        reader.onerror = () => flashNote(els.transferNote, '❌ 读取文件失败');
+        reader.readAsText(file);
+    });
     // 手动保存当前世界
     els.saveBtn.addEventListener('click', () => {
         const ok = handlers.onSave ? handlers.onSave() : false;
@@ -198,8 +310,9 @@ export function openGameSettings() {
     if (!els.modal) return;
     buildStyleCards();
     syncVolumeSliders();
+    syncVideoSliders();
     renderSavesPage();
-    switchTab(localStorage.getItem(TAB_KEY) === 'saves' ? 'saves' : 'audio');
+    switchTab(localStorage.getItem(TAB_KEY) === 'video' ? 'video' : localStorage.getItem(TAB_KEY) === 'saves' ? 'saves' : 'audio');
     openSettingsState(); // 非 title/pause 下是 no-op，显隐统一由状态机驱动
 }
 
@@ -219,6 +332,15 @@ function buildStyleCards() {
         });
         grid.appendChild(card);
     }
+}
+
+function syncVideoSliders() {
+    const sens = els.modal.querySelector('#gs-sens');
+    const fov = els.modal.querySelector('#gs-fov');
+    sens.value = Math.round(getMouseSensitivity() * 100);
+    els.modal.querySelector('#gs-sens-val').textContent = `${getMouseSensitivity().toFixed(1)}×`;
+    fov.value = getFov();
+    els.modal.querySelector('#gs-fov-val').textContent = String(getFov());
 }
 
 function syncVolumeSliders() {
