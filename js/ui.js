@@ -298,6 +298,11 @@ export function buildInventoryGrid() {
             appendDurabilityBar(slot, blockType, count);
         }
         slot.addEventListener('click', () => {
+            // 生存模式数量 0 = 没有该物品，不可选中（对齐原版「用完即消失」，工具同理不得空手白嫖）
+            if (!isCreative() && (state.player.inventory[blockType] || 0) <= 0) {
+                showTooltip(`❌ ${name} ×0，先去收集吧`);
+                return;
+            }
             state.player.selectedSlot = index;
             updateHotbar();
             setState('playing'); // 选中即收起，不需要再按 E（状态机负责恢复指针锁定）

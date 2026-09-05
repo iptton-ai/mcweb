@@ -20,17 +20,20 @@ import { playHitSound } from './audio.js';
 import { swingViewmodel } from './viewmodel.js';
 import { showTooltip, updateHotbar } from './ui.js';
 
-// 当前手持的工具（BlockInfo[id].tool，非工具返回 null；selectedSlot 指向 HotbarBlocks）
+// 当前手持的工具（BlockInfo[id].tool，非工具返回 null；selectedSlot 指向 HotbarBlocks）。
+// 生存模式数量为 0 = 物品不存在 = 空手（对齐原版「用完即消失」，杜绝 0 数量工具白嫖加成）
 export function getHeldTool() {
-    const info = BlockInfo[HotbarBlocks[state.player.selectedSlot]];
-    return info?.tool || null;
+    const id = HotbarBlocks[state.player.selectedSlot];
+    if (!isCreative() && (state.player.inventory[id] || 0) <= 0) return null;
+    return BlockInfo[id]?.tool || null;
 }
 
-// 当前手持工具的剩余耐久（0..maxDurability；非工具/全新返回 null = 无需显示）
+// 当前手持工具的剩余耐久（0..maxDurability；非工具/无库存/全新返回 null = 无需显示）
 export function getHeldDurability() {
     const id = HotbarBlocks[state.player.selectedSlot];
     const max = BlockInfo[id]?.maxDurability;
     if (!max) return null;
+    if (!isCreative() && (state.player.inventory[id] || 0) <= 0) return null;
     return { left: max - (state.player.toolWear[id] || 0), max };
 }
 
@@ -50,7 +53,7 @@ export function damageHeldTool() {
     if (isCreative()) return;
     const id = HotbarBlocks[state.player.selectedSlot];
     const max = BlockInfo[id]?.maxDurability;
-    if (!max) return;
+    if (!max || (state.player.inventory[id] || 0) <= 0) return; // 空手/无库存不磨损
     const wear = (state.player.toolWear[id] || 0) + 1;
     if (wear >= max) {
         delete state.player.toolWear[id];

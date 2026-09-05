@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { BlockInfo, HotbarBlocks, ToolTypes, isToolId } from './config.js';
-import { state } from './state.js';
+import { state, isCreative } from './state.js';
 import { atlasCanvas, atlasTexture, blockUVs, getUVForFace, tileSize } from './textures.js';
 
 // ==================== 手部场景 ====================
@@ -127,7 +127,9 @@ export function swingViewmodel() {
 }
 
 function updateHeldItem() {
-    const heldId = HotbarBlocks[state.player.selectedSlot] ?? null;
+    let heldId = HotbarBlocks[state.player.selectedSlot] ?? null;
+    // 生存模式数量 0 = 物品不存在 = 空手（Steve 手臂），与挖掘/攻击的空手判定一致
+    if (heldId != null && !isCreative() && (state.player.inventory[heldId] || 0) <= 0) heldId = null;
     if (heldId !== lastHeldId) {
         if (lastHeldId !== undefined) anim.equip = 1; // 真切换才播举起动画（首帧静默就位）
         lastHeldId = heldId;
