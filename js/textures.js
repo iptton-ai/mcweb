@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -203,8 +203,9 @@ export function generateAllTextures() {
         { type: ToolTypes.WOOD_SWORD, top: 70, side: 70, bottom: 70, name: 'wood_sword' },
         { type: ToolTypes.STONE_SWORD, top: 71, side: 71, bottom: 71, name: 'stone_sword' },
         { type: ToolTypes.DIAMOND_SWORD, top: 72, side: 72, bottom: 72, name: 'diamond_sword' },
-        // ---- 物流+控制组（Create-lite L1）：传送带 tile 73..74（顶面箭头 / 带沿侧面） ----
+        // ---- 物流+控制组（Create-lite L1）：传送带 tile 73..74（顶面箭头 / 带沿侧面）、投料器 tile 75..76（正面投料口 / 机身侧面） ----
         { type: BELT_ITEM_ID, top: 73, side: 74, bottom: 74, name: 'belt' }, // 传送带（实际是 3D 薄板道具，顶面箭头指北为基准、按 dir 旋转整板）
+        { type: DEPLOYER_ITEM_ID, top: 75, side: 76, bottom: 76, name: 'deployer' }, // 投料器（实际是 3D 方箱+喷嘴道具，正面投料口 tile 75 按朝向旋转）
     ];
 
     const drawFunctions = {
@@ -1001,6 +1002,46 @@ export function generateAllTextures() {
             ctx.fillStyle = '#8a8474';
             ctx.fillRect(x, y, s, 1); // 上沿高光
         },
+        // ---- 物流+控制组（Create-lite L1 链 3）：投料器 75 正面（方形投料口）/ 76 机身侧面 ----
+        75: (ctx, x, y, s) => { // 投料器正面：铜木机身底 + 中央深色方形投料口（喷嘴口）+ 四角铆钉
+            ctx.fillStyle = '#8a7a5a';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#9a8a68';
+            for (let i = 1; i < s; i += 4) ctx.fillRect(x + i, y + 1, 1, s - 2); // 竖向刮痕
+            ctx.fillStyle = '#6e6146';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1);
+            ctx.fillRect(x, y, 1, s);
+            ctx.fillRect(x + s - 1, y, 1, s); // 边框收边
+            ctx.fillStyle = '#2c261c'; // 投料口：中央 6×6 深洞
+            ctx.fillRect(x + 5, y + 5, 6, 6);
+            ctx.fillStyle = '#4a4030';
+            ctx.fillRect(x + 5, y + 5, 6, 1);
+            ctx.fillRect(x + 5, y + 5, 1, 6); // 洞口内沿阴影
+            ctx.fillStyle = '#d8a028'; // 四角铆钉
+            ctx.fillRect(x + 2, y + 2, 2, 2);
+            ctx.fillRect(x + s - 4, y + 2, 2, 2);
+            ctx.fillRect(x + 2, y + s - 4, 2, 2);
+            ctx.fillRect(x + s - 4, y + s - 4, 2, 2);
+        },
+        76: (ctx, x, y, s) => { // 投料器机身侧面：铜木机壳 + 两道横向散热格栅 + 中央接缝
+            ctx.fillStyle = '#7e7052';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6e6146';
+            for (let i = 2; i < s - 2; i += 3) ctx.fillRect(x + 1, y + i, s - 2, 1); // 横向条纹
+            ctx.fillStyle = '#4a4030';
+            ctx.fillRect(x, y + 3, s, 2); // 上散热格栅
+            ctx.fillRect(x, y + s - 5, s, 2); // 下散热格栅
+            ctx.fillStyle = '#93846a';
+            for (let i = 3; i < s - 3; i += 4) { // 格栅镂空高光
+                ctx.fillRect(x + i, y + 3, 2, 2);
+                ctx.fillRect(x + i, y + s - 5, 2, 2);
+            }
+            ctx.fillStyle = '#5a5038';
+            ctx.fillRect(x + 7, y, 2, s); // 中央竖向接缝
+            ctx.fillStyle = '#8a8474';
+            ctx.fillRect(x, y, s, 1); // 顶沿高光
+        },
     };
 
     for (const tile of tiles) {
@@ -1095,6 +1136,8 @@ export function generateAllTextures() {
     // 传送带（Create-lite L1 链 2）4 个 dir 变体共享物品图标 tile（本体是按 dir 旋转的 3D 薄板，
     // 顶面箭头 tile 73 由 chunk.js 的 makeTexturedBoxGeo 直接铺 UV，不走这里的 blockUVs）
     for (let i = 0; i < BELT_COUNT; i++) blockUVs[BELT_BASE + i] = blockUVs[BELT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+    // 投料器 6 变体共享物品图标 tile（实际是 3D 方箱+喷嘴道具，手模型/物品栏/掉落物走这里的 UV）
+    for (let i = 0; i < DEPLOYER_COUNT; i++) blockUVs[DEPLOYER_BASE + i] = blockUVs[DEPLOYER_ITEM_ID] || blockUVs[BlockTypes.STONE];
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位

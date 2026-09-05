@@ -563,6 +563,10 @@ export const BELT_SU_LOAD = 4; // 每格传送带的应力负载（纯转运件�
 export const BELT_SPEED = 1.5; // 带速（格/秒，恒定——全网 8 RPM 无变化维度，plan §5 差异 2）
 export const BELT_RIDE_Y = 0.15; // carried 物品骑行高度（带格底起算，与 items.js 落地公式的 0.15 同源）
 
+// 投料器数值常量（Create-lite L1 链 3，集中此处便于调平）
+export const DEPLOYER_SU_LOAD = 16; // 每台投料器的应力负载（介于锯 24 与带 4 之间）
+export const DEPLOYER_SEC = 0.5; // 投料器动作冷却（秒/次）
+
 // 离合器 ID 编解码（纯函数，供 redstone.js / kinetic.js / chunk.js / interaction.js 共用）。
 // 对外语义统一为 engaged（1=接合传动力 / 0=断开——红石充能），位布局见上方段注释。
 export function clutchId(axis, engaged) {
@@ -601,6 +605,23 @@ export function beltDir(id) {
 // js/items.js 的 carried 平移与 js/playerPhysics.js 的骑带都按它取方向
 export const BELT_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
+// 投料器 ID 编解码（Create-lite L1 链 3）：facing 0..5 复用 FACING_NORMALS（照机械锯），
+// 朝向 = 所点击面的外法线（贴着目标面放，面向「要投料的位置」）。solid 动力块，
+// 邻接照锯——正面（朝向邻格）是被投目标不传动、只有背面接传动（js/kinetic.js）。
+// 把捕获三格 {朝向格 T, T+up, 投料器头顶 D+up} 里的「可放置方块物品」变回方块
+// 塞进 T（0.5s 节拍，守卫与帧末聚合见 js/kinetic.js 的 updateDeployers）。
+export function deployerId(facing) {
+    return DEPLOYER_BASE + facing;
+}
+
+export function isDeployerId(id) {
+    return id >= DEPLOYER_BASE && id < DEPLOYER_BASE + DEPLOYER_COUNT;
+}
+
+export function deployerFacing(id) {
+    return id - DEPLOYER_BASE;
+}
+
 // 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组，用常量判段界；
 // 动力求解器全图扫描的热路径——两次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
@@ -608,13 +629,13 @@ export function isKineticId(id) {
         (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT);
 }
 
-// 动力方块的传动轴：轴类方块取编码轴，机械锯取朝向法线所在轴
+// 动力方块的传动轴：轴类方块取编码轴，机械锯/投料器取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
 export function kineticAxisOf(id) {
     if (isBeltId(id)) return null;
-    if (isSawId(id)) {
-        const f = sawFacing(id);
+    if (isSawId(id) || isDeployerId(id)) {
+        const f = isSawId(id) ? sawFacing(id) : deployerFacing(id);
         return f <= 1 ? AXIS_Y : (f === 2 || f === 4) ? AXIS_Z : AXIS_X;
     }
     if (isShaftId(id)) return shaftAxis(id);
@@ -632,6 +653,7 @@ export function kineticItemId(id) {
     if (isCrusherId(id)) return CRUSHER_ITEM_ID;
     if (isClutchId(id)) return CLUTCH_ITEM_ID;
     if (isBeltId(id)) return BELT_ITEM_ID;
+    if (isDeployerId(id)) return DEPLOYER_ITEM_ID;
     return SAW_ITEM_ID;
 }
 
@@ -889,6 +911,7 @@ export const HotbarBlocks = [
     SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
     CLUTCH_ITEM_ID, // 离合器：串进传动轴的红石开关——充能断开传动、断电接合（见 js/kinetic.js）
     BELT_ITEM_ID, // 传送带：通电后把落上的物品沿箭头运走，玩家站上也会被带动（见 js/kinetic.js / js/items.js）
+    DEPLOYER_ITEM_ID, // 投料器：通电后把头顶/朝向格的方块物品变回方块塞进朝向格（粉碎链回流的钥匙，见 js/kinetic.js）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
     // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛 ----
     BlockTypes.COAL_ORE, // 煤矿石：掉煤炭（燃料/火把）
@@ -1093,5 +1116,17 @@ for (let dir = 0; dir < 4; dir++) {
         color: '#6a5a3a',
         hardness: 0.5, tool: 'axe',
         drop: BELT_ITEM_ID,
+    };
+}
+// 投料器（Create-lite L1 链 3）：通电后每 0.5 秒把捕获三格 {T, T+up, D+up} 里的可放置
+// 方块物品变回方块塞进朝向格 T（部署器-lite：只做「放置」动词，差异 5）。solid 动力块
+// （物品能落在头顶被捕获），照锯只背面接传动；drop 固定代表变体，防变体 ID 进背包不叠堆
+for (let facing = 0; facing < 6; facing++) {
+    BlockInfo[deployerId(facing)] = {
+        name: `投料器（${PISTON_ORIENT[facing]}）`,
+        solid: true, transparent: true, customMesh: true, kinetic: true,
+        color: '#8a7a5a',
+        hardness: 1.5, tool: 'pickaxe',
+        drop: DEPLOYER_ITEM_ID,
     };
 }
