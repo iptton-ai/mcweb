@@ -14,6 +14,7 @@ import { camModeText, toggleBuildCam } from './cameraRig.js';
 import { setState } from './uiModal.js';
 import { audioCtx, getRecAudioStream } from './audio.js';
 import { renderViewmodel } from './viewmodel.js';
+import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -111,6 +112,9 @@ export function updateHotbar() {
         e.stopPropagation(); // 不触发「点击重新锁定指针」兜底
         openItemPicker();
     };
+    // 指针自由时（暂停菜单/助手面板开着）悬停胶囊也能看当前手持的说明
+    slot.addEventListener('mouseenter', () => showItemInfo(blockType));
+    slot.addEventListener('mouseleave', hideItemInfo);
 }
 
 // ==================== 背包 + 合成面板（E 打开；2026-09-05 对齐参考版）====================
@@ -121,18 +125,7 @@ export function updateHotbar() {
 let craftStation = null; // 右键工作台/熔炉打开时强制的合成站（'crafting' | 'furnace' | null）
 let invSearch = '';      // 搜索框关键字（按名称过滤物品与配方）
 
-// 画一个物品图标（从图集裁 tile 到 canvas）
-function makeItemIcon(id, size = 24) {
-    const c = document.createElement('canvas');
-    c.width = size;
-    c.height = size;
-    const ctx = c.getContext('2d');
-    const uv = blockUVs[id] || blockUVs[BlockTypes.STONE];
-    const tile = uv.top || { x: 0, y: 0 };
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, size, size);
-    return c;
-}
+// 物品图标已移到 itemInfo.js（makeItemIcon，说明条与网格共用）
 
 // 工具耐久条（剩余比例 <40% 黄、<15% 红）
 function appendDurabilityBar(slotEl, id, count) {
@@ -225,6 +218,9 @@ function buildRecipeRow(recipe, stations) {
             buildInventoryGrid(); // 刷新数量角标与配方可用态
         }
     });
+    // 悬停 = 底部说明条显示产物详情（数值/用途/合成关系）
+    row.addEventListener('mouseenter', () => showItemInfo(recipe.out));
+    row.addEventListener('mouseleave', hideItemInfo);
     return row;
 }
 
@@ -307,6 +303,9 @@ export function buildInventoryGrid() {
             setState('playing'); // 选中即收起，不需要再按 E（状态机负责恢复指针锁定）
             showTooltip(BlockInfo[blockType].name);
         });
+        // 悬停 = 底部说明条显示物品详情（工具数值/挖掘属性/特殊行为/合成关系）
+        slot.addEventListener('mouseenter', () => showItemInfo(blockType));
+        slot.addEventListener('mouseleave', hideItemInfo);
         grid.appendChild(slot);
     });
 }

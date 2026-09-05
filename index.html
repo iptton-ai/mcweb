@@ -355,6 +355,61 @@
             margin-top: 16px;
             font-size: 13px;
         }
+        /* 物品说明条（对话式：左 = 物品图标+名称，右 = 说明行）。
+           悬停 E 面板的物品格/配方行时由 itemInfo.js 显示在屏幕最底下，
+           固定位置不遮挡网格；宽度与面板一致视觉上成套 */
+        #item-info-strip {
+            position: fixed;
+            left: 50%;
+            bottom: 16px;
+            transform: translateX(-50%);
+            z-index: 45;
+            display: none;
+            align-items: center;
+            gap: 16px;
+            width: min(92vw, 680px);
+            background: rgba(15, 15, 28, 0.96);
+            border: 3px solid #4a4a6a;
+            border-radius: 10px;
+            padding: 10px 18px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+            pointer-events: none; /* 纯信息展示，不抢网格的悬停/点击 */
+        }
+        #item-info-strip.show {
+            display: flex;
+        }
+        #item-info-strip .iis-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 96px;
+            padding-right: 16px;
+            border-right: 2px solid #4a4a6a;
+        }
+        #item-info-strip .iis-item canvas {
+            width: 40px;
+            height: 40px;
+            image-rendering: pixelated;
+            border-radius: 4px;
+        }
+        #item-info-strip .iis-name {
+            margin-top: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffe066;
+            text-align: center;
+            white-space: nowrap;
+        }
+        #item-info-strip .iis-lines {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #cfcfe0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
         /* 合成配方区（生存模式的 E 面板顶部） */
         #crafting-section {
             margin-bottom: 12px;
@@ -892,6 +947,12 @@
         <div id="inv-toolbar"><input id="inv-search" type="text" placeholder="🔍 搜索方块或物品…" autocomplete="off"></div>
         <div id="inventory-grid"></div>
         <div id="inventory-close-hint">点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起</div>
+    </div>
+
+    <!-- 物品说明条：悬停面板里的物品格/配方行时，屏幕底部对话式显示（左 = 物品，右 = 说明） -->
+    <div id="item-info-strip">
+        <div class="iis-item"></div>
+        <div class="iis-lines"></div>
     </div>
 
     <!-- 游戏画布 -->

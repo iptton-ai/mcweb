@@ -20,6 +20,7 @@
 
 import { state } from './state.js';
 import { canvas } from './engine.js';
+import { hideItemInfo } from './itemInfo.js';
 
 // 指针是否锁定（活绑定导出，main.js 每帧读取）
 export let mouseLocked = false;
@@ -142,6 +143,8 @@ function syncOverlays() {
     if (screen) screen.classList.toggle('hidden', !menuVisible);
     const inv = document.getElementById('inventory-panel');
     if (inv) inv.classList.toggle('open', uiState === 'inventory');
+    // 离开背包态时兜底隐藏物品说明条（面板 display:none 不一定触发 mouseleave）
+    if (uiState !== 'inventory') hideItemInfo();
     // 设置浮层（DOM 由 settingsUI.js 注入，本模块只管显隐）
     const gs = document.getElementById('game-settings');
     if (gs) gs.classList.toggle('hidden', uiState !== 'settings');
