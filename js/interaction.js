@@ -17,6 +17,8 @@ import { spawnTntEntity } from './tnt.js';
 import { spawnItemDrop } from './items.js';
 import { addXp, doEat } from './playerLife.js';
 import { damageHeldTool, getHeldTool } from './mining.js';
+import { swingViewmodel } from './viewmodel.js';
+import { keys } from './input.js'; // Shift 绕过台/炉交互用（运行时读取，与 input.js 循环依赖安全）
 // 注意：ui.js 也 import 本模块的 raycastBlocks，循环依赖均为运行时函数调用，安全
 // （mining.js ↔ 本模块同理：本模块只运行时调用 getHeldTool）
 import { openItemPicker, showTooltip, updateHotbar } from './ui.js';
