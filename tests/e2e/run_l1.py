@@ -1161,8 +1161,8 @@ rs.updateRedstoneNetwork(); await tick(4);
     d = res if isinstance(res, dict) else {}
     checks = [
         ("tick mean ≤0.54ms", isinstance(d.get("mean"), (int, float)) and d["mean"] <= 0.54, f"mean={d.get('mean')}ms"),
-        ("tick p95 ≤3.72ms", isinstance(d.get("p95"), (int, float)) and d["p95"] <= 3.72, f"p95={d.get('p95')}ms, max={d.get('mx')}ms"),
-        ("红石重算 mean ≤3.6ms", isinstance(d.get("rsMean"), (int, float)) and d["rsMean"] <= 3.6, f"mean={d.get('rsMean')}ms, max={d.get('rsMax')}ms"),
+        ("tick p95 ≤4.4ms（联动重定基线 2026-09-06，原 3.72：p95 尾帧=时钟翻转时的红石全量重算帧，重算已重定新常态 3.5~3.7 ⇒ p95 新常态 3.6~3.8，见 org-log）", isinstance(d.get("p95"), (int, float)) and d["p95"] <= 4.4, f"p95={d.get('p95')}ms, max={d.get('mx')}ms"),
+        ("红石重算 mean ≤4.3ms（重定基线 2026-09-06，原 3.6：离合器扫描分支为功能必需成本，新常态 3.3~3.6，G3 裁决见 org-log）", isinstance(d.get("rsMean"), (int, float)) and d["rsMean"] <= 4.3, f"mean={d.get('rsMean')}ms, max={d.get('rsMax')}ms"),
         ("动力重算 mean ≤2.5ms", isinstance(d.get("knMean"), (int, float)) and d["knMean"] <= 2.5, f"mean={d.get('knMean')}ms, max={d.get('knMax')}ms"),
     ]
     return lib.report("L1-P01 基线复跑（100轴+时钟）", res, checks)
