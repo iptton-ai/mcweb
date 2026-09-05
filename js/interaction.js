@@ -383,8 +383,8 @@ export function placeBlock() {
             // TNT 放置为惰性：右键点燃或红石信号引爆（配合压力板/拉杆可做陷阱）
             showTooltip('💣 TNT 已放置：右键点燃，或用红石信号引爆');
         }
-        if (selectedType === BlockTypes.WATER) {
-            // 放水可能给下方水车供电（顶面接触水判定），重算动力网络
+        if (selectedType === BlockTypes.WATER || currentBlock === BlockTypes.WATER) {
+            // 放水/盖掉水都可能改变水车顶面供水（顶面接触水判定），重算动力网络
             updateKineticNetwork();
         }
         spawnBreakParticles(bx, by, bz, selectedType);
