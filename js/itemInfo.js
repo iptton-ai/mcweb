@@ -10,6 +10,7 @@ import {
     DOOR_ITEM_ID, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID,
     PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID,
     WATERWHEEL_ITEM_ID, SHAFT_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, SAW_ITEM_ID,
+    CLUTCH_ITEM_ID, BELT_ITEM_ID, DEPLOYER_ITEM_ID,
 } from './config.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 
@@ -48,6 +49,9 @@ const SPECIAL_HINTS = {
     [COGWHEEL_ITEM_ID]: ['与垂直轴的相邻齿轮啮合 = 换向反转（平行并排不连接）'],
     [CRUSHER_ITEM_ID]: ['两枚水平相邻配对 · 右键向轮子上方投料碾碎（石头→圆石→沙砾→沙）'],
     [SAW_ITEM_ID]: ['通电后自动锯切朝向格（原木→木板 ×4）'],
+    [CLUTCH_ITEM_ID]: ['串进传动轴的红石开关 · 充能 = 断开传动（水车侧照转，下游停）'],
+    [BELT_ITEM_ID]: ['贴顶面放置 · 通电后以 1.5 格/秒沿箭头运送物品（玩家站上会被带动）'],
+    [DEPLOYER_ITEM_ID]: ['通电后每 0.5 秒把捕获到的方块物品放进朝向格（投料口自动化）'],
     [BlockTypes.WATER]: ['静态水：供水车/造水景 · 只能被方块覆盖，不可挖掘'],
     [BlockTypes.TORCH]: ['光源 · 照到的格子夜间不刷怪'],
     [BlockTypes.COAL_ORE]: ['生成于 y<44 的岩层'],
