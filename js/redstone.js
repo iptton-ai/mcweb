@@ -125,6 +125,7 @@ function mountedFacing(id) {
 const OBS_OUT_FACING = [1, 0, 5, 4, 3, 2];
 
 function isSupportedBy(id, sx, sy, sz, x, y, z) {
+    if (isLampId(id)) return false; // 红石灯是实心立方体、随处可放，无挂靠依赖（亮灭两态一并排除）
     const [nx, ny, nz] = FACING_NORMALS[mountedFacing(id)];
     return x - sx === nx && y - sy === ny && z - sz === nz;
 }
