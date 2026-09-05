@@ -12,6 +12,11 @@
 //   同一格被相反转向到达 = 卡死，整网停转；无水车的分量 = 无动力静止。
 //   离合器（Create-lite L1）串在轴中间当红石开关：断开（engaged=0）时动力传不过去——
 //   下游停转、水车侧照转；engaged 由红石网络按电平语义回写（见 redstone.js 末段）。
+//   传送带（L1 链 2）是贴顶面的静止薄板（solid false）：带↔带相邻与带↔动力邻接
+//   （四邻水平 + 上下格）都进同一分量传导（对称边），但带边打 beltEdge 标记——
+//   方向/转向 BFS 不穿越（相位绝缘，防两条独立产线经带桥被误判卡死）；每格带计入
+//   应力负载 BELT_SU_LOAD。带上的物品转运（carried）在 js/items.js、玩家骑带在
+//   js/playerPhysics.js，本模块只负责求解与 isBeltRunningAt 查询。
 // 求解照 updateRedstoneNetwork 的事件触发全量重算骨架，派生态写进本模块的运行时 Map
 // （不占方块 ID、不进存档），读档/开新世界后 initKinetic() 重算。
 //
@@ -23,6 +28,9 @@ import {
     AXIS_X,
     AXIS_Y,
     AXIS_Z,
+    BELT_ITEM_ID,
+    BELT_SPEED,
+    BELT_SU_LOAD,
     BlockInfo,
     BlockTypes,
     CHUNK_SIZE,
@@ -44,12 +52,14 @@ import {
     WORLD_DEPTH,
     WORLD_HEIGHT,
     WORLD_WIDTH,
+    beltId,
     clutchEngaged,
     clutchId,
     cogAxis,
     cogId,
     crusherAxis,
     crusherId,
+    isBeltId,
     isClutchId,
     isCogId,
     isCrusherId,
@@ -68,11 +78,12 @@ import {
 } from './config.js';
 import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
-import { refreshPropAt, rebuildChunk } from './chunk.js';
+import { isSolid, refreshPropAt, rebuildChunk } from './chunk.js';
 import { popUnsupportedRedstone, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound, playCrushSound, playSawSound } from './audio.js';
 import { spawnItemDrop } from './items.js';
+import { facingFromYaw } from './door.js';
 
 const keyOf = (x, y, z) => `${x},${y},${z}`;
 
@@ -104,14 +115,18 @@ let sawCells = []; // 全部机械锯（Commit C 的锯切 tick 用）
 // ==================== 放置 ====================
 // 轴类方块朝所点击面的法线方向放置（点顶面 = 立轴，贴墙 = 横轴垂直墙面）；
 // 机械锯朝向 = 被锯方块方向（复用活塞的贴面朝向规则）；离合器照轴定轴向、
-// 初始 engaged=1（接合）直落——放进充能位会被随后的红石重算翻到断开（电平语义自愈）。
+// 初始 engaged=1（接合）直落——放进充能位会被随后的红石重算翻到断开（电平语义自愈）；
+// 传送带贴实心方块顶面（照红石粉/压力板），带向 = 玩家水平朝向量化四向（door.js facingFromYaw）。
 // 返回 null = 成功。
 export function placeKinetic(bx, by, bz, itemId, face) {
     if (bx < 0 || bx >= WORLD_WIDTH || by < 0 || by >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH) {
         return '❌ 超出世界边界';
     }
     let id;
-    if (itemId === SAW_ITEM_ID) {
+    if (itemId === BELT_ITEM_ID) {
+        if (!isSolid(getBlock(bx, by - 1, bz))) return '❌ 传送带需要放在实心方块的顶面';
+        id = beltId(facingFromYaw(state.player.yaw));
+    } else if (itemId === SAW_ITEM_ID) {
         id = sawId(facingFromNormalLocal(face.dx, face.dy, face.dz));
     } else {
         const axis = normalAxis(face.dx, face.dy, face.dz);
@@ -210,8 +225,8 @@ export function updateKineticNetwork() {
             }
         }
 
-        // 2) 应力统计：容量 = Σ有水水车×64；负载 = Σ配对粉碎轮×32 + Σ锯×24
-        //    （传动轴与离合器是纯传动件不计负载，CLUTCH_SU_LOAD=0）
+        // 2) 应力统计：容量 = Σ有水水车×64；负载 = Σ配对粉碎轮×32 + Σ锯×24 + Σ带×4
+        //    （传动轴与离合器是纯传动件不计负载，CLUTCH_SU_LOAD=0；带是分量内全部带格计数）
         let capacity = 0, load = 0, wheels = 0, poweredWheels = 0;
         for (const c of members) {
             if (isWaterwheelId(c.id)) {
@@ -220,6 +235,8 @@ export function updateKineticNetwork() {
                     poweredWheels++;
                     capacity += WHEEL_SU_CAPACITY;
                 }
+            } else if (isBeltId(c.id)) {
+                load += BELT_SU_LOAD;
             } else if (isCrusherId(c.id) && crusherPaired.has(keyOf(c.x, c.y, c.z))) {
                 load += CRUSHER_SU_LOAD;
             } else if (isSawId(c.id)) {
@@ -229,7 +246,9 @@ export function updateKineticNetwork() {
 
         // 3) 转向传播：从第一台有水的水车出发（多水车不加速、方向以它为准），
         //    同轴传向不变、啮合翻转；同一格被相反转向到达，或有水水车被反向到达
-        //    （水车的转向由水固定，两路传动冲突）= 卡死，整网停转
+        //    （水车的转向由水固定，两路传动冲突）= 卡死，整网停转。
+        //    相位绝缘（G2 裁决 R1-01/R2-01）：带边（beltEdge）不穿越——带格不参与
+        //    转向/卡死判定（带自身无转向语义），两条独立产线经带桥接不会被误判卡死合并
         let jammed = false;
         const dirMap = new Map();
         const src = members.find((c) => c.powered);
@@ -239,7 +258,8 @@ export function updateKineticNetwork() {
             let qi = 0;
             while (qi < dq.length) {
                 const { c, dir } = dq[qi++];
-                for (const { other, mesh } of neighborsOf(c, byKey)) {
+                for (const { other, mesh, beltEdge } of neighborsOf(c, byKey)) {
+                    if (beltEdge) continue; // 带边绝缘：方向/卡死 BFS 不穿越
                     const nd = mesh ? -dir : dir;
                     const k = keyOf(other.x, other.y, other.z);
                     const prev = dirMap.get(k);
@@ -275,11 +295,30 @@ export function updateKineticNetwork() {
 
 // 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
 // 粉碎轮配对（成对两轮本身就是一对啮合的轮：单驱任意一只，两只都反转着碾）。
-// yield { other, mesh }：mesh = true 表示这是啮合边（转向翻转）。
+// yield { other, mesh, beltEdge }：mesh = true 表示这是啮合边（转向翻转）；
+// beltEdge = true 表示这是带相关边（带↔带 / 带↔动力）——连通性 BFS 照走（同分量：
+// 应力归属合并），但方向/卡死 BFS 不穿越（相位绝缘：带只传播转/停与应力，不传播转向
+// 符号与冲突，防两条独立产线经带桥接被误判卡死合并——G2 裁决 R1-01/R2-01）。
 // 离合器（Create-lite L1）同轴相邻照轴传动，但 engaged=0（断开）时：自身不外延任何
 // 传动边、且作为 other 时不可被跨过——BFS 遇断开离合器，该格仍是分量成员（可被应力
 // 统计/HUD 查询）但动力传不过去，水车侧照转、下游静止。
+// 传送带（链 2）：带↔动力为对称边——带侧与动力侧双向枚举同一组邻接对
+// （带的四邻水平格 + 上下格），否则全局 visited BFS 下任一侧先被扫到都会把对向
+// 掉进另一个分量（y/z/x 主序扫描时「轴在带的东侧/南侧」恰是带先种子——N09 锁定）。
 function* neighborsOf(c, byKey) {
+    if (isBeltId(c.id)) {
+        // 带侧专属分支（不读 c.axis，带无传动轴）：四邻水平格 + 上下格里的动力族格
+        // 都是同分量邻接（带↔带传导 = 整条带单点驱动的离散版，差异 9；带↔动力接入）
+        for (const [dx, dz] of HORIZ_DIRS) {
+            const other = byKey.get(keyOf(c.x + dx, c.y, c.z + dz));
+            if (other) yield { other, mesh: false, beltEdge: true };
+        }
+        for (const dy of [-1, 1]) {
+            const other = byKey.get(keyOf(c.x, c.y + dy, c.z));
+            if (other) yield { other, mesh: false, beltEdge: true };
+        }
+        return;
+    }
     if (isClutchId(c.id) && clutchEngaged(c.id) === 0) return; // 断开的离合器不外延传动边
     for (const dir of [-1, 1]) {
         const [ax, ay, az] = AXIS_DIRS[c.axis];
@@ -298,7 +337,7 @@ function* neighborsOf(c, byKey) {
             if (other.x - fx === c.x && other.y - fy === c.y && other.z - fz === c.z) yield { other, mesh: false };
             continue;
         }
-        if (other.axis === c.axis) yield { other, mesh: false };
+        if (other.axis === c.axis) yield { other, mesh: false }; // 带的 axis 为 null，不会走进同轴分支
     }
     // 齿轮啮合：相邻格是齿轮、两轴垂直、连线方向沿两者之一的轴（一以轮面贴、一以轮齿咬）
     if (isCogId(c.id)) {
@@ -308,7 +347,7 @@ function* neighborsOf(c, byKey) {
             const dirAxis = fx !== 0 ? AXIS_X : fy !== 0 ? AXIS_Y : AXIS_Z;
             if (dirAxis === c.axis || dirAxis === other.axis) yield { other, mesh: true };
         }
-        return;
+        // （原此处的 return 移除：isCogId 与 isCrusherId 互斥，继续走到下方带补充枚举）
     }
     // 粉碎轮配对边：水平相邻、同轴、连线垂直于轴（与 updateKineticNetwork 的配对判定同规则）
     if (isCrusherId(c.id)) {
@@ -317,6 +356,17 @@ function* neighborsOf(c, byKey) {
             const other = byKey.get(keyOf(c.x + dx, c.y, c.z + dz));
             if (other && isCrusherId(other.id) && other.axis === c.axis) yield { other, mesh: true };
         }
+    }
+    // 动力侧对向枚举（对称边的动力侧，G2 裁决 R1-01/R2-01）：四邻水平格 + 上下格是带 →
+    // 与带同分量。补在既有轴向逻辑之外，不破坏上面的轴类邻接；没有这一侧，y/z/x 主序
+    // 扫描下先建分量的动力格吸收不到后来种子的带（visited 单向边缺陷）
+    for (const [dx, dz] of HORIZ_DIRS) {
+        const other = byKey.get(keyOf(c.x + dx, c.y, c.z + dz));
+        if (other && isBeltId(other.id)) yield { other, mesh: false, beltEdge: true };
+    }
+    for (const dy of [-1, 1]) {
+        const other = byKey.get(keyOf(c.x, c.y + dy, c.z));
+        if (other && isBeltId(other.id)) yield { other, mesh: false, beltEdge: true };
     }
 }
 
@@ -339,12 +389,31 @@ export function updateKineticTick(dt) {
 
 // ==================== 外部查询（HUD / 交互提示用） ====================
 // 准星对准动力方块时的状态文案；非动力方块返回 null。
+// 该格传送带是否正在运转（查 kineticMap 派生态 + 分量 running）——js/items.js 的
+// carried 判定与 js/playerPhysics.js 的玩家骑带共用（链 2 对既有模块的唯一新增导出）。
+export function isBeltRunningAt(x, y, z) {
+    const entry = kineticMap.get(keyOf(x, y, z));
+    if (!entry) return false;
+    const comp = components[entry.compId];
+    return !!comp && comp.running;
+}
+
 export function kineticStatusAt(x, y, z) {
     const id = getBlock(x, y, z);
     if (!isKineticId(id)) return null;
     const name = BlockInfo[id]?.name || '动力方块';
     // 离合器断开：优先提示断开态（断开后自成无动力分量，常规文案会误报「需要水车驱动」）
     if (isClutchId(id) && clutchEngaged(id) === 0) return `⚙️ ${name} · 断开（红石充能中，传动已切断）`;
+    // 传送带：带本身是静止薄板，文案按运转/静止 + 应力报（差异 4：物品移动即方向反馈）
+    if (isBeltId(id)) {
+        const bk = kineticMap.get(keyOf(x, y, z));
+        const bc = bk && components[bk.compId];
+        if (!bc) return `⚙️ ${name} · 静止`;
+        if (bc.jammed) return `⚙️ ${name} · ⛔ 卡死（传动转向冲突）`;
+        if (bc.overstressed) return `⚙️ ${name} · ⛔ 过载（应力 ${bc.load}/${bc.capacity}，再加一台水车）`;
+        if (bc.poweredWheels === 0) return `⚙️ ${name} · 静止（需要水车驱动）`;
+        return `⚙️ ${name} · 运转中 · 带速 ${BELT_SPEED} 格/秒 · 应力 ${bc.load}/${bc.capacity}`;
+    }
     const k = kineticMap.get(keyOf(x, y, z));
     const c = k && components[k.compId];
     let prefix = isCrusherId(id) && !crusherPaired.has(keyOf(x, y, z)) ? '未配对 · ' : '';

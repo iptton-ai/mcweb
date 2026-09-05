@@ -1,7 +1,7 @@
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BELT_DIRS, BELT_SPEED, BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, beltDir, isBeltId } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
@@ -11,6 +11,7 @@ import { keys } from './input.js';
 import { showTooltip } from './ui.js';
 import { isGameActive } from './uiModal.js';
 import { damagePlayer } from './playerLife.js';
+import { isBeltRunningAt } from './kinetic.js';
 
 // ==================== 玩家物理 ====================
 export function updatePlayerPhysics(dt) {
@@ -45,8 +46,21 @@ export function updatePlayerPhysics(dt) {
     if (k['KeyD']) moveDir.add(right);
     if (moveDir.length() > 0) moveDir.normalize();
 
-    const targetVx = moveDir.x * speed;
-    const targetVz = moveDir.z * speed;
+    let targetVx = moveDir.x * speed;
+    let targetVz = moveDir.z * speed;
+
+    // 玩家骑带（Create-lite L1 链 2，G2 裁决 R3-17）：脚部格是运转中的传送带 →
+    // 水平速度目标叠加带向 BELT_SPEED（Create 标志性体验；站静止带无移动；
+    // 怪物 v1 不载——plan §5 差异 16）。走带向加速/逆带向减速，碰撞检测自然兜底
+    if (!p.flying) {
+        const fx = Math.floor(p.x), fy = Math.floor(p.y + 0.1), fz = Math.floor(p.z);
+        const fb = getBlock(fx, fy, fz);
+        if (isBeltId(fb) && isBeltRunningAt(fx, fy, fz)) {
+            const [ux, , uz] = BELT_DIRS[beltDir(fb)];
+            targetVx += ux * BELT_SPEED;
+            targetVz += uz * BELT_SPEED;
+        }
+    }
 
     // 平滑加速
     const accel = p.flying ? 8 : 12;

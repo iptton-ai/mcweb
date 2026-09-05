@@ -3,9 +3,14 @@
 // 区别于玩家挖掘的「直接进背包」——有简单重力、落地即停、玩家靠近磁吸、
 // 1.5 格内自动入包、120 秒寿命防堆积。玩家挖掘掉落不改走物品实体（改动大，
 // 动摇已验证行为，留给以后单独立项）。
+// 另含传送带携带（carried，Create-lite L1 链 2）：feet 格是运转中的传送带时
+// 豁免重力与磁吸，沿带向匀速平移（见下方 beltCarried 与 updateItemDrops）。
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, ITEM_LIFETIME_SEC, ITEM_MAGNET_DIST, ITEM_PICKUP_DIST, isToolId } from './config.js';
+import {
+    BELT_DIRS, BELT_RIDE_Y, BELT_SPEED, BlockInfo, BlockTypes, ITEM_LIFETIME_SEC,
+    ITEM_MAGNET_DIST, ITEM_PICKUP_DIST, beltDir, isBeltId, isToolId,
+} from './config.js';
 import { isCreative, state } from './state.js';
 import { scene } from './engine.js';
 import { getBlock } from './world.js';
@@ -13,6 +18,7 @@ import { isSolid } from './chunk.js';
 import { atlasSize, atlasTexture, blockUVs, getUVForFace } from './textures.js';
 import { playPickupSound } from './audio.js';
 import { updateHotbar } from './ui.js';
+import { isBeltRunningAt } from './kinetic.js';
 
 // 几何/材质模块级共享（掉落物几十个上下，逐个 dispose 不值得；移除实体只 scene.remove）
 const dropGeoCache = new Map(); // 方块 itemId -> 0.25 立方几何（六面图集 UV）
@@ -98,8 +104,88 @@ function removeDrop(i) {
     state.itemDrops.splice(i, 1);
 }
 
+// ==================== 传送带携带（carried，Create-lite L1 链 2）====================
+// feet 探针与落地公式同源（y - BELT_RIDE_Y）：带 solid false（照压力板），物品落入
+// 带格后落在带下方支撑面上，feet 恰好等于带格——carried 接管，无需改落地支撑判定。
+// 扫掠捕获：本帧与上一帧位置之间的 feet 格逐格比较，防低帧率远坠整格跳过带格漏捕
+// （G2 裁决 R1-08）。命中 → 豁免重力与磁吸（寿命照走、1.5 格拾取保留——带通向玩家
+// = 免费的自动收集线，差异 13）；沿带向匀速平移；前方 ~0.35 格内有其它物品实体则
+// 排队暂停（简版 O(N²)，G2 裁决 R3-15）；前方实心墙抵墙停留；跨格自动接力——
+// 新 feet 不是 running 带则恢复普通物理并保留残余带向速度（自然弹出/落地）。
+// 断电（isBeltRunningAt false）判定不命中 → 普通物理，物品原地停住，寿命内复电再带走。
+const BELT_QUEUE_DIST = 0.35; // 排队间距（前方有物品实体时保持的最小距离）
+const BELT_SWEEP_MAX = 8; // 扫掠格数上限（防极端帧率下大区间扫列）
+
+function beltCarried(d, prevY, dt) {
+    const colX = Math.floor(d.x), colZ = Math.floor(d.z);
+    // 扫掠捕获：从上一帧位置到本帧位置的 feet 区间自上而下找第一格 running 带
+    let beltY = -1, beltIdFound = 0;
+    const yTop = Math.floor(Math.max(prevY, d.y) - BELT_RIDE_Y);
+    const yBot = Math.max(Math.floor(Math.min(prevY, d.y) - BELT_RIDE_Y), yTop - BELT_SWEEP_MAX);
+    for (let y = yTop; y >= yBot; y--) {
+        const b = getBlock(colX, y, colZ);
+        if (isBeltId(b) && isBeltRunningAt(colX, y, colZ)) {
+            beltY = y;
+            beltIdFound = b;
+            break;
+        }
+    }
+    if (beltY < 0) {
+        // 离带瞬间：恢复普通物理。两种情形分开处理——
+        // 脚还踩在带上（断电/过载停转）= 原地停住等复电（E04：停走不滑行）；
+        // 真正走出带格（跨格接力的「否」分支/带尽头）= 保留残余带向速度自然弹出
+        if (d.carried) {
+            const feetOnBelt = isBeltId(getBlock(Math.floor(d.x), Math.floor(d.y - BELT_RIDE_Y), Math.floor(d.z)));
+            if (feetOnBelt) {
+                d.vx = 0;
+                d.vz = 0;
+            } else {
+                d.vx = d.beltVX || 0;
+                d.vz = d.beltVZ || 0;
+            }
+            d.vy = 0;
+            d.carried = false;
+        }
+        return false;
+    }
+    d.carried = true;
+    const [ux, , uz] = BELT_DIRS[beltDir(beltIdFound)];
+    d.beltVX = ux * BELT_SPEED;
+    d.beltVZ = uz * BELT_SPEED;
+    // 间距排队简版：前方约 0.35 格内有其它物品实体则本帧暂停（不叠成一点）
+    let queued = false;
+    for (const o of state.itemDrops) {
+        if (o === d) continue;
+        const ox = o.x - d.x, oz = o.z - d.z, oy = o.y - d.y;
+        if (ox * ux + oz * uz <= 0) continue; // 只看带向前方
+        if (ox * ox + oy * oy + oz * oz < BELT_QUEUE_DIST * BELT_QUEUE_DIST) {
+            queued = true;
+            break;
+        }
+    }
+    if (!queued) {
+        // 抵墙停留：前方格实心则暂停移动不穿越（撤墙后自动续走；寿命照扣防无限堆积）
+        const nx = d.x + d.beltVX * dt, nz = d.z + d.beltVZ * dt;
+        if (!isSolid(getBlock(Math.floor(nx), beltY, Math.floor(nz)))) {
+            d.x = nx;
+            d.z = nz;
+        }
+    }
+    // 横向与高度向骑行面收敛：垂直于带向的水平轴 lerp 回格中心（防斜着飘出带缘），
+    // 高度 lerp 到 带格底 + BELT_RIDE_Y（从上方落入带格时向下收敛到骑行面）
+    const t = Math.min(1, 10 * dt);
+    if (ux !== 0) d.z += (colZ + 0.5 - d.z) * t; // 带沿 X：z 收敛
+    else d.x += (colX + 0.5 - d.x) * t; // 带沿 Z：x 收敛
+    d.y += (beltY + BELT_RIDE_Y - d.y) * t;
+    d.vx = 0;
+    d.vz = 0;
+    d.vy = 0;
+    return true;
+}
+
 // ==================== 每帧驱动（main.js gameLoop 调用）====================
-// 磁吸（4 格内飞向玩家胸口）→ 拾取（1.5 格入包）→ 简单重力（落地即停，不做碰撞弹跳）
+// 磁吸（4 格内飞向玩家胸口）→ 拾取（1.5 格入包）→ 简单重力（落地即停，不做碰撞弹跳）；
+// carried 判定插在拾取之后、磁吸/重力之前（传送带优先接管，见上方 beltCarried）
 export function updateItemDrops(dt) {
     const p = state.player;
     for (let i = state.itemDrops.length - 1; i >= 0; i--) {
@@ -119,6 +205,14 @@ export function updateItemDrops(dt) {
             }
             playPickupSound();
             removeDrop(i);
+            continue;
+        }
+        // carried 判定（扫掠区间 = 上一帧起点到本帧起点，普通物理的位移发生在其后）
+        const prevY = d.py ?? d.y;
+        d.py = d.y;
+        if (beltCarried(d, prevY, dt)) {
+            d.mesh.position.set(d.x, d.y + Math.sin(d.age * 2.2) * 0.04, d.z);
+            d.mesh.rotation.y += dt * 2;
             continue;
         }
         if (!p.dead && !thrown && dist < ITEM_MAGNET_DIST) {

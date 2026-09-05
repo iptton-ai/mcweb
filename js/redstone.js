@@ -47,6 +47,7 @@ import {
     doorOpen,
     dustId,
     dustLit,
+    isBeltId,
     isButtonId,
     isClutchId,
     isDoorId,
@@ -77,9 +78,10 @@ import { isSolid, rebuildChunk, refreshPropAt, removeTorchLightAt } from './chun
 import { playDoorSound, playLeverSound } from './audio.js';
 import { spawnTntEntity } from './tnt.js';
 import { enqueuePistonAction, resetPistons, syncObserverRegistry, updatePistonTick } from './piston.js';
-// 离合器 engaged 变化要带起动力全网重算（Create-lite L1）。与本模块被 piston.js 引用同构：
-// redstone ↔ kinetic 双向引用均为运行时函数调用、无模块顶层执行，循环 import 安全
-import { updateKineticNetwork } from './kinetic.js';
+// 离合器 engaged 变化要带起动力全网重算（Create-lite L1）；拆支撑弹落传送带同样走
+// kinetic 的破坏函数（链 2）。与本模块被 piston.js 引用同构：redstone ↔ kinetic
+// 双向引用均为运行时函数调用、无模块顶层执行，循环 import 安全
+import { breakKineticAt, updateKineticNetwork } from './kinetic.js';
 
 // 水平四向（红石粉布线/充能都用它），与 FACING_NORMALS 的 2..5 独立
 const HORIZ_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -219,7 +221,10 @@ export function breakRedstoneAt(x, y, z) {
     return cells;
 }
 
-// 普通方块被拆后调用：贴在它表面、失去支撑的红石元件一并脱落
+// 普通方块被拆后调用：贴在它表面、失去支撑的红石元件一并脱落；
+// 被拆方块正上方是传送带 → 带连锁弹落返还（G2 裁决 R3-12 改判：带=贴面道具，
+// 拆支撑弹落在红石粉/压力板有先例——TNT 路径不覆盖，与红石粉现状一致）。
+// 返回被清除的格子列表（调用方负责粒子与区块重建），既有 6 个调用点自动覆盖。
 export function popUnsupportedRedstone(x, y, z) {
     const cells = [];
     for (const [nx, ny, nz] of FACING_NORMALS) {
@@ -228,6 +233,14 @@ export function popUnsupportedRedstone(x, y, z) {
         if (isRedstoneId(mid) && isSupportedBy(mid, x, y, z, mx, my, mz)) {
             cells.push(...breakRedstoneAt(mx, my, mz));
         }
+    }
+    // 传送带只贴实心方块顶面（支撑 = 正下方一格）：走 breakKineticAt 清格 + 生存
+    // 返还 + 动力重算；道具网格清理由调用方按返回 cells 重建区块完成（照红石粉先例）。
+    // 逐格向上循环：连摞的带（AI 施工/快照可造出）整柱连锁弹落
+    let by = y + 1;
+    while (isBeltId(getBlock(x, by, z))) {
+        cells.push(...breakKineticAt(x, by, z));
+        by++;
     }
     if (cells.length > 0) updateRedstoneNetwork();
     return cells;
