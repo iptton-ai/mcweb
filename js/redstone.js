@@ -400,7 +400,10 @@ export function updateRedstoneNetwork() {
     }
     for (const s of activeSources) {
         const [dx, dy, dz] = FACING_NORMALS[mountedFacing(s.id)];
-        powerBlock(s.x - dx, s.y - dy, s.z - dz);
+        // 观察者的 mountedFacing 是背面（输出面）：充能 s+法线 = 背面输出格；
+        // 其余源的 mountedFacing 是挂靠方向：充能 s-法线 = 挂靠/支撑方块
+        if (isObserverId(s.id)) powerBlock(s.x + dx, s.y + dy, s.z + dz);
+        else powerBlock(s.x - dx, s.y - dy, s.z - dz);
     }
 
     // ---- 红石火把：目标态 = 挂靠方块未被充能；翻转走 RTORCH_DELAY 延迟队列 ----
