@@ -403,22 +403,24 @@ export function placeBlock() {
 
 
 // ==================== 丢弃与吸取（Z / 鼠标中键，键位在 input.js）====================
-// 丢弃手持物品（生存）：朝视线方向弹出真物品实体（可捡回；工具耐久保留在本把上）
+// 丢弃手持物品：沿视线抛出真物品实体（带 1.2s 拾取冷却与水平初速，对齐原版 Q 丢弃——
+// 否则刚弹出就在自己 1.5 格入包圈内被立刻吸回，丢弃等于没丢）。
+// 创造模式照原版：也丢出实体但不减库存（捡回时 !isCreative 保护不会多计数）。
 export function dropHeldItem() {
     const p = state.player;
     const id = HotbarBlocks[p.selectedSlot];
     if (!id) return;
-    if (isCreative()) {
-        showTooltip('🧪 创造模式物品无限，无需丢弃');
-        return;
+    if (!isCreative()) {
+        if ((p.inventory[id] || 0) <= 0) {
+            showTooltip('手里没有这个物品');
+            return;
+        }
+        p.inventory[id]--;
+        if ((p.inventory[id] || 0) <= 0) delete p.toolWear[id]; // 最后一把工具丢光：清掉耐久残留，下次合成的新工具不带旧磨损
     }
-    if ((p.inventory[id] || 0) <= 0) {
-        showTooltip('手里没有这个物品');
-        return;
-    }
-    p.inventory[id]--;
     const dir = lookDirection();
-    spawnItemDrop(p.x + dir.x * 1.2, p.y + 1.3, p.z + dir.z * 1.2, id, 1);
+    spawnItemDrop(p.x + dir.x * 0.6, p.y + 1.4, p.z + dir.z * 0.6, id, 1,
+        { vx: dir.x * 4.5, vz: dir.z * 4.5, vy: 1.6 + dir.y * 2.5, pickupDelay: 1.2 });
     updateHotbar();
 }
 

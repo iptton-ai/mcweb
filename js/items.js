@@ -71,12 +71,20 @@ function buildDropMesh(itemId) {
 }
 
 // ==================== 生成与清理 ====================
-// 在 (x,y,z)（世界坐标，可带小数）弹出一个物品实体，向上小跳后落地
-export function spawnItemDrop(x, y, z, itemId, count = 1) {
+// 在 (x,y,z)（世界坐标，可带小数）弹出一个物品实体，向上小跳后落地。
+// opts.vx/vz：水平初速（玩家丢弃=沿视线抛出）；opts.pickupDelay：拾取冷却秒数
+// （丢弃物需要——否则刚弹出就在 1.5 格入包圈内被自己立刻吸回，丢弃等于没丢）。
+export function spawnItemDrop(x, y, z, itemId, count = 1, opts = {}) {
     const mesh = buildDropMesh(itemId);
     mesh.position.set(x, y, z);
     scene.add(mesh);
-    state.itemDrops.push({ x, y, z, vy: 2.2 + Math.random() * 1.2, itemId, count, mesh, age: 0 });
+    state.itemDrops.push({
+        x, y, z, itemId, count, mesh, age: 0,
+        vy: opts.vy !== undefined ? opts.vy : 2.2 + Math.random() * 1.2,
+        vx: opts.vx || 0,
+        vz: opts.vz || 0,
+        pickupDelay: opts.pickupDelay || 0,
+    });
 }
 
 // 切世界（读档/重开/换槽）时清光物品实体
@@ -103,7 +111,8 @@ export function updateItemDrops(dt) {
         }
         const dx = p.x - d.x, dy = p.y + 0.9 - d.y, dz = p.z - d.z;
         const dist = Math.hypot(dx, dy, dz);
-        if (!p.dead && dist < ITEM_PICKUP_DIST) {
+        const thrown = d.pickupDelay > 0; // 玩家丢弃的实体：冷却内不可拾取，且永不磁吸（捡回需走近 1.5 格）
+        if (!p.dead && d.age >= d.pickupDelay && dist < ITEM_PICKUP_DIST) {
             if (!isCreative()) {
                 state.player.inventory[d.itemId] = (state.player.inventory[d.itemId] || 0) + d.count;
                 updateHotbar();
@@ -112,7 +121,7 @@ export function updateItemDrops(dt) {
             removeDrop(i);
             continue;
         }
-        if (!p.dead && dist < ITEM_MAGNET_DIST) {
+        if (!p.dead && !thrown && dist < ITEM_MAGNET_DIST) {
             // 机器产出磁吸：不用走过去捡（手感优先）
             const step = Math.min(6 * dt, dist);
             d.x += dx / dist * step;
@@ -126,6 +135,20 @@ export function updateItemDrops(dt) {
                 d.y = Math.floor(ny - 0.15) + 1.15; // 落在方块顶面（中心离顶 0.15）
             } else {
                 d.y = ny;
+            }
+            // 水平抛出（丢弃物沿视线飞一段）：目标格实心=撞墙停住，摩擦随时间衰减
+            if (d.vx || d.vz) {
+                const nx = d.x + d.vx * dt, nz = d.z + d.vz * dt;
+                if (isSolid(getBlock(Math.floor(nx), Math.floor(d.y - 0.15), Math.floor(nz)))) {
+                    d.vx = 0;
+                    d.vz = 0;
+                } else {
+                    d.x = nx;
+                    d.z = nz;
+                    const fr = Math.max(0, 1 - 2.5 * dt);
+                    d.vx *= fr;
+                    d.vz *= fr;
+                }
             }
         }
         d.mesh.position.set(d.x, d.y + Math.sin(d.age * 2.2) * 0.04, d.z); // 落地后轻微浮动
