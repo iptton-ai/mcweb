@@ -38,6 +38,9 @@ import {
     buttonFacing,
     buttonId,
     buttonPressed,
+    clutchAxis,
+    clutchEngaged,
+    clutchId,
     doorFacing,
     doorHalf,
     doorId,
@@ -45,6 +48,7 @@ import {
     dustId,
     dustLit,
     isButtonId,
+    isClutchId,
     isDoorId,
     isDustId,
     isLampId,
@@ -73,6 +77,9 @@ import { isSolid, rebuildChunk, refreshPropAt, removeTorchLightAt } from './chun
 import { playDoorSound, playLeverSound } from './audio.js';
 import { spawnTntEntity } from './tnt.js';
 import { enqueuePistonAction, resetPistons, syncObserverRegistry, updatePistonTick } from './piston.js';
+// 离合器 engaged 变化要带起动力全网重算（Create-lite L1）。与本模块被 piston.js 引用同构：
+// redstone ↔ kinetic 双向引用均为运行时函数调用、无模块顶层执行，循环 import 安全
+import { updateKineticNetwork } from './kinetic.js';
 
 // 水平四向（红石粉布线/充能都用它），与 FACING_NORMALS 的 2..5 独立
 const HORIZ_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -296,16 +303,17 @@ export function updateRedstoneTick(dt) {
 }
 
 // ==================== 供能网络重算 ====================
-// 全图扫描红石元件/门/TNT → 从激活源 BFS 沿红石粉传播强度（每格 -1）→
+// 全图扫描红石元件/门/TNT/离合器 → 从激活源 BFS 沿红石粉传播强度（每格 -1）→
 // 计算充能方块集合 → 红石火把目标态入延迟队列 → 回写红石粉亮灭与红石灯，
-// 并对门/TNT 做信号边沿检测（门上升沿开/下降沿关，TNT 上升沿点燃）。
+// 并对门/TNT 做信号边沿检测（门上升沿开/下降沿关，TNT 上升沿点燃）；
+// 离合器按电平语义判定接合/断开并回写变体（Create-lite L1，见文末）。
 // 网格刷新：贴面元件与红石粉走 refreshPropAt（customMesh），红石灯走 rebuildChunk（立方体贴图变化）。
 export function updateRedstoneNetwork() {
     if (!state.blocks) return;
     const blocks = state.blocks;
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
-    const doors = [], tnts = [], pistons = [], observers = [];
+    const doors = [], tnts = [], pistons = [], observers = [], clutches = [];
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -326,15 +334,19 @@ export function updateRedstoneNetwork() {
                     pistons.push({ x, y, z, id });
                 } else if (isObserverId(id)) {
                     observers.push({ x, y, z, id });
+                } else if (isClutchId(id)) {
+                    clutches.push({ x, y, z, id });
                 }
             }
         }
     }
     plateRegistry = plates;
     syncObserverRegistry(observers); // 活塞组：观察者注册进每帧侦测表（piston.js）
+    // 早退门条件含离合器（G2 裁决 R1-03/R2-03）：拆掉最后一根信号源后，
+    // 断开态离合器仍能被这里的重算收敛回接合（电平语义天然自愈）
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
         plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
-        pistons.length === 0 && observers.length === 0) {
+        pistons.length === 0 && observers.length === 0 && clutches.length === 0) {
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
         pistonPoweredPrev = new Map();
@@ -477,6 +489,26 @@ export function updateRedstoneNetwork() {
         if (powered !== (pistonPoweredPrev.get(k) ?? false)) enqueuePistonAction(pi.x, pi.y, pi.z, powered);
     }
     pistonPoweredPrev = pistonPrev;
+
+    // 离合器（Create-lite L1）：电平语义单机制（G2 裁决 R1-02，无 prev 边沿表）——
+    // 每轮重算无条件求电平，红石充能 = 断开（engaged = !powered，Create 语义：信号 = 切断传动）。
+    // 「唯一写出门」：目标 engaged ≠ 当前 ID 编码才回写变体（照红石粉亮灭回写先例）并置
+    // kineticDirty，相等则不写不置 dirty——稳态零多余动力重算（时钟驱动时的重算风暴阀门，
+    // plan §6.2 P-1）。变体切换走 refreshPropAt（customMesh 道具，不重建区块网格）。
+    let kineticDirty = false;
+    for (const cl of clutches) {
+        const powered = isCellActive(cl.x, cl.y, cl.z);
+        const engaged = powered ? 0 : 1;
+        if (clutchEngaged(cl.id) !== engaged) {
+            setBlockSafe(cl.x, cl.y, cl.z, clutchId(clutchAxis(cl.id), engaged));
+            refreshPropAt(cl.x, cl.y, cl.z);
+            kineticDirty = true;
+        }
+    }
+
+    // 仅离合器 engaged 实际变化才触发动力全网重算（电平写出门的出口；动力求解不再改
+    // 红石状态，递归有界——见 plan §3.2）
+    if (kineticDirty) updateKineticNetwork();
 }
 
 // 火把翻转入队：同格旧目标作废（后到覆盖），节拍重置为 RTORCH_DELAY

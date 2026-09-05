@@ -1,5 +1,5 @@
 // ==================== kinetic.js ====================
-// 有状态方块「动力组」（水车/传动轴/齿轮/粉碎轮/机械锯）的高层逻辑，分层与 redstone.js /
+// 有状态方块「动力组」（水车/传动轴/齿轮/粉碎轮/机械锯 + 离合器）的高层逻辑，分层与 redstone.js /
 // piston.js 一致：config.js 把轴向/朝向编码进方块 ID，本模块负责放置、破坏、
 // 动力网络求解 updateKineticNetwork() 与每帧驱动 updateKineticTick()（旋转动画 + 机器计时）。
 //
@@ -10,6 +10,8 @@
 //   换向反转（平行轴并排不连接，对齐 Create 直觉）；机械锯只从背面接传动（朝向那头是锯切目标）。
 //   应力：负载 = Σ配对粉碎轮 32 + Σ机械锯 24；负载 > 容量 = 过载，整网停转；
 //   同一格被相反转向到达 = 卡死，整网停转；无水车的分量 = 无动力静止。
+//   离合器（Create-lite L1）串在轴中间当红石开关：断开（engaged=0）时动力传不过去——
+//   下游停转、水车侧照转；engaged 由红石网络按电平语义回写（见 redstone.js 末段）。
 // 求解照 updateRedstoneNetwork 的事件触发全量重算骨架，派生态写进本模块的运行时 Map
 // （不占方块 ID、不进存档），读档/开新世界后 initKinetic() 重算。
 //
@@ -24,6 +26,7 @@ import {
     BlockInfo,
     BlockTypes,
     CHUNK_SIZE,
+    CLUTCH_ITEM_ID,
     COGWHEEL_ITEM_ID,
     CRUSH_SEC,
     CRUSHER_ITEM_ID,
@@ -41,10 +44,13 @@ import {
     WORLD_DEPTH,
     WORLD_HEIGHT,
     WORLD_WIDTH,
+    clutchEngaged,
+    clutchId,
     cogAxis,
     cogId,
     crusherAxis,
     crusherId,
+    isClutchId,
     isCogId,
     isCrusherId,
     isKineticId,
@@ -97,7 +103,9 @@ let sawCells = []; // 全部机械锯（Commit C 的锯切 tick 用）
 
 // ==================== 放置 ====================
 // 轴类方块朝所点击面的法线方向放置（点顶面 = 立轴，贴墙 = 横轴垂直墙面）；
-// 机械锯朝向 = 被锯方块方向（复用活塞的贴面朝向规则）。返回 null = 成功。
+// 机械锯朝向 = 被锯方块方向（复用活塞的贴面朝向规则）；离合器照轴定轴向、
+// 初始 engaged=1（接合）直落——放进充能位会被随后的红石重算翻到断开（电平语义自愈）。
+// 返回 null = 成功。
 export function placeKinetic(bx, by, bz, itemId, face) {
     if (bx < 0 || bx >= WORLD_WIDTH || by < 0 || by >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH) {
         return '❌ 超出世界边界';
@@ -110,10 +118,14 @@ export function placeKinetic(bx, by, bz, itemId, face) {
         id = itemId === SHAFT_ITEM_ID ? shaftId(axis)
             : itemId === COGWHEEL_ITEM_ID ? cogId(axis)
                 : itemId === WATERWHEEL_ITEM_ID ? waterwheelId(axis)
-                    : crusherId(axis);
+                    : itemId === CLUTCH_ITEM_ID ? clutchId(axis, 1)
+                        : crusherId(axis);
     }
     setBlockSafe(bx, by, bz, id);
     refreshPropAt(bx, by, bz);
+    // 离合器：先重算红石建立 engaged 电平基线（放进充能位会在同一次重算中翻到断开；
+    // 翻转时红石侧的电平写出门会带起一次动力重算），再常规重算动力拓扑
+    if (isClutchId(id)) updateRedstoneNetwork();
     updateKineticNetwork();
     return null;
 }
@@ -199,6 +211,7 @@ export function updateKineticNetwork() {
         }
 
         // 2) 应力统计：容量 = Σ有水水车×64；负载 = Σ配对粉碎轮×32 + Σ锯×24
+        //    （传动轴与离合器是纯传动件不计负载，CLUTCH_SU_LOAD=0）
         let capacity = 0, load = 0, wheels = 0, poweredWheels = 0;
         for (const c of members) {
             if (isWaterwheelId(c.id)) {
@@ -263,12 +276,17 @@ export function updateKineticNetwork() {
 // 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
 // 粉碎轮配对（成对两轮本身就是一对啮合的轮：单驱任意一只，两只都反转着碾）。
 // yield { other, mesh }：mesh = true 表示这是啮合边（转向翻转）。
+// 离合器（Create-lite L1）同轴相邻照轴传动，但 engaged=0（断开）时：自身不外延任何
+// 传动边、且作为 other 时不可被跨过——BFS 遇断开离合器，该格仍是分量成员（可被应力
+// 统计/HUD 查询）但动力传不过去，水车侧照转、下游静止。
 function* neighborsOf(c, byKey) {
+    if (isClutchId(c.id) && clutchEngaged(c.id) === 0) return; // 断开的离合器不外延传动边
     for (const dir of [-1, 1]) {
         const [ax, ay, az] = AXIS_DIRS[c.axis];
         const nx = c.x + ax * dir, ny = c.y + ay * dir, nz = c.z + az * dir;
         const other = byKey.get(keyOf(nx, ny, nz));
         if (!other) continue;
+        if (isClutchId(other.id) && clutchEngaged(other.id) === 0) continue; // 对方断开：不可被跨过
         if (c.saw) {
             // 锯的正面（朝向邻格）是被锯目标，不参与传动
             const [fx, fy, fz] = FACING_NORMALS[sawFacing(c.id)];
@@ -325,9 +343,12 @@ export function kineticStatusAt(x, y, z) {
     const id = getBlock(x, y, z);
     if (!isKineticId(id)) return null;
     const name = BlockInfo[id]?.name || '动力方块';
+    // 离合器断开：优先提示断开态（断开后自成无动力分量，常规文案会误报「需要水车驱动」）
+    if (isClutchId(id) && clutchEngaged(id) === 0) return `⚙️ ${name} · 断开（红石充能中，传动已切断）`;
     const k = kineticMap.get(keyOf(x, y, z));
     const c = k && components[k.compId];
-    const prefix = isCrusherId(id) && !crusherPaired.has(keyOf(x, y, z)) ? '未配对 · ' : '';
+    let prefix = isCrusherId(id) && !crusherPaired.has(keyOf(x, y, z)) ? '未配对 · ' : '';
+    if (isClutchId(id)) prefix += '接合 · ';
     if (!c) return `⚙️ ${name} · ${prefix}静止`;
     if (c.jammed) return `⚙️ ${name} · ${prefix}⛔ 卡死（传动转向冲突）`;
     if (c.overstressed) return `⚙️ ${name} · ${prefix}⛔ 过载（应力 ${c.load}/${c.capacity}，再加一台水车）`;
