@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -1053,6 +1053,10 @@ export function generateAllTextures() {
         blockUVs[CRUSHER_BASE + i] = blockUVs[CRUSHER_ITEM_ID] || blockUVs[BlockTypes.STONE];
     }
     for (let i = 0; i < 6; i++) blockUVs[SAW_BASE + i] = blockUVs[SAW_ITEM_ID] || blockUVs[BlockTypes.STONE];
+
+    // 离合器（Create-lite L1）全部变体共享物品图标 tile：暂复用传动轴木纹——本体是 3D 网格
+    // 不走图集，这里的 UV 只喂手模型像素板/物品栏图标/掉落物（专用 tile 由链 2/3 统一补画）
+    for (let i = 0; i < CLUTCH_COUNT; i++) blockUVs[CLUTCH_BASE + i] = blockUVs[SHAFT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位

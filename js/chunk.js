@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, cogAxis, crusherAxis, doorHalf, dustLit, isButtonId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, doorHalf, dustLit, isButtonId, isClutchId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -428,11 +428,13 @@ function buildKineticMesh(blockType) {
         const axis = isShaftId(blockType) ? shaftAxis(blockType)
             : isCogId(blockType) ? cogAxis(blockType)
                 : isWaterwheelId(blockType) ? waterwheelAxis(blockType)
-                    : crusherAxis(blockType);
+                    : isClutchId(blockType) ? clutchAxis(blockType)
+                        : crusherAxis(blockType);
         axisNormal = AXIS_TO_NORMAL[axis];
         if (isShaftId(blockType)) buildShaftMesh(spinner);
         else if (isCogId(blockType)) buildCogMesh(spinner);
         else if (isWaterwheelId(blockType)) buildWaterwheelMesh(spinner);
+        else if (isClutchId(blockType)) buildClutchMesh(spinner, clutchEngaged(blockType) === 1);
         else buildCrusherMesh(spinner);
     }
     orient.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...axisNormal));
@@ -510,6 +512,35 @@ function buildCrusherMesh(spinner) {
     }
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.86, 8), new THREE.MeshLambertMaterial({ color: 0x3a3a3a }));
     spinner.add(hub);
+}
+
+// 离合器（Create-lite L1）：中央通轴 + 两片法兰盘。接合 = 两盘贴合在格心传动力（木色，
+// 随全网旋转动画转动）；断开 = 两盘各退向两端、中间露出红色指示点 + 盘面变暗灰——
+// 断开后该格自成无动力分量不转，靠变色 + 红点一眼可辨「开关断开了」
+function buildClutchMesh(spinner, engaged) {
+    const rod = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.1, 1, 8),
+        new THREE.MeshLambertMaterial({ color: 0x5a4222 }),
+    );
+    spinner.add(rod);
+    const plateMat = new THREE.MeshLambertMaterial({ color: engaged ? 0x9c7a48 : 0x565049 });
+    const gap = engaged ? 0 : 0.14;
+    for (const s of [-1, 1]) {
+        const plate = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.3, 0.14, 12),
+            plateMat,
+        );
+        plate.position.y = s * (0.07 + gap);
+        spinner.add(plate);
+    }
+    if (!engaged) {
+        // 红色断开指示：比通轴宽的小方块嵌在两盘间隙里（断开态整格静止，指示不随之旋转）
+        const dot = new THREE.Mesh(
+            new THREE.BoxGeometry(0.26, 0.08, 0.26),
+            new THREE.MeshLambertMaterial({ color: 0xff4030, emissive: 0xd02010, emissiveIntensity: 1.2 }),
+        );
+        spinner.add(dot);
+    }
 }
 
 // 机械锯：圆锯片（进 spinner 随机旋转）+ 背面固定机身（挂 orient 不转）
