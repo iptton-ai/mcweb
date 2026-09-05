@@ -121,8 +121,8 @@ function mountedFacing(id) {
     return 0;
 }
 
-// facing 反面查表（0上↔1下 2北↔5西 3东↔4南）
-const OBS_OUT_FACING = [1, 0, 5, 4, 3, 2];
+// facing 反面查表（0上↔1下 2北↔4南 3东↔5西）
+const OBS_OUT_FACING = [1, 0, 4, 5, 2, 3];
 
 function isSupportedBy(id, sx, sy, sz, x, y, z) {
     if (isLampId(id)) return false; // 红石灯是实心立方体、随处可放，无挂靠依赖（亮灭两态一并排除）
