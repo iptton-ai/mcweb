@@ -11,3 +11,6 @@ server-rust/target/
 
 # ZCode 会话目录（AI 工具本地文件）
 .zcode/
+
+# AI 助手项目指南：仅本地使用，不入库（已从历史中清除）
+AGENTS.md
