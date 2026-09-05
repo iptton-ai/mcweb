@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -203,6 +203,8 @@ export function generateAllTextures() {
         { type: ToolTypes.WOOD_SWORD, top: 70, side: 70, bottom: 70, name: 'wood_sword' },
         { type: ToolTypes.STONE_SWORD, top: 71, side: 71, bottom: 71, name: 'stone_sword' },
         { type: ToolTypes.DIAMOND_SWORD, top: 72, side: 72, bottom: 72, name: 'diamond_sword' },
+        // ---- 物流+控制组（Create-lite L1）：传送带 tile 73..74（顶面箭头 / 带沿侧面） ----
+        { type: BELT_ITEM_ID, top: 73, side: 74, bottom: 74, name: 'belt' }, // 传送带（实际是 3D 薄板道具，顶面箭头指北为基准、按 dir 旋转整板）
     ];
 
     const drawFunctions = {
@@ -967,6 +969,38 @@ export function generateAllTextures() {
         70: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#a8864c', '#7c5e2e'),
         71: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#8a8d90', '#63666a'),
         72: (ctx, x, y, s) => drawTool(ctx, x, y, 'sword', '#51dec7', '#2fa89c'),
+        // ---- 物流+控制组（Create-lite L1 链 2）：传送带 73 顶面（箭头指北=贴图上方向）/ 74 带沿侧面 ----
+        73: (ctx, x, y, s) => { // 传送带顶面：深灰胶带底 + 纵向防滑纹 + 中央橙色人字箭头（指向北=贴图上方）
+            ctx.fillStyle = '#4a4438';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#5a5344';
+            for (let i = 1; i < s; i += 3) ctx.fillRect(x + i, y + 1, 1, s - 2); // 纵向防滑纹
+            ctx.fillStyle = '#3a352c';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1); // 两端收边
+            // 人字箭头：两道斜劈汇成向上（北）的尖
+            ctx.fillStyle = '#e8a030';
+            ctx.fillRect(x + 7, y + 2, 2, 7); // 箭杆
+            ctx.fillRect(x + 7, y + 1, 2, 1);
+            ctx.fillRect(x + 4, y + 4, 2, 2);
+            ctx.fillRect(x + 3, y + 6, 2, 2); // 左翼
+            ctx.fillRect(x + 10, y + 4, 2, 2);
+            ctx.fillRect(x + 11, y + 6, 2, 2); // 右翼
+            ctx.fillStyle = '#c88420';
+            ctx.fillRect(x + 7, y + 9, 2, 3); // 箭杆根
+        },
+        74: (ctx, x, y, s) => { // 传送带侧面（带沿）：上下金属滚边 + 中段深色胶带
+            ctx.fillStyle = '#6a6456';
+            ctx.fillRect(x, y, s, 3); // 上滚边
+            ctx.fillStyle = '#57503f';
+            ctx.fillRect(x, y + 3, s, s - 6); // 胶带侧壁
+            ctx.fillStyle = '#3a352c';
+            for (let i = 0; i < s; i += 4) ctx.fillRect(x + i, y + 5, 2, s - 9); // 段接缝
+            ctx.fillStyle = '#6a6456';
+            ctx.fillRect(x, y + s - 3, s, 3); // 下滚边
+            ctx.fillStyle = '#8a8474';
+            ctx.fillRect(x, y, s, 1); // 上沿高光
+        },
     };
 
     for (const tile of tiles) {
@@ -1057,6 +1091,10 @@ export function generateAllTextures() {
     // 离合器（Create-lite L1）全部变体共享物品图标 tile：暂复用传动轴木纹——本体是 3D 网格
     // 不走图集，这里的 UV 只喂手模型像素板/物品栏图标/掉落物（专用 tile 由链 2/3 统一补画）
     for (let i = 0; i < CLUTCH_COUNT; i++) blockUVs[CLUTCH_BASE + i] = blockUVs[SHAFT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
+
+    // 传送带（Create-lite L1 链 2）4 个 dir 变体共享物品图标 tile（本体是按 dir 旋转的 3D 薄板，
+    // 顶面箭头 tile 73 由 chunk.js 的 makeTexturedBoxGeo 直接铺 UV，不走这里的 blockUVs）
+    for (let i = 0; i < BELT_COUNT; i++) blockUVs[BELT_BASE + i] = blockUVs[BELT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位

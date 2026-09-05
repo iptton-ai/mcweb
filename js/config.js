@@ -558,6 +558,11 @@ export const CLUTCH_ITEM_ID = CLUTCH_BASE; // 物品栏「离合器」用 X 轴�
 
 export const CLUTCH_SU_LOAD = 0; // 离合器是纯传动件，不计应力负载（照传动轴）
 
+// 传送带数值常量（Create-lite L1 链 2，集中此处便于调平）
+export const BELT_SU_LOAD = 4; // 每格传送带的应力负载（纯转运件，远低于粉碎轮 32）
+export const BELT_SPEED = 1.5; // 带速（格/秒，恒定——全网 8 RPM 无变化维度，plan §5 差异 2）
+export const BELT_RIDE_Y = 0.15; // carried 物品骑行高度（带格底起算，与 items.js 落地公式的 0.15 同源）
+
 // 离合器 ID 编解码（纯函数，供 redstone.js / kinetic.js / chunk.js / interaction.js 共用）。
 // 对外语义统一为 engaged（1=接合传动力 / 0=断开——红石充能），位布局见上方段注释。
 export function clutchId(axis, engaged) {
@@ -576,6 +581,26 @@ export function clutchEngaged(id) {
     return ((id - CLUTCH_BASE) & 1) === 0 ? 1 : 0;
 }
 
+// 传送带 ID 编解码（链 2 实现）：dir 0..3 = 北/东/南/西（与门 facing 同序），水平平带。
+// 贴实心方块顶面放置（照红石粉/压力板先例），dir = 玩家水平朝向量化四向
+// （复用 door.js 的 facingFromYaw）。solid false（薄板不参与碰撞，照压力板）；
+// 带上物品实体与玩家的转运见 js/items.js（carried）与 js/playerPhysics.js（骑带）。
+export function beltId(dir) {
+    return BELT_BASE + dir;
+}
+
+export function isBeltId(id) {
+    return id >= BELT_BASE && id < BELT_BASE + BELT_COUNT;
+}
+
+export function beltDir(id) {
+    return id - BELT_BASE;
+}
+
+// 带向法线表（dir → 水平单位向量）：北(-Z)/东(+X)/南(+Z)/西(-X)，与门 facing 同序，
+// js/items.js 的 carried 平移与 js/playerPhysics.js 的骑带都按它取方向
+export const BELT_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
+
 // 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组，用常量判段界；
 // 动力求解器全图扫描的热路径——两次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
@@ -585,8 +610,9 @@ export function isKineticId(id) {
 
 // 动力方块的传动轴：轴类方块取编码轴，机械锯取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
-// 传送带（链 2）无传动轴：届时返回 null，neighborsOf 走带专属分支、不读本值
+// 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
 export function kineticAxisOf(id) {
+    if (isBeltId(id)) return null;
     if (isSawId(id)) {
         const f = sawFacing(id);
         return f <= 1 ? AXIS_Y : (f === 2 || f === 4) ? AXIS_Z : AXIS_X;
@@ -605,6 +631,7 @@ export function kineticItemId(id) {
     if (isWaterwheelId(id)) return WATERWHEEL_ITEM_ID;
     if (isCrusherId(id)) return CRUSHER_ITEM_ID;
     if (isClutchId(id)) return CLUTCH_ITEM_ID;
+    if (isBeltId(id)) return BELT_ITEM_ID;
     return SAW_ITEM_ID;
 }
 
@@ -861,6 +888,7 @@ export const HotbarBlocks = [
     CRUSHER_ITEM_ID, // 粉碎轮：水平相邻两轮同轴配对，上方格投料碾碎（石头→圆石→沙砾→沙）
     SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
     CLUTCH_ITEM_ID, // 离合器：串进传动轴的红石开关——充能断开传动、断电接合（见 js/kinetic.js）
+    BELT_ITEM_ID, // 传送带：通电后把落上的物品沿箭头运走，玩家站上也会被带动（见 js/kinetic.js / js/items.js）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
     // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛 ----
     BlockTypes.COAL_ORE, // 煤矿石：掉煤炭（燃料/火把）
@@ -1053,4 +1081,17 @@ for (let axis = 0; axis < 3; axis++) {
             drop: CLUTCH_ITEM_ID,
         };
     }
+}
+// 传送带（Create-lite L1 链 2）：贴顶面的静止薄板——solid false 照压力板不参与碰撞，
+// transparent + customMesh 走道具网格（chunk.js 薄板按 dir 旋转箭头贴图）。
+// 带格计入动力分量（BELT_SU_LOAD 4/格）；运转时带走落上的物品与玩家（js/items.js /
+// playerPhysics.js）。drop 固定代表变体（北向），防变体 ID 进背包不叠堆（活塞压碎/拆支撑返还）
+for (let dir = 0; dir < 4; dir++) {
+    BlockInfo[beltId(dir)] = {
+        name: `传送带（${DOOR_SUFFIX[dir][1]}向）`,
+        solid: false, transparent: true, customMesh: true, kinetic: true,
+        color: '#6a5a3a',
+        hardness: 0.5, tool: 'axe',
+        drop: BELT_ITEM_ID,
+    };
 }
