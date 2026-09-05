@@ -20,6 +20,7 @@ import {
     BUTTON_ITEM_ID,
     BUTTON_PULSE_SEC,
     CHUNK_SIZE,
+    CLUTCH_BASE,
     DUST_BASE,
     DUST_ITEM_ID,
     FACING_NORMALS,
@@ -347,7 +348,9 @@ export function updateRedstoneNetwork() {
                     pistons.push({ x, y, z, id });
                 } else if (isObserverId(id)) {
                     observers.push({ x, y, z, id });
-                } else if (isClutchId(id)) {
+                } else if (id >= CLUTCH_BASE && isClutchId(id)) {
+                    // 前置 id>=CLUTCH_BASE 短路：全图扫描对每个非零方块都要过这条 else-if 链，
+                    // 世界绝大多数方块 ID<202，一次比较即跳出（G3 P01 压线超门 0.3ms 的成因）
                     clutches.push({ x, y, z, id });
                 }
             }
