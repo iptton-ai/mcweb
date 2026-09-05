@@ -226,7 +226,7 @@ function planExtend(px, py, pz, f) {
             const dk = pushKind(getBlock(dx, dy, dz));
             if (dk === PUSH_FIXED) return null;
             if (dk === PUSH_POP) popped.push({ x: dx, y: dy, z: dz });
-            else if (dk === PUSH_MOVE) queue.push({ x: dx, y: dy, dz });
+            else if (dk === PUSH_MOVE) queue.push({ x: dx, y: dy, z: dz });
         } else {
             return null; // 目的格出界：这块会被推出世界 → 整个伸出动作失败（对齐原版，同上方活塞头格越界的语义）
         }
