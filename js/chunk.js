@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -415,6 +415,9 @@ function buildKineticMesh(blockType) {
     // 传送带：贴顶面的静止薄板（照压力板入缓存、按 dir 旋转箭头贴图）——不挂
     // userData.kinetic、不进 spinner 层级：带不转，物品移动本身就是方向反馈（差异 4）
     if (isBeltId(blockType)) return buildBeltMesh(blockType);
+    // 投料器：无旋转件的静止机身（方箱+正面喷嘴），照锯的机身 orient 逻辑摆朝向——
+    // 不挂 userData.kinetic、无 spinner（投料器不转，放置动作本身就是工作反馈，链 3）
+    if (isDeployerId(blockType)) return buildDeployerMesh(blockType);
     const spinner = new THREE.Group(); // 几何一律沿局部 +Y 构建（= 旋转轴）
     const orient = new THREE.Group();
     orient.add(spinner); // spinner 必须是第一个子节点（见上方约定）
@@ -581,6 +584,32 @@ function buildSawMesh(spinner, orient) {
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), new THREE.MeshLambertMaterial({ color: 0x6a5a3a }));
     body.position.set(0, -0.42, 0); // 机身在朝向的反侧（orient 的 +Y 指向被锯方块）
     orient.add(body);
+}
+
+// 投料器（Create-lite L1 链 3）：0.9 见方铜木机身（局部 +Y 面 = 正面，铺 tile 75 投料口、
+// 其余五面 tile 76 机壳）+ 正面伸出的方形喷嘴——整组挂 orient 按朝向摆放（orient 的
+// +Y 指向被投格，照锯的 orient 逻辑），无 spinner 旋转件（投料器不转）。
+// 6 个 facing 变体各自入 propMeshCache（静态无逐格依赖，照压力板模式）。
+function buildDeployerMesh(blockType) {
+    const orient = new THREE.Group();
+    orient.position.set(0, 0.5, 0); // 格中心
+    const root = new THREE.Group();
+    root.add(orient);
+    const body = new THREE.Mesh(
+        makeTexturedBoxGeo(0.9, 0.9, 0.9, {
+            py: 'deployer', // 正面 = 投料口贴图（tile 75）
+            ny: 'deployer_side',
+            px: 'deployer_side', nx: 'deployer_side', pz: 'deployer_side', nz: 'deployer_side',
+        }),
+        pistonAtlasMat,
+    );
+    orient.add(body);
+    // 正面喷嘴：中央小方柱沿局部 +Y 伸出机身面（越过 0.45 半高，指向投料目标）
+    const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.3), new THREE.MeshLambertMaterial({ color: 0x5a5038 }));
+    nozzle.position.y = 0.52;
+    orient.add(nozzle);
+    orient.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...FACING_NORMALS[deployerFacing(blockType)]));
+    return root;
 }
 
 // ==================== 火把光源 ====================
