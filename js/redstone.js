@@ -399,6 +399,7 @@ export function updateRedstoneNetwork() {
         for (const [dx, dz] of HORIZ_DIRS) powerBlock(x + dx, y, z + dz);
     }
     for (const s of activeSources) {
+        if (isRTorchId(s.id)) continue; // 火把不充能自己的挂靠方块（原版行为）——否则亮火把自己供能挂靠块=310ms 自振荡
         const [dx, dy, dz] = FACING_NORMALS[mountedFacing(s.id)];
         // 观察者的 mountedFacing 是背面（输出面）：充能 s+法线 = 背面输出格；
         // 其余源的 mountedFacing 是挂靠方向：充能 s-法线 = 挂靠/支撑方块
