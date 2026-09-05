@@ -535,13 +535,57 @@ export function sawFacing(id) {
     return id - SAW_BASE;
 }
 
-// 是否动力组任一方块（ID 区间 148..169 连续，可直接范围判断）
+// ==================== 有状态方块：物流+控制组（Create-lite 批次 L1，方案见 docs/l1-logistics-plan.md） ====================
+// 三段 ID 一次性前置预声明（G2 裁决 R1-06：段界声明前置，后续链只补编解码不再动段界）：
+//   传送带 ID = BELT_BASE + dir(0..3)（北/东/南/西水平四向，链 2 实现编解码）
+//   投料器 ID = DEPLOYER_BASE + facing(0..5)（复用 FACING_NORMALS，照机械锯，链 3 实现）
+//   离合器 ID = CLUTCH_BASE + axis*2 + dis（本链 1 实现）：照传动轴的 3 轴编码 + 通断态
+//             编码进 ID。Create 语义：红石充能 = 断开传动。低位取「断开位」dis
+//             （0=接合（默认）/ 1=断开（红石充能））而非接合位——使 CLUTCH_BASE 恰为
+//             X 轴·接合代表变体，与门/红石组/活塞组 *_ITEM_ID=BASE 的惯例一致
+//             （plan §2.2 的公式句与物品代表变体句在此取舍，见提交说明）。
+//             接合/断开由红石网络每轮重算按电平回写变体（js/redstone.js，照红石粉
+//             亮灭先例），存档零改动。
+export const BELT_BASE = 202;
+export const BELT_COUNT = 4;
+export const DEPLOYER_BASE = 206;
+export const DEPLOYER_COUNT = 6;
+export const CLUTCH_BASE = 212;
+export const CLUTCH_COUNT = 6;
+export const BELT_ITEM_ID = BELT_BASE; // 物品栏「传送带」用北向变体代表（链 2 起用）
+export const DEPLOYER_ITEM_ID = DEPLOYER_BASE; // 物品栏「投料器」用朝上变体代表（链 3 起用）
+export const CLUTCH_ITEM_ID = CLUTCH_BASE; // 物品栏「离合器」用 X 轴·接合 变体代表
+
+export const CLUTCH_SU_LOAD = 0; // 离合器是纯传动件，不计应力负载（照传动轴）
+
+// 离合器 ID 编解码（纯函数，供 redstone.js / kinetic.js / chunk.js / interaction.js 共用）。
+// 对外语义统一为 engaged（1=接合传动力 / 0=断开——红石充能），位布局见上方段注释。
+export function clutchId(axis, engaged) {
+    return CLUTCH_BASE + axis * 2 + (engaged ? 0 : 1);
+}
+
+export function isClutchId(id) {
+    return id >= CLUTCH_BASE && id < CLUTCH_BASE + CLUTCH_COUNT;
+}
+
+export function clutchAxis(id) {
+    return (id - CLUTCH_BASE) >> 1;
+}
+
+export function clutchEngaged(id) {
+    return ((id - CLUTCH_BASE) & 1) === 0 ? 1 : 0;
+}
+
+// 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组，用常量判段界；
+// 动力求解器全图扫描的热路径——两次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
-    return id >= SHAFT_BASE && id < SAW_BASE + 6;
+    return (id >= SHAFT_BASE && id < SAW_BASE + 6) ||
+        (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT);
 }
 
 // 动力方块的传动轴：轴类方块取编码轴，机械锯取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
+// 传送带（链 2）无传动轴：届时返回 null，neighborsOf 走带专属分支、不读本值
 export function kineticAxisOf(id) {
     if (isSawId(id)) {
         const f = sawFacing(id);
@@ -550,6 +594,7 @@ export function kineticAxisOf(id) {
     if (isShaftId(id)) return shaftAxis(id);
     if (isCogId(id)) return cogAxis(id);
     if (isWaterwheelId(id)) return waterwheelAxis(id);
+    if (isClutchId(id)) return clutchAxis(id);
     return crusherAxis(id);
 }
 
@@ -559,6 +604,7 @@ export function kineticItemId(id) {
     if (isCogId(id)) return COGWHEEL_ITEM_ID;
     if (isWaterwheelId(id)) return WATERWHEEL_ITEM_ID;
     if (isCrusherId(id)) return CRUSHER_ITEM_ID;
+    if (isClutchId(id)) return CLUTCH_ITEM_ID;
     return SAW_ITEM_ID;
 }
 
@@ -814,6 +860,7 @@ export const HotbarBlocks = [
     COGWHEEL_ITEM_ID, // 齿轮：垂直轴相邻啮合 = 换向反转/分流；平行并排不连接
     CRUSHER_ITEM_ID, // 粉碎轮：水平相邻两轮同轴配对，上方格投料碾碎（石头→圆石→沙砾→沙）
     SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
+    CLUTCH_ITEM_ID, // 离合器：串进传动轴的红石开关——充能断开传动、断电接合（见 js/kinetic.js）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
     // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛 ----
     BlockTypes.COAL_ORE, // 煤矿石：掉煤炭（燃料/火把）
@@ -993,4 +1040,17 @@ for (let facing = 0; facing < 6; facing++) {
         solid: true, transparent: true, customMesh: true, kinetic: true,
         color: '#b8bcc4', hardness: 1.5, tool: 'pickaxe',
     };
+}
+// 离合器（Create-lite L1 链 1）：串进传动轴中段的电控开关，红石充能 = 断开（engaged 编码进
+// ID，红石网络每轮重算回写变体，见 js/redstone.js）；drop 固定代表变体，防变体 ID 进背包不叠堆
+for (let axis = 0; axis < 3; axis++) {
+    for (let engaged = 0; engaged < 2; engaged++) {
+        BlockInfo[clutchId(axis, engaged)] = {
+            name: `离合器（${AXIS_NAMES[axis]}向${engaged ? '' : '·断开'}）`,
+            solid: true, transparent: true, customMesh: true, kinetic: true,
+            color: engaged ? '#9c7a48' : '#6a6a6a',
+            hardness: 0.8, tool: 'axe',
+            drop: CLUTCH_ITEM_ID,
+        };
+    }
 }
