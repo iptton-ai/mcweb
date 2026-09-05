@@ -24,11 +24,12 @@ BASE = "http://127.0.0.1:8000"
 # 页面侧公共前导：每次 evaluate 自包含（skill 坑：不假设 window.__xxx 还在）
 PREAMBLE = r"""
 const B='%s/js/';
-const [cfg,st,w,rs,ps,kn,it,itm,eng,um,ui,sg,door]=await Promise.all([
+const [cfg,st,w,rs,ps,kn,it,itm,eng,um,ui,sg,door,bq,tn,pp]=await Promise.all([
  import(B+'config.js'),import(B+'state.js'),import(B+'world.js'),
  import(B+'redstone.js'),import(B+'piston.js'),import(B+'kinetic.js'),
  import(B+'interaction.js'),import(B+'items.js'),import(B+'engine.js'),
- import(B+'uiModal.js'),import(B+'ui.js'),import(B+'saveGame.js'),import(B+'door.js')]);
+ import(B+'uiModal.js'),import(B+'ui.js'),import(B+'saveGame.js'),import(B+'door.js'),
+ import(B+'buildQueue.js'),import(B+'tnt.js'),import(B+'playerPhysics.js')]);
 const S=st.state, BT=cfg.BlockTypes, HB=cfg.HotbarBlocks, IT=cfg.ItemTypes;
 const gb=(x,y,z)=>w.getBlock(Math.floor(x),Math.floor(y),Math.floor(z));
 const sb=(x,y,z,t)=>w.setBlockSafe(Math.floor(x),Math.floor(y),Math.floor(z),t);
@@ -128,14 +129,22 @@ class E2E:
         return r
 
     def fresh_page(self):
-        """清空本地存档后重新导航：保证 boot 时 loadGame 失败 → freshWorld 全新世界。"""
+        """导航后强制重生成全新世界。
+        注意：清 localStorage 不够——助手快照机制会在页面卸载/重载间恢复最近世界
+        （行为正常，见 l1 复验记录），故 nav 后必须换随机种子 generateWorld。"""
         self.run("clearSaves(); return {ok:true};")
         self.page.nav(BASE + "/", settle=6.0)
         res = self.run(r"""
         document.getElementById('start-screen').click();
         await sleep(300);
-        clearSaves(); setDay();
-        return {uiState: um.getUIState(), rafAlive: window.__rafAlive === undefined ? (window.__rafAlive = await rafAlive()) : window.__rafAlive};
+        clearSaves();
+        S.worldSeed=(Math.random()*0x7fffffff)|0;
+        w.generateWorld();
+        rs.initRedstone(); kn.initKinetic(); itm.clearItemDrops();
+        if(ps.resetPistons)ps.resetPistons();
+        S.player.x=64;S.player.y=40;S.player.z=64;S.player.vx=S.player.vy=S.player.vz=0;
+        setDay();
+        return {uiState: um.getUIState(), seed: S.worldSeed};
         """)
 
     def close(self):
