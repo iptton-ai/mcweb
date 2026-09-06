@@ -1,7 +1,7 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, isKineticId, isLampId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, pistonSticky } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, isKineticId, isLampId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
@@ -45,6 +45,34 @@ function getPickRay() {
 // 触及距离（照搬原版：创造 5.2 格 / 生存 4.5 格）
 function reachDistance() {
     return isCreative() ? REACH_CREATIVE : REACH_SURVIVAL;
+}
+
+// 射线与 AABB 的 slab 区间求交：命中返回参数 t（落在 [tMin,tMax] 内），未命中返回 -1。
+// min/max 为世界坐标数组 [x0,y0,z0]/[x1,y1,z1]，o/d 为射线原点与方向。
+function rayVsAABB(o, d, min, max, tMin, tMax) {
+    let enter = tMin;
+    let exit = tMax;
+    const axes = ['x', 'y', 'z'];
+    for (let k = 0; k < 3; k++) {
+        const a = axes[k];
+        const da = d[a];
+        const oa = o[a];
+        if (da === 0) {
+            if (oa < min[k] || oa > max[k]) return -1;
+            continue;
+        }
+        let t0 = (min[k] - oa) / da;
+        let t1 = (max[k] - oa) / da;
+        if (t0 > t1) {
+            const s = t0;
+            t0 = t1;
+            t1 = s;
+        }
+        if (t0 > enter) enter = t0;
+        if (t1 < exit) exit = t1;
+        if (enter > exit) return -1;
+    }
+    return enter;
 }
 
 // ==================== 方块交互 ====================
@@ -91,10 +119,33 @@ export function raycastBlocks() {
         }
         const block = getBlock(x, y, z);
         if (block !== BlockTypes.AIR && block !== BlockTypes.WATER) {
+            // 选取形状（照原版 outlineShape）：不满格的道具按 outline 局部 AABB 精确求交，
+            // 射线只穿过格子空白部分 = 不算命中，继续 DDA 打到后面的方块（无 outline = 整格）
+            const boxes = outlineOf(block);
+            let tHit = dist;
+            if (boxes) {
+                const tExit = Math.min(tMaxX, tMaxY, tMaxZ); // 射线在本格内的参数区间 [dist, tExit]
+                tHit = -1;
+                for (let i = 0; i < boxes.length; i += 6) {
+                    const t = rayVsAABB(origin, direction,
+                        [x + boxes[i], y + boxes[i + 1], z + boxes[i + 2]],
+                        [x + boxes[i + 3], y + boxes[i + 4], z + boxes[i + 5]], dist, tExit);
+                    if (t >= 0) {
+                        tHit = t;
+                        break;
+                    }
+                }
+                if (tHit < 0) {
+                    lastX = x;
+                    lastY = y;
+                    lastZ = z;
+                    continue;
+                }
+            }
             // 命中点必须落在手的触及范围内（从眼睛算起），否则视为够不着
-            const hx = origin.x + direction.x * dist;
-            const hy = origin.y + direction.y * dist;
-            const hz = origin.z + direction.z * dist;
+            const hx = origin.x + direction.x * tHit;
+            const hy = origin.y + direction.y * tHit;
+            const hz = origin.z + direction.z * tHit;
             if (Math.hypot(hx - eye.x, hy - eye.y, hz - eye.z) > reach + 0.01) return null;
             return { x, y, z, block, face: { dx: lastX - x, dy: lastY - y, dz: lastZ - z } };
         }

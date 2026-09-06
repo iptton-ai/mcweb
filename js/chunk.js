@@ -126,17 +126,17 @@ export function getPropMesh(blockType) {
 function orientMounted(mounted, facing, t) {
     const [nx, ny, nz] = FACING_NORMALS[facing];
     if (ny === 1) {
-        mounted.position.set(0, t / 2, 0); // 贴地：道具底面贴格底
+        mounted.position.set(0, 0, 0); // 贴地：道具底面贴格底（道具局部 y∈[0,t]）
     } else if (ny === -1) {
         mounted.rotation.x = Math.PI; // 贴顶：翻转后底面贴格顶
-        mounted.position.set(0, 1 - t / 2, 0);
+        mounted.position.set(0, 1, 0);
     } else {
-        // 壁挂：+Y 法线旋转到墙法线，道具中心抬到格中部，贴靠面与墙面齐平
+        // 壁挂：+Y 旋到挂靠面法线（指向格内），原点摆到墙面格心——道具从墙面伸进格内
         mounted.quaternion.setFromUnitVectors(
             new THREE.Vector3(0, 1, 0),
             new THREE.Vector3(nx, ny, nz),
         );
-        mounted.position.set(0, 0.5, 0);
+        mounted.position.set(-nx * 0.5, 0.5, -nz * 0.5);
     }
 }
 
@@ -163,7 +163,7 @@ function buildRedstoneTorchMesh(blockType) {
     } else {
         const [nx, , nz] = FACING_NORMALS[facing];
         group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(nx, 0, nz));
-        group.position.set(0.5 + nx * 0.5, 0.5, 0.5 + nz * 0.5); // 杆底贴墙面格心
+        group.position.set(-nx * 0.5, 0.5, -nz * 0.5); // 杆底贴墙面格心，杆身伸进格内（root 原点在格底面中心）
         root.add(group);
     }
     return root;

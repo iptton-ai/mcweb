@@ -1205,3 +1205,100 @@ for (let facing = 0; facing < 6; facing++) {
         drop: DEPLOYER_ITEM_ID,
     };
 }
+
+// ==================== 选取形状（outline）：不满格道具的「被瞄准形状」 ====================
+// 照原版把「占一格」与「被瞄准/框选的形状」解耦：outline 是格内局部 AABB 列表
+// （平铺 [x0,y0,z0,x1,y1,z1, ...]，格子角点坐标系）。interaction.js 的 raycastBlocks
+// 命中格子后按它做射线求交——穿过格子空白部分不算命中，继续打到后面的方块；
+// highlight.js 的准星黑框按全部 AABB 的包围盒缩放。碰撞照旧走 BlockInfo.solid
+// （原版同理：碰撞箱/选取框/渲染模型三者解耦，小道具无碰撞但有小选取框）。
+// 形状纯派生自 ID（朝向/开合已在 ID 里），不进存档；未登记 outline 的方块 = 整格（旧行为）。
+// 数值取自各道具网格的实测包围盒（tests/e2e/probe_outline.py）。
+
+// 沿 facing 法线的单盒：法线轴上占 [deep0,deep1]（从挂靠面量进格内），其余两轴 [c0,c1]
+function alongOutline(facing, deep0, deep1, c0, c1) {
+    const [nx, ny, nz] = FACING_NORMALS[facing];
+    const b = [c0, c0, c0, c1, c1, c1];
+    const axis = ny !== 0 ? 1 : nx !== 0 ? 0 : 2;
+    const sign = ny || nx || nz;
+    if (sign > 0) {
+        b[axis] = deep0;
+        b[axis + 3] = deep1;
+    } else {
+        b[axis] = 1 - deep1;
+        b[axis + 3] = 1 - deep0;
+    }
+    return b;
+}
+
+BlockInfo[BlockTypes.TORCH].outline = [0.41, 0, 0.41, 0.59, 0.76, 0.59];
+BlockInfo[BlockTypes.FLOWER].outline = [0.2, 0, 0.2, 0.8, 0.9, 0.8]; // 十字贴图近满格，框收紧到花株主体
+for (const lit of [0, 1]) BlockInfo[dustId(lit)].outline = [0.07, 0, 0.07, 0.93, 0.06, 0.93];
+BlockInfo[plateId(0)].outline = [0.1, 0, 0.1, 0.9, 0.07, 0.9];
+BlockInfo[plateId(1)].outline = [0.1, 0, 0.1, 0.9, 0.03, 0.9]; // 被踩下更薄（原版 1/16 → 1/32 同思路）
+for (const lit of [0, 1]) {
+    BlockInfo[rtorchId(0, lit)].outline = [0.42, 0, 0.42, 0.58, 0.64, 0.58];
+    for (let f = 2; f <= 5; f++) BlockInfo[rtorchId(f, lit)].outline = alongOutline(f, 0, 0.64, 0.42, 0.58);
+}
+for (let f = 0; f < 6; f++) {
+    for (const pressed of [0, 1]) {
+        const t = pressed ? 0.05 : 0.1;
+        BlockInfo[buttonId(f, pressed)].outline = alongOutline(f, 0, t, 0.375, 0.625);
+    }
+}
+// 拉杆外形 = 底座 + 斜杆扫掠（开/关各偏一侧），框取两态并集；贴墙款横截面取宽侧并集
+for (const on of [0, 1]) {
+    BlockInfo[leverId(0, on)].outline = [0.31, 0, 0.14, 0.69, 0.6, 0.86];
+    BlockInfo[leverId(1, on)].outline = [0.31, 0.4, 0.14, 0.69, 1, 0.86];
+    for (let f = 2; f <= 5; f++) BlockInfo[leverId(f, on)].outline = alongOutline(f, 0, 0.6, 0.3, 0.86);
+}
+// 门：3/16 厚门板贴 doorEdge 所在格边（0北 1东 2南 3西），开门绕铰链转 90°（公式同 js/door.js）
+for (const half of [0, 1]) {
+    for (const open of [0, 1]) {
+        for (let facing = 0; facing < 4; facing++) {
+            const closedEdge = (facing + 2) % 4;
+            const edge = open ? (closedEdge + 1) % 4 : closedEdge;
+            const t = DOOR_THICKNESS;
+            const b = [0, 0, 0, 1, 1, 1];
+            if (edge === 0) b[5] = t;
+            else if (edge === 1) b[0] = 1 - t;
+            else if (edge === 2) b[2] = 1 - t;
+            else b[3] = t;
+            BlockInfo[doorId(half, open, facing)].outline = b;
+        }
+    }
+}
+// 活塞头：远端 1×1×¼ 推板 + 连回底座的 ¼ 见方推杆（solid 碰撞不变，仅射线/黑框贴合视觉）
+for (let f = 0; f < 6; f++) {
+    BlockInfo[pistonHeadId(f)].outline = [
+        ...alongOutline(f, 0.75, 1, 0, 1),
+        ...alongOutline(f, 0, 0.75, 0.375, 0.625),
+    ];
+}
+// 传送带：贴地薄板（4 向同形，带向只影响贴图箭头）
+for (let dir = 0; dir < 4; dir++) BlockInfo[beltId(dir)].outline = [0, 0, 0, 1, 0.12, 1];
+
+// 查询助手：outlineOf 取局部 AABB 平铺数组（无 = 整格）；outlineUnion 取全部盒的包围盒（黑框用）
+export function outlineOf(id) {
+    return BlockInfo[id]?.outline || null;
+}
+
+const outlineUnionCache = new Map();
+
+export function outlineUnion(id) {
+    if (!outlineUnionCache.has(id)) {
+        const a = outlineOf(id);
+        let u = null;
+        if (a) {
+            u = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+            for (let i = 0; i < a.length; i += 6) {
+                for (let k = 0; k < 3; k++) {
+                    u[k] = Math.min(u[k], a[i + k]);
+                    u[k + 3] = Math.max(u[k + 3], a[i + k + 3]);
+                }
+            }
+        }
+        outlineUnionCache.set(id, u);
+    }
+    return outlineUnionCache.get(id);
+}

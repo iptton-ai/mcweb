@@ -1,7 +1,7 @@
 // ==================== highlight.js ====================
 
 import * as THREE from 'three';
-import { BlockTypes } from './config.js';
+import { BlockTypes, outlineUnion } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { raycastBlocks } from './interaction.js';
@@ -49,7 +49,15 @@ export function updateHighlight() {
     const hit = raycastBlocks();
     if (hit && hit.block !== BlockTypes.AIR && hit.block !== BlockTypes.WATER) {
         highlightLine.visible = true;
-        highlightLine.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+        // 不满格道具：黑框缩到 outline 包围盒（基础几何 1.005³ 顺带做微放大）；整格方块满格框
+        const u = outlineUnion(hit.block);
+        if (u) {
+            highlightLine.scale.set(u[3] - u[0], u[4] - u[1], u[5] - u[2]);
+            highlightLine.position.set(hit.x + (u[0] + u[3]) / 2, hit.y + (u[1] + u[4]) / 2, hit.z + (u[2] + u[5]) / 2);
+        } else {
+            highlightLine.scale.set(1, 1, 1);
+            highlightLine.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+        }
     } else {
         highlightLine.visible = false;
     }
