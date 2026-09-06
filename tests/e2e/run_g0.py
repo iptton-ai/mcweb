@@ -188,10 +188,12 @@ return JSON.stringify(RESULT);
 def g0_04(e2e):
     res = e2e.run(r"""
 setDay(); S.gameMode='creative';
-// 立柱到 y=62：活塞在 (80,62,16) 朝上，石头在 (80,63,16)=世界顶格，伸出会把石头推出 y=64 界外
-for(let y=30;y<=61;y++) sb(80,y,16,BT.STONE);
-sb(80,63,16,BT.STONE); sb(80,62,16,BT.AIR);
-const P={x:80,y:62,z:16}, TOP={x:80,y:63,z:16}, LV={x:81,y:62,z:16};
+// 立柱到顶格下一格：活塞在 (80,H-2,16) 朝上，石头在 (80,H-1,16)=世界顶格，伸出会把石头推出界外
+// （坐标随 WORLD_HEIGHT 走——2026-09-06 世界扩容 128 高，顶格不再是 y=63）
+const TOP_Y=cfg.WORLD_HEIGHT-1, PIS_Y=cfg.WORLD_HEIGHT-2;
+for(let y=30;y<=PIS_Y-1;y++) sb(80,y,16,BT.STONE);
+sb(80,TOP_Y,16,BT.STONE); sb(80,PIS_Y,16,BT.AIR);
+const P={x:80,y:PIS_Y,z:16}, TOP={x:80,y:TOP_Y,z:16}, LV={x:81,y:PIS_Y,z:16};
 ps.placePiston(P.x,P.y,P.z, cfg.PISTON_ITEM_ID, N[0]); // 朝上
 const pistonFacing = cfg.pistonFacing(gb(P.x,P.y,P.z));
 // ---- 阳性对照：无顶石时拉杆信号确实能伸出（证明信号路径有效） ----
@@ -238,7 +240,7 @@ return JSON.stringify(RESULT);
         ("活塞朝上放置", res["pistonFacing"] == 0, f"facing={res['pistonFacing']}"),
         ("阳性对照：无阻挡时拉杆信号使活塞伸出（信号路径有效）", res["ctrlExtended"] == 1 and res["ctrlHead"], f"ext={res['ctrlExtended']} headAtTop={res['ctrlHead']}"),
         ("顶石在位时活塞不动作（保持收回态）", res["ext"] == 0, f"ext={res['ext']}"),
-        ("石头仍在 y=63 且无活塞头", res["topBlock"] == 3 and not res["headAtTop"], f"topBlock={res['topBlock']} headAtTop={res['headAtTop']}"),
+        ("石头仍在世界顶格且无活塞头", res["topBlock"] == 3 and not res["headAtTop"], f"topBlock={res['topBlock']} headAtTop={res['headAtTop']}"),
         ("创造模式库存无返还", res["invUnchanged"] and res["dropsUnchanged"], f"inv={res['invUnchanged']} drops={res['dropsUnchanged']}"),
         ("生存模式复测：库存不变且不动作", res["extS"] == 0 and res["topS"] == 3 and res["invUnchangedS"], f"ext={res['extS']} top={res['topS']} inv={res['invUnchangedS']}"),
         ("enqueuePistonAction 直驱同样不动作", res["extQ"] == 0 and res["topQ"] == 3, f"ext={res['extQ']} top={res['topQ']}"),

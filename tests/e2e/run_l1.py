@@ -8,7 +8,7 @@
 state.player.inventory / state.itemDrops / tntEntities / renderer.info / scene）。
 
 重跑：cd tests/e2e && python3 run_l1.py [用例名 …]（缺省全跑）
-注意：P01..P04/A5a/ATK/LEAK 各自 fresh_page（世界只有 128×128，性能场景复用同一 z 带）。
+注意：P01..P04/A5a/ATK/LEAK 各自 fresh_page（性能场景复用同一 z 带；2026-09-06 世界扩容 256×256×128，越界用例坐标随 cfg.WORLD_* 走）。
 """
 
 import json
@@ -362,10 +362,10 @@ def N03(e2e):
 setDay(); S.gameMode='creative';
 platform(20,64,10,6,20); // x20..29, z64..69
 const t1=kn.placeKinetic(-1,20,66,cfg.BELT_ITEM_ID,N[0]);
-const t2=kn.placeKinetic(128,20,66,cfg.BELT_ITEM_ID,N[0]);
-const t3=kn.placeKinetic(30,64,66,cfg.BELT_ITEM_ID,N[0]);
+const t2=kn.placeKinetic(cfg.WORLD_WIDTH,20,66,cfg.BELT_ITEM_ID,N[0]); // 东界外一格（随尺寸走：扩容后 128 已是界内）
+const t3=kn.placeKinetic(30,cfg.WORLD_HEIGHT,66,cfg.BELT_ITEM_ID,N[0]); // 顶界外
 const t4=kn.placeKinetic(-2,20,68,cfg.DEPLOYER_ITEM_ID,N[3]);
-const t5=kn.placeKinetic(30,64,68,cfg.CLUTCH_ITEM_ID,N[0]);
+const t5=kn.placeKinetic(30,cfg.WORLD_HEIGHT,68,cfg.CLUTCH_ITEM_ID,N[0]);
 sb(26,20,66,BT.STONE); S.player.yaw=-Math.PI/2;
 const t6=kn.placeKinetic(26,21,66,cfg.BELT_ITEM_ID,N[0]);
 RESULT={t1,t2,t3,t4,t5,t6, okBelt:gb(26,21,66), log:LOG};
@@ -378,10 +378,10 @@ return JSON.stringify(RESULT);
 
     checks = [
         ("越界被拒：x=-1 带", rejected(d.get("t1")), f"ret={d.get('t1')}"),
-        ("越界被拒：x=128 带", rejected(d.get("t2")), f"ret={d.get('t2')}"),
-        ("越界被拒：y=64 带", rejected(d.get("t3")), f"ret={d.get('t3')}"),
+        ("越界被拒：x=WIDTH 带", rejected(d.get("t2")), f"ret={d.get('t2')}"),
+        ("越界被拒：y=HEIGHT 带", rejected(d.get("t3")), f"ret={d.get('t3')}"),
         ("越界被拒：x=-2 投料器", rejected(d.get("t4")), f"ret={d.get('t4')}"),
-        ("越界被拒：y=64 离合器", rejected(d.get("t5")), f"ret={d.get('t5')}"),
+        ("越界被拒：y=HEIGHT 离合器", rejected(d.get("t5")), f"ret={d.get('t5')}"),
         ("界内合法格可放置", d.get("t6") is None and d.get("okBelt") == 203, f"ret={d.get('t6')}, id={d.get('okBelt')}(203=东向带)"),
     ]
     return lib.report("L1-N03 越界放置守卫", res, checks)
@@ -1002,6 +1002,10 @@ return JSON.stringify(RESULT);
 # ================================================================ S 组
 @case
 def S01(e2e):
+    # 独立 fresh_page（2026-09-06 世界扩容后追加）：E/N 组共享世界里 N08 的火把时钟永不稳态，
+    # 任何存→读往返都会撞上时钟不同相位 → 字节不变式本质掷硬币（旧尺寸下碰巧相位对齐）。
+    # 干净世界里只有本用例的产线，不变式才成立。
+    e2e.fresh_page()
     res = e2e.run(r"""
 setDay(); S.gameMode='creative'; clearSaves();
 platform(20,114,24,8,20); // x20..43, z114..121
@@ -1030,7 +1034,16 @@ sg.saveGame();                                   // 读档后再存一次
 const j1=JSON.parse(sg.exportSlotJson());
 const keys1=Object.keys(j1).sort(), pkeys1=Object.keys(j1.player||{}).sort();
 const blocksEq=JSON.stringify(j0.blocks)===JSON.stringify(j1.blocks);
-RESULT={saved, keys0, keys1, pkeys0, pkeys1, blocksEq, lineEq:line.join()===line2.join(), beltsEq:belts.join()===belts2.join(),
+// 失败时解码差异格（RLE→坐标），便于定位是哪个子系统在读写档窗口内改写了方块
+let diffCells=[];
+if(!blocksEq){
+  const dec=b64=>{const s=atob(b64);const out=new Uint8Array(cfg.WORLD_WIDTH*cfg.WORLD_HEIGHT*cfg.WORLD_DEPTH);
+    let pos=0;for(let k=0;k+2<s.length;k+=3){const r=(s.charCodeAt(k+1)<<8)|s.charCodeAt(k+2);out.fill(s.charCodeAt(k),pos,pos+r);pos+=r;}return out;};
+  const ua=dec(j0.blocks), ub=dec(j1.blocks);
+  for(let i=0;i<ua.length&&diffCells.length<8;i++) if(ua[i]!==ub[i])
+    diffCells.push({p:[i%cfg.WORLD_WIDTH,Math.floor(i/(cfg.WORLD_WIDTH*cfg.WORLD_DEPTH)),Math.floor(i/cfg.WORLD_WIDTH)%cfg.WORLD_DEPTH],was:ua[i],now:ub[i]});
+}
+RESULT={saved, keys0, keys1, pkeys0, pkeys1, blocksEq, diffCells, lineEq:line.join()===line2.join(), beltsEq:belts.join()===belts2.join(),
   stDepB, stDepA, clutch:[cfg.clutchEngaged(line[2]),cfg.clutchEngaged(line2[2])], log:LOG};
 return JSON.stringify(RESULT);
 """)
@@ -1041,7 +1054,7 @@ return JSON.stringify(RESULT);
         ("重算后状态与存前一致（断开下游停）", d.get("stDepB") == d.get("stDepA"), f"{d.get('stDepB')} → {d.get('stDepA')}"),
         ("存档顶层 key 集逐次相等（无新字段）", d.get("keys0") == d.get("keys1"), f"{d.get('keys0')}"),
         ("player 子 key 集逐次相等", d.get("pkeys0") == d.get("pkeys1"), f"{len(d.get('pkeys0') or [])} 键"),
-        ("RLE 后 blocks 结构逐字节不变", d.get("blocksEq"), f"blocksEq={d.get('blocksEq')}"),
+        ("RLE 后 blocks 结构逐字节不变", d.get("blocksEq"), f"blocksEq={d.get('blocksEq')} diff={d.get('diffCells')}"),
     ]
     return lib.report("L1-S01 存档往返不变式", res, checks)
 
@@ -1160,10 +1173,10 @@ rs.updateRedstoneNetwork(); await tick(4);
     res = e2e.run(_perf_body(setup))
     d = res if isinstance(res, dict) else {}
     checks = [
-        ("tick mean ≤0.58ms（L2 重定 2026-09-06，原 0.54：滑轮批次红石扫描分支细分 + 动力机器链挂 updatePulleys 的功能必需成本，新常态 0.54~0.56；分支形态回归 1.2ms 已由「pulleys 并入 CLUTCH 短路分支」消除，见 org-log 批次 L2）", isinstance(d.get("mean"), (int, float)) and d["mean"] <= 0.58, f"mean={d.get('mean')}ms"),
-        ("tick p95 ≤4.4ms（联动重定基线 2026-09-06，原 3.72：p95 尾帧=时钟翻转时的红石全量重算帧，重算已重定新常态 3.5~3.7 ⇒ p95 新常态 3.6~3.8，见 org-log）", isinstance(d.get("p95"), (int, float)) and d["p95"] <= 4.4, f"p95={d.get('p95')}ms, max={d.get('mx')}ms"),
-        ("红石重算 mean ≤4.3ms（重定基线 2026-09-06，原 3.6：离合器扫描分支为功能必需成本，新常态 3.3~3.6，G3 裁决见 org-log）", isinstance(d.get("rsMean"), (int, float)) and d["rsMean"] <= 4.3, f"mean={d.get('rsMean')}ms, max={d.get('rsMax')}ms"),
-        ("动力重算 mean ≤2.5ms", isinstance(d.get("knMean"), (int, float)) and d["knMean"] <= 2.5, f"mean={d.get('knMean')}ms, max={d.get('knMax')}ms"),
+        ("tick mean ≤3.2ms（扩容重定 2026-09-06，原 0.58：世界 128×128×64→256×256×128 方块 ×8，时钟翻转帧的红石/动力全图线性扫描随格数放大；空气早退已收回 ~40%，实测 2.4~2.7，留全套连跑堆压力余量。根治=写入口维护元件索引——债务项见 AGENTS.md）", isinstance(d.get("mean"), (int, float)) and d["mean"] <= 3.2, f"mean={d.get('mean')}ms"),
+        ("tick p95 ≤22ms（扩容重定 2026-09-06，原 4.4：p95 尾帧=时钟翻转时的全量重算帧，实测 16~19）", isinstance(d.get("p95"), (int, float)) and d["p95"] <= 22, f"p95={d.get('p95')}ms, max={d.get('mx')}ms"),
+        ("红石重算 mean ≤22ms（扩容重定 2026-09-06，原 4.3：全图扫描线性成本，实测 17~18/max 20.5）", isinstance(d.get("rsMean"), (int, float)) and d["rsMean"] <= 22, f"mean={d.get('rsMean')}ms, max={d.get('rsMax')}ms"),
+        ("动力重算 mean ≤18ms（扩容重定 2026-09-06，原 2.5：同上全图扫描，实测 14~15）", isinstance(d.get("knMean"), (int, float)) and d["knMean"] <= 18, f"mean={d.get('knMean')}ms, max={d.get('knMax')}ms"),
     ]
     return lib.report("L1-P01 基线复跑（100轴+时钟）", res, checks)
 
@@ -1304,7 +1317,7 @@ return JSON.stringify(RESULT);
     d = res if isinstance(res, dict) else {}
     checks = [
         ("蛇形带单分量（两端同状态：2000SU/64 必然整网过载）", d.get("sameComp"), f"near={d.get('stNear')} | far={d.get('stFar')}"),
-        ("500 带动力重算 mean ≤2.5ms", isinstance(d.get("mean"), (int, float)) and d["mean"] <= 2.5, f"mean={d.get('mean')}ms, max={d.get('max')}ms"),
+        ("500 带动力重算 mean ≤18ms（扩容重定 2026-09-06，原 2.5：全图扫描随世界方块数线性，实测 14~15）", isinstance(d.get("mean"), (int, float)) and d["mean"] <= 18, f"mean={d.get('mean')}ms, max={d.get('max')}ms"),
     ]
     return lib.report("A5(a) 500 格蛇形带重算", res, checks)
 
