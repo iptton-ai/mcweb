@@ -857,6 +857,9 @@ export const HUNGER_REGEN_SEC = 5; // 每 5 秒判定一次：饥饿 ≥17 回 1
 export const HUNGER_REGEN_MIN = 17; // 回血所需的最低饥饿值
 export const MAX_AIR = 10; // 氧气秒数：头部没入水开始倒数，归零每 1.5 秒扣 2 血（出水 3 倍速恢复）
 export const FALL_DAMAGE_MIN = 3.5; // 摔落超过此格数才开始扣血：damage = floor(落差 - 3)
+// ---- 粘液块弹跳（电梯 T1，js/playerPhysics.js 落地分支；对齐原版：弹跳高度按 KEEP² 衰减）----
+export const SLIME_BOUNCE_KEEP = 0.8; // 落上粘液块反弹保留的垂直速度比例（能量按 0.64 衰减/次）
+export const SLIME_BOUNCE_MIN = 3; // 触发弹跳的最小落速（格/秒）：低速落上按普通落地站住，防站立微弹抖动
 export const XP_PER_CRAFT = 1; // 每次合成 +1 经验（矿石见 BlockInfo.xp：煤/铁 +2、钻 +7）
 
 // ---- 生物图鉴（js/entities.js）：speed 格/秒，drops 为 [itemId, 概率, 概率命中时的额外数量上限] ----

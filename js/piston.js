@@ -29,6 +29,7 @@ import {
     PISTON_ITEM_ID,
     PISTON_PUSH_LIMIT,
     PLAYER_HEIGHT,
+    PLAYER_WIDTH,
     STICKY_PISTON_ITEM_ID,
     WORLD_DEPTH,
     WORLD_HEIGHT,
@@ -178,22 +179,44 @@ function flushChunks(set) {
     }
 }
 
-// ==================== 被推的实体 ====================
-// 推动方向上会被新方块占据的格子里站着玩家/怪 → 沿推力方向整体挪一格（简化：无挤压伤害）
-function shoveEntities(destCells, n) {
-    if (destCells.length === 0) return;
-    const occ = new Set(destCells.map((c) => `${c.x},${c.y},${c.z}`));
-    const shove = (e, height) => {
-        const feet = `${Math.floor(e.x)},${Math.floor(e.y + 0.1)},${Math.floor(e.z)}`;
-        const head = `${Math.floor(e.x)},${Math.floor(e.y + height - 0.1)},${Math.floor(e.z)}`;
-        if (occ.has(feet) || occ.has(head)) {
+// ==================== 活塞载客（电梯 T1）====================
+// carryRiders(cells, n)：把与 cells 发生「占据/承载」关系的实体沿 n 整体平移 1 格
+// （伸出 = 新占格集合 ∪ 活塞头格；收回 = 被拉集合的原位置格，n 取反向）。
+// 命中判定从旧实现的「中心列格匹配」升级为 AABB（玩家 0.6 宽身体横跨方块边缘时
+// 中心列不在被占格 → 漏判被埋；水平推动站方块顶也永远不命中 → 悬空坠落）：
+// - 占据（原推挤语义）：实体水平 AABB 与格子水平范围相交，且身体竖直区间与格子
+//   竖直区间相交——方块移进实体所在格，实体一起挪走（防埋）；
+// - 站立承载：实体脚部在格子顶面 ± 带宽内（含起跳瞬间），方块升降时站在其上的
+//   实体跟随——活塞电梯/水平载人平台的基础。
+// 物品实体同款判定（尺寸 0.25 近似）。位移为瞬移 1 格（与方块跳变同步，不做插值）；
+// 实体被推入墙维持现状无解挤压（本批不引入窒息/压碎）。
+const RIDER_STAND_LOW = 0.15; // 站立承载：脚低于格顶的容差（轻微下沉/边缘接触仍算站着）
+const RIDER_STAND_HIGH = 0.35; // 站立承载：脚高于格顶的容差（起跳瞬间不脱队，跳太高漏判接受）
+
+function entityHitsCells(e, half, height, cells) {
+    for (const c of cells) {
+        // 水平 AABB 相交判定（e 为中心点坐标，half 为半宽）
+        if (e.x + half <= c.x || e.x - half >= c.x + 1) continue;
+        if (e.z + half <= c.z || e.z - half >= c.z + 1) continue;
+        const overlapY = e.y < c.y + 1 && e.y + height > c.y; // 占据：身体与格子竖直区间相交
+        const standing = e.y >= c.y + 1 - RIDER_STAND_LOW && e.y <= c.y + 1 + RIDER_STAND_HIGH; // 站顶
+        if (overlapY || standing) return true;
+    }
+    return false;
+}
+
+function carryRiders(cells, n) {
+    if (cells.length === 0) return;
+    const move = (e, half, height) => {
+        if (entityHitsCells(e, half, height, cells)) {
             e.x += n[0];
             e.y += n[1];
             e.z += n[2];
         }
     };
-    if (!state.player.dead) shove(state.player, PLAYER_HEIGHT);
-    for (const en of state.enemies) shove(en, 1.8);
+    if (!state.player.dead) move(state.player, PLAYER_WIDTH / 2, PLAYER_HEIGHT);
+    for (const en of state.enemies) move(en, 0.3, 1.8);
+    for (const d of state.itemDrops) move(d, 0.125, 0.25); // 物品实体跟随（电梯 T1 防埋，配合 items.js 兜底）
 }
 
 // ==================== 伸出（推动）====================
@@ -269,8 +292,8 @@ function doExtend(x, y, z) {
         }
     }
 
-    // 被推的玩家/怪物整体位移一格（新方块即将占据的格子）
-    shoveEntities(
+    // 被推的玩家/怪物/物品整体位移一格（占据新格防埋 + 站在被推方块顶上跟随载人，电梯 T1）
+    carryRiders(
         [...plan.moved.map((c) => ({ x: c.x + nx, y: c.y + ny, z: c.z + nz })), front],
         [nx, ny, nz],
     );
@@ -398,6 +421,10 @@ function doRetract(x, y, z) {
                     markChunkAround(chunks, cc.x, cc.z);
                 }
             }
+            // 收回跟随载人（电梯 T1）：站在被拉方块顶上的实体随之下降 1 格，
+            // 方块移入实体所在格的推挤也由「占据命中」同覆盖。cells 用被拉集合的
+            // 原位置格（此时已回写为新位置，carryRiders 只按传入坐标做 AABB，不受影响）
+            carryRiders(plan.moved, [-nx, -ny, -nz]);
         }
     }
 

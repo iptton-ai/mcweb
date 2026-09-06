@@ -222,6 +222,14 @@ export function updateItemDrops(dt) {
             d.y += dy / dist * step;
             d.z += dz / dist * step;
         } else {
+            // 防埋兜底（电梯 T1）：物品中心所在格变为实心（活塞顶升/AI 放块/方块移入）
+            // → 直接上浮到该格顶面 +0.001（与玩家 Y 轴自救同款语义），随后重力自然落回
+            // 正常的离地 0.15 漂浮——防物品嵌进实心方块
+            const embedY = Math.floor(d.y);
+            if (isSolid(getBlock(Math.floor(d.x), embedY, Math.floor(d.z)))) {
+                d.y = embedY + 1 + 0.001;
+                d.vy = 0;
+            }
             d.vy -= 18 * dt;
             const ny = d.y + d.vy * dt;
             if (d.vy < 0 && isSolid(getBlock(Math.floor(d.x), Math.floor(ny - 0.15), Math.floor(d.z)))) {

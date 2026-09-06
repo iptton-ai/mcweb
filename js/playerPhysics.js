@@ -1,7 +1,7 @@
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { BELT_DIRS, BELT_SPEED, BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, beltDir, isBeltId } from './config.js';
+import { BELT_DIRS, BELT_SPEED, BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, SLIME_BOUNCE_KEEP, SLIME_BOUNCE_MIN, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, beltDir, isBeltId } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
@@ -123,6 +123,7 @@ export function updatePlayerPhysics(dt) {
         const minY = newY;
         const maxY = newY + PLAYER_HEIGHT;
         let hitGround = false;
+        let bounced = false; // 粘液块弹跳（电梯 T1）：本帧已反弹，跳过落地归零与 newY 覆盖
         for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
             for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
                 const by = p.vy > 0 ? Math.floor(maxY) : Math.floor(minY);
@@ -132,7 +133,18 @@ export function updatePlayerPhysics(dt) {
                 if (isSolid(block)) {
                     if (p.vy > 0) {
                         p.y = by - PLAYER_HEIGHT - 0.001;
-                    } else if (p.vy <= 0) {
+                    } else if (block === BlockTypes.SLIME && p.vy < -SLIME_BOUNCE_MIN) {
+                        // 落在粘液块上：反弹保留大部分垂直速度（电梯 T1，对齐原版）。
+                        // 不置 hitGround → onGround 保持 false → 摸底这一次摔落结算不触发；
+                        // 同时清 fallStartY（对齐原版 fallDistance 重置，蓝图代码片段的补全）：
+                        // 否则衰减静止后的最终落地会按整段初始落差结算扣血，粘液免摔伤失效，
+                        // 且后续弹跳后落在普通方块应按「弹后高度」重新起算
+                        p.y = by + 1 + 0.001;
+                        p.vy = -p.vy * SLIME_BOUNCE_KEEP;
+                        p.fallStartY = null;
+                        bounced = true;
+                        break;
+                    } else {
                         p.y = by + 1 + 0.001;
                         hitGround = true;
                     }
@@ -140,9 +152,9 @@ export function updatePlayerPhysics(dt) {
                     break;
                 }
             }
-            if (p.vy === 0) break;
+            if (bounced || p.vy === 0) break;
         }
-        if (p.vy !== 0) p.y = newY;
+        if (!bounced && p.vy !== 0) p.y = newY;
         p.onGround = p.vy === 0 && hitGround || p.vy === 0 && !p.flying && Math.abs(p.vy) < 0.01;
         if (p.vy === 0 && !hitGround) p.onGround = false;
     } else {
