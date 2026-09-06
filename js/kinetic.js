@@ -49,8 +49,15 @@ import {
     FACING_NORMALS,
     KINETIC_RECIPES,
     KINETIC_SPIN_VIS,
+    LIFT_SPEED,
+    PLATFORM_BASE,
+    PLATFORM_ITEM_ID,
+    PLATFORM_SU_LOAD,
     PLAYER_HEIGHT,
     PLAYER_WIDTH,
+    PULLEY_ITEM_ID,
+    PULLEY_ROPE_MAX,
+    PULLEY_SU_LOAD,
     SAW_ITEM_ID,
     SAW_SPEED,
     SAW_SU_LOAD,
@@ -77,8 +84,10 @@ import {
     isDeployerId,
     isDoorId,
     isKineticId,
+    isPlatformId,
     isPistonGroupId,
     isPistonHeadId,
+    isPulleyId,
     isRedstoneId,
     isSawId,
     isShaftId,
@@ -86,6 +95,9 @@ import {
     isWaterwheelId,
     kineticAxisOf,
     kineticItemId,
+    pulleyId,
+    pulleyPowered,
+    pulleyUp,
     sawFacing,
     sawId,
     shaftAxis,
@@ -95,8 +107,9 @@ import {
 } from './config.js';
 import { isCreative, state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
-import { isSolid, refreshPropAt, rebuildChunk } from './chunk.js';
+import { isCustomMesh, isSolid, refreshPropAt, rebuildChunk } from './chunk.js';
 import { popUnsupportedRedstone, updateRedstoneNetwork } from './redstone.js';
+import { carryRiders } from './piston.js'; // L2 滑轮电梯：平台跨格载客（电梯 T1 导出）；piston↔kinetic 双向运行时循环照 redstone↔piston 先例安全
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound, playCrushSound, playSawSound } from './audio.js';
 import { spawnItemDrop } from './items.js';
@@ -131,12 +144,17 @@ const crusherPaired = new Set(); // 配对粉碎轮 key 集（投料口校验/HU
 let sawCells = []; // 全部机械锯（锯切 tick 用）
 let deployerCells = []; // 全部投料器（Create-lite L1 链 3，投放 tick 用）
 const deployerCool = new Map(); // 投料器 key -> 剩余冷却秒（照 crushProgress 模式，重算兜底清理）
+let pulleyCells = []; // 全部滑轮（Create-lite L2 电梯，升降 tick 用）
+let pulleyBinds = new Map(); // 滑轮 key -> { px,py,pz } 绑定的平台格（纯派生：事件重算全量重建 + 跨格本地同步，plan §3.1）
+const pulleyState = new Map(); // 滑轮 key -> { phase, blocked } 跨格节拍与端点态（照 crushProgress 模式）
 
-// front-blocked 方块（机械锯/投料器）的正面朝向向量：正面（朝向邻格）是工作目标不参与传动，
-// 只有「本格正好在它背面」才接通（neighborsOf 统一按 front 特判——投料器照锯，plan §3.1）
+// front-blocked 方块（机械锯/投料器/滑轮）的正面朝向向量：正面（朝向邻格）是工作目标不参与传动，
+// 只有「本格正好在它背面」才接通（neighborsOf 统一按 front 特判——投料器照锯，滑轮照两者，
+// plan §3.1）
 function frontNormalOf(id) {
     if (isSawId(id)) return FACING_NORMALS[sawFacing(id)];
     if (isDeployerId(id)) return FACING_NORMALS[deployerFacing(id)];
+    if (isPulleyId(id)) return FACING_NORMALS[pulleyUp(id) ? 0 : 1]; // 0=朝上顶举 / 1=朝下垂挂
     return null;
 }
 
@@ -159,6 +177,13 @@ export function placeKinetic(bx, by, bz, itemId, face) {
     } else if (itemId === DEPLOYER_ITEM_ID) {
         // 投料器朝向 = 所点击面的外法线（照锯/活塞：贴着目标面放，面向「要投料的位置」）
         id = deployerId(facingFromNormalLocal(face.dx, face.dy, face.dz));
+    } else if (itemId === PULLEY_ITEM_ID) {
+        // 滑轮（L2 电梯）：点击面法线须竖直——点方块底面 = 朝下垂挂、点顶面 = 朝上顶举；
+        // 初始 powered=0（放绳态），放进充能位由随后的红石重算电平自愈（照离合器先例）
+        if (face.dy === 0) return '❌ 滑轮需要贴顶面或底面（绳竖直）';
+        id = pulleyId(face.dy > 0, false);
+    } else if (itemId === PLATFORM_ITEM_ID) {
+        id = PLATFORM_BASE; // 电梯平台：普通实心立方体，任意空格可放（可当建材）
     } else {
         const axis = normalAxis(face.dx, face.dy, face.dz);
         id = itemId === SHAFT_ITEM_ID ? shaftId(axis)
@@ -170,9 +195,11 @@ export function placeKinetic(bx, by, bz, itemId, face) {
     setBlockSafe(bx, by, bz, id);
     refreshPropAt(bx, by, bz);
     // 离合器：先重算红石建立 engaged 电平基线（放进充能位会在同一次重算中翻到断开；
-    // 翻转时红石侧的电平写出门会带起一次动力重算），再常规重算动力拓扑
-    if (isClutchId(id)) updateRedstoneNetwork();
+    // 翻转时红石侧的电平写出门会带起一次动力重算），再常规重算动力拓扑。
+    // 滑轮同款：放进充能位重算翻到卷绳变体（不触发动力重算）
+    if (isClutchId(id) || isPulleyId(id)) updateRedstoneNetwork();
     updateKineticNetwork();
+    if (isPulleyId(id)) updateRopeVisual({ x: bx, y: by, z: bz, id }); // 绳长按绑定即时校正
     return null;
 }
 
@@ -234,11 +261,43 @@ export function updateKineticNetwork() {
     sawCells = cells.filter((c) => c.saw);
     deployerCells = cells.filter((c) => isDeployerId(c.id));
 
+    // 滑轮绳绑定扫描（Create-lite L2 电梯，plan §3.1）：沿朝向逐格扫（≤PULLEY_ROPE_MAX），
+    // AIR/WATER 都是绳格（水可穿：水下电梯彩蛋，差异 7）；第一个平台即绑定（先扫描先得，
+    // 唯一绑定——双滑轮夹同一平台时后来者视作挡绳未绑定，防双向拉抖动，差异 8）；
+    // 其他方块挡绳 = 未绑定（HUD「未找到平台」）。绑定纯派生：本函数全量重建 +
+    // updatePulleys 跨格时本地同步（跨格零动力重算，G2 裁决 R4-01）。
+    pulleyCells = cells.filter((c) => isPulleyId(c.id));
+    pulleyBinds = new Map();
+    const boundPlatforms = new Set();
+    for (const c of pulleyCells) {
+        const dy = pulleyUp(c.id) ? 1 : -1;
+        for (let s = 1; s <= PULLEY_ROPE_MAX; s++) {
+            const ry = c.y + dy * s;
+            if (ry < 0 || ry >= WORLD_HEIGHT) break;
+            const rb = getBlock(c.x, ry, c.z);
+            // 绳格：AIR/水/贴面道具（薄板悬在格缘，细绳从格中心穿过——平台顶贴着红石粉
+            // 不该断绳，否则「跨格→支撑消失→粉脱落」链永远不触发，N13）；**移动前方格
+            // 判定不含贴面**（平台面宽，贴面道具挡行程=端点停不压碎，保护语义）
+            if (rb === BlockTypes.AIR || rb === BlockTypes.WATER || isCustomMesh(rb)) continue;
+            const rk = keyOf(c.x, ry, c.z);
+            if (isPlatformId(rb) && !boundPlatforms.has(rk)) {
+                pulleyBinds.set(keyOf(c.x, c.y, c.z), { px: c.x, py: ry, pz: c.z });
+                boundPlatforms.add(rk);
+            }
+            break; // 实心挡绳 / 平台已被先扫的滑轮绑定
+        }
+    }
+
     const byKey = new Map(cells.map((c) => [keyOf(c.x, c.y, c.z), c]));
     const newMap = new Map();
     const comps = [];
     const visited = new Set();
     for (const seed of cells) {
+        // 电梯平台不当种子（L2）：它是纯被动格（neighborsOf 不外延），归属完全由滑轮侧的
+        // 绳绑定边决定——y 主序扫描平台先于滑轮，若自己当种子会吸收成独立分量，滑轮的
+        // 单向绑定边被全局 visited 吞掉（应力丢平台的 PLATFORM_SU_LOAD，L1 R1-01 同款单向
+        // 边坑）。未被绑定的平台无分量：HUD 显示静止，无副作用
+        if (isPlatformId(seed.id)) continue;
         const seedKey = keyOf(seed.x, seed.y, seed.z);
         if (visited.has(seedKey)) continue;
 
@@ -269,12 +328,16 @@ export function updateKineticNetwork() {
                 }
             } else if (isBeltId(c.id)) {
                 load += BELT_SU_LOAD;
+            } else if (isPlatformId(c.id)) {
+                load += PLATFORM_SU_LOAD; // 平台 8/格（绳绑定边进滑轮分量，差异 9）
             } else if (isCrusherId(c.id) && crusherPaired.has(keyOf(c.x, c.y, c.z))) {
                 load += CRUSHER_SU_LOAD;
             } else if (isSawId(c.id)) {
                 load += SAW_SU_LOAD;
             } else if (isDeployerId(c.id)) {
                 load += DEPLOYER_SU_LOAD;
+            } else if (isPulleyId(c.id) && pulleyBinds.has(keyOf(c.x, c.y, c.z))) {
+                load += PULLEY_SU_LOAD; // 已绑定滑轮 32/台（未绑定不计，照「配对粉碎轮」先例）
             }
         }
 
@@ -327,6 +390,8 @@ export function updateKineticNetwork() {
     for (const k of sawProgress.keys()) if (!sawKeys.has(k)) sawProgress.delete(k);
     const deployerKeys = new Set(deployerCells.map((c) => keyOf(c.x, c.y, c.z)));
     for (const k of deployerCool.keys()) if (!deployerKeys.has(k)) deployerCool.delete(k);
+    const pulleyKeys = new Set(pulleyCells.map((c) => keyOf(c.x, c.y, c.z)));
+    for (const k of pulleyState.keys()) if (!pulleyKeys.has(k)) pulleyState.delete(k);
 }
 
 // 邻接枚举：同轴相邻（沿轴向连线；锯只从背面接，正面是被锯目标）+ 齿轮垂直啮合 +
@@ -342,6 +407,26 @@ export function updateKineticNetwork() {
 // （带的四邻水平格 + 上下格），否则全局 visited BFS 下任一侧先被扫到都会把对向
 // 掉进另一个分量（y/z/x 主序扫描时「轴在带的东侧/南侧」恰是带先种子——N09 锁定）。
 function* neighborsOf(c, byKey) {
+    if (isPlatformId(c.id)) {
+        // 电梯平台（L2）：被动载荷，不外延任何传动边——只被滑轮侧的绳绑定边单向枚举
+        // （绳绑定边打 beltEdge 绝缘标记：平台进滑轮分量=应力合并，但不参与转向/卡死传播）
+        return;
+    }
+    if (isPulleyId(c.id)) {
+        // 滑轮：绳绑定边（模块级 pulleyBinds，求解循环先建后用）——沿 Y 轴向传动照下方
+        // 通用分支（front-blocked：正面=绳出口被 front 排除、背面接轴）
+        const bind = pulleyBinds.get(keyOf(c.x, c.y, c.z));
+        if (bind) {
+            const other = byKey.get(keyOf(bind.px, bind.py, bind.pz));
+            if (other) yield { other, mesh: false, beltEdge: true };
+        }
+        // 背面跨轴接传动：贴「横轴顶面」放置的朝上滑轮，其背面是横轴（AXIS_X/Z）——
+        // 通用轴向分支只认同轴会漏接（E06 实证）。方案语义是「背面接传动」而非「背面接同轴」，
+        // 故背面格是任意动力族（非带）即连通；同轴竖轴情形仍由通用分支覆盖（visited 防重）
+        const [pfx, pfy, pfz] = FACING_NORMALS[pulleyUp(c.id) ? 0 : 1];
+        const back = byKey.get(keyOf(c.x - pfx, c.y - pfy, c.z - pfz));
+        if (back && !isBeltId(back.id)) yield { other: back, mesh: false };
+    }
     if (isBeltId(c.id)) {
         // 带侧专属分支（不读 c.axis，带无传动轴）：四邻水平格 + 上下格里的动力族格
         // 都是同分量邻接（带↔带传导 = 整条带单点驱动的离散版，差异 9；带↔动力接入）
@@ -402,6 +487,17 @@ function* neighborsOf(c, byKey) {
         const other = byKey.get(keyOf(c.x, c.y + dy, c.z));
         if (other && isBeltId(other.id)) yield { other, mesh: false, beltEdge: true };
     }
+    // 滑轮背面接传动的动力侧对向枚举（同款对称边闭合，L2 E05 实证）：上下格是滑轮且其
+    // 背面正对本格 → 接通。没有这一侧，轴链被先种子的分量吸走后，后种子的滑轮会孤立成
+    // 无动力分量（visited 单向边缺陷与带同构）——滑轮侧的单向背面边在 neighborsOf 开头
+    for (const dy of [-1, 1]) {
+        const other = byKey.get(keyOf(c.x, c.y + dy, c.z));
+        if (!other || !isPulleyId(other.id)) continue;
+        const [pfx, pfy, pfz] = FACING_NORMALS[pulleyUp(other.id) ? 0 : 1];
+        if (c.x === other.x - pfx && c.y === other.y - pfy && c.z === other.z - pfz) {
+            yield { other, mesh: false };
+        }
+    }
 }
 
 // ==================== 每帧驱动 ====================
@@ -420,6 +516,7 @@ export function updateKineticTick(dt) {
     updateCrushers(dt);
     updateSaws(dt);
     updateDeployers(dt);
+    updatePulleys(dt);
 }
 
 // ==================== 外部查询（HUD / 交互提示用） ====================
@@ -439,6 +536,21 @@ export function kineticStatusAt(x, y, z) {
     const name = BlockInfo[id]?.name || '动力方块';
     // 离合器断开：优先提示断开态（断开后自成无动力分量，常规文案会误报「需要水车驱动」）
     if (isClutchId(id) && clutchEngaged(id) === 0) return `⚙️ ${name} · 断开（红石充能中，传动已切断）`;
+    // 滑轮（L2 电梯）：未绑定/端点/悬停优先于常规文案（方向词写明防与离合器心智混淆，G2 R3-04）
+    if (isPulleyId(id)) {
+        const pk = kineticMap.get(keyOf(x, y, z));
+        const pc = pk && components[pk.compId];
+        if (!pulleyBinds.has(keyOf(x, y, z))) return `⚙️ ${name} · 未找到平台（${pulleyUp(id) ? '上方' : '下方'} ${PULLEY_ROPE_MAX} 格内需有电梯平台）`;
+        // 全网态（卡死/过载/无动力）优先于端点提示（全网停转的因果更该先说；端点是运行时缓存）
+        const dirTxt = pulleyPowered(id) ? (pulleyUp(id) ? '卷绳·平台下降' : '卷绳·平台上升') : (pulleyUp(id) ? '放绳·平台上升' : '放绳·平台下降');
+        if (!pc) return `⚙️ ${name} · ${dirTxt} · 静止`;
+        if (pc.jammed) return `⚙️ ${name} · ${dirTxt} · ⛔ 卡死（传动转向冲突）`;
+        if (pc.overstressed) return `⚙️ ${name} · ${dirTxt} · ⛔ 过载（应力 ${pc.load}/${pc.capacity}，再加一台水车）`;
+        if (pc.poweredWheels === 0) return `⚙️ ${name} · ${dirTxt} · 悬停（需要水车驱动）`;
+        const st = pulleyState.get(keyOf(x, y, z));
+        if (st?.blocked) return `⚙️ ${name} · 已到行程端点（平台停住，滑轮空转）`;
+        return `⚙️ ${name} · ${dirTxt} · 升降 ${LIFT_SPEED} 格/秒 · 应力 ${pc.load}/${pc.capacity}`;
+    }
     // 传送带：带本身是静止薄板，文案按运转/静止 + 应力报（差异 4：物品移动即方向反馈）
     if (isBeltId(id)) {
         const bk = kineticMap.get(keyOf(x, y, z));
@@ -656,6 +768,100 @@ function updateDeployers(dt) {
     if (kineticDirty) updateKineticNetwork();   // 仅投水才重算（守卫一）
 }
 
+// ==================== 终端机器 D：滑轮电梯（Create-lite L2）====================
+// 绳升降（plan §3.2）：通电分量里已绑定的滑轮按方向做跨格节拍（1/LIFT_SPEED 秒一格）——
+// powered=1 卷绳（平台向滑轮收拢）/ powered=0 放绳（远离滑轮）；无动力（停转/过载/卡死）
+// = 平台悬停（phase 冻结，照「停机冻结」先例）；前方格非 AIR/WATER = 行程端点（平台停住、
+// 滑轮照转空转、HUD 提示——差异 4 改判：不 jammed 整网）。
+// 跨格提交（G2 裁决四处修订落点）：
+//   · 前置校验 getBlock(平台格)===PLATFORM（防同帧其它滑轮/活塞干预下 bind 指向陈旧位置，R1-10）
+//   · carryRiders cells = 旧平台格 ∪ 前方格（站顶±带宽载走 + 占据前方格实体同向推开防埋，R1-04）
+//   · 旧格调 popUnsupportedRedstone 连锁脱落贴面道具（照活塞推方块先例，R1-03）
+//   · **零动力重算**：bind 与 kineticMap 两条目本地同步（跨格不改动力拓扑、应力不变，
+//     R4-01——16 台全速 24 跨格/s × 2.65ms 全图重算会超 tick 门近 3 倍；事件重算全量重建收敛）
+// 帧末聚合：迭代内只收集区块 + 置 redstoneDirty（hasRedstoneNear 守卫），循环后统一 flush。
+// 【不变量】迭代循环内不调 updateKineticNetwork/updateRedstoneNetwork/rebuildChunk（同 updateDeployers）。
+function updatePulleys(dt) {
+    if (pulleyCells.length === 0) return;
+    const chunksToRebuild = new Set();
+    let redstoneDirty = false;
+    for (const c of pulleyCells) {
+        const k = keyOf(c.x, c.y, c.z);
+        const comp = componentAt(k);
+        if (!comp || !comp.running) continue; // 无动力悬停：phase 冻结（恢复供电续拍）
+        const bind = pulleyBinds.get(k);
+        if (!bind) continue; // 未绑定空转（HUD「未找到平台」）
+        // powered 现读世界（不读快照 c.id）：红石回写 powered 变体刻意不触发动力重算
+        // （拓扑不变），快照 ID 会陈旧到下次事件重算——拉杆换向必须即时生效（E02）
+        const curId = getBlock(c.x, c.y, c.z);
+        if (!isPulleyId(curId)) continue; // 已被破坏/替换：本帧跳过待重算收敛
+        const up = pulleyUp(curId);
+        const dirY = pulleyPowered(curId) ? (up ? -1 : 1) : (up ? 1 : -1);
+        // powered=卷绳：朝下垂挂的平台向上（+1）收拢 / 朝上顶举的平台向下（-1）；放绳反之
+        const ny = bind.py + dirY;
+        let st = pulleyState.get(k);
+        if (ny < 0 || ny >= WORLD_HEIGHT) {
+            if (st) st.blocked = true; // 行程端点（世界边界）
+            continue;
+        }
+        const front = getBlock(bind.px, ny, bind.pz);
+        const passable = front === BlockTypes.AIR || front === BlockTypes.WATER;
+        if (!passable) {
+            if (!st) { st = { phase: 0, blocked: false }; pulleyState.set(k, st); }
+            st.blocked = true; // 行程端点：平台停住、滑轮照转空转（差异 4）
+            continue;
+        }
+        if (!st) { st = { phase: 0, blocked: false }; pulleyState.set(k, st); }
+        st.blocked = false;
+        st.phase += dt;
+        if (st.phase < 1 / LIFT_SPEED) continue;
+        st.phase = 0;
+        // ---- 跨格提交（节拍到）----
+        if (getBlock(bind.px, bind.py, bind.pz) !== PLATFORM_BASE) continue; // 前置校验（R1-10）
+        setBlockSafe(bind.px, bind.py, bind.pz, BlockTypes.AIR);
+        // 旧格支撑连锁：平台顶/侧面贴着的红石元件/火把随平台离开而脱落（R1-03，照活塞先例）
+        for (const cc of popUnsupportedRedstone(bind.px, bind.py, bind.pz)) {
+            spawnBreakParticles(cc.x, cc.y, cc.z, cc.id);
+            markChunksAroundLocal(chunksToRebuild, cc.x, cc.z);
+        }
+        setBlockSafe(bind.px, ny, bind.pz, PLATFORM_BASE);
+        // 载客：站平台顶（站顶±带宽）+ 占据前方格（被方块写入=同向推开防埋）的实体一起走（R1-04）
+        carryRiders(
+            [{ x: bind.px, y: bind.py, z: bind.pz }, { x: bind.px, y: ny, z: bind.pz }],
+            [0, dirY, 0],
+        );
+        markChunksAroundLocal(chunksToRebuild, bind.px, bind.pz);
+        if (!redstoneDirty && hasRedstoneNear(bind.px, bind.py, bind.pz)) redstoneDirty = true;
+        if (!redstoneDirty && hasRedstoneNear(bind.px, ny, bind.pz)) redstoneDirty = true;
+        // 本地同步派生态（零动力重算，R4-01）：bind 指向新格 + kineticMap 两条目迁移（HUD 不退化）
+        const entry = kineticMap.get(keyOf(bind.px, bind.py, bind.pz));
+        if (entry) {
+            kineticMap.delete(keyOf(bind.px, bind.py, bind.pz));
+            kineticMap.set(keyOf(bind.px, ny, bind.pz), entry);
+        }
+        bind.py = ny;
+        updateRopeVisual(c); // 绳线段长度跟随（chunk.js 滑轮 prop，零区块重建）
+    }
+    // ---- 帧末聚合 flush ----
+    if (chunksToRebuild.size > 0) {
+        for (const ck of chunksToRebuild) rebuildChunk(Math.floor(ck / 1000), ck % 1000);
+    }
+    if (redstoneDirty) updateRedstoneNetwork(); // 仅平台新旧格 5×5×5 内有红石元件才重算（守卫）
+}
+
+// 绳视觉更新：跨格后把滑轮 prop 的绳线段下端跟到平台新顶面（prop 结构归 chunk.js
+// 构建——root.userData.rope 引用绳 mesh；此处只改 scale，零区块重建。为避免
+// chunk↔kinetic 循环依赖，不注入回调：直接遍历 state.droppedItems 按 propKey 定位）
+function updateRopeVisual(c) {
+    const bind = pulleyBinds.get(keyOf(c.x, c.y, c.z));
+    for (const it of state.droppedItems) {
+        if (it.mesh?.userData?.propKey !== keyOf(c.x, c.y, c.z)) continue;
+        const rope = it.mesh.getObjectByName?.('pulley_rope'); // name 定位（userData 只存纯数据约定）
+        if (rope && bind) rope.scale.y = Math.max(0.1, Math.abs(bind.py - c.y));
+        break;
+    }
+}
+
 // 可放置方块域（差异 11）：普通方块（石/圆石/沙砾/沙/木板/原木/玻璃/TNT/水/羊毛…）。
 // customMesh 的门/红石元件/火把/花/动力族一律排除；工具与材料/食物（item: true）排除
 function isDeployableItem(id) {
@@ -761,6 +967,7 @@ function dropMachineProgressAt(x, y, z) {
     crushProgress.delete(k);
     sawProgress.delete(k);
     deployerCool.delete(k);
+    pulleyState.delete(k);
 }
 
 // 读档/开新世界后调用：清机器进度并重算全网（派生态不存档，现场恢复）
@@ -773,4 +980,5 @@ function dropAllMachineProgress() {
     crushProgress.clear();
     sawProgress.clear();
     deployerCool.clear();
+    pulleyState.clear();
 }

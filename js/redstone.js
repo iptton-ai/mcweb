@@ -21,6 +21,7 @@ import {
     BUTTON_PULSE_SEC,
     CHUNK_SIZE,
     CLUTCH_BASE,
+    PULLEY_BASE,
     DUST_BASE,
     DUST_ITEM_ID,
     FACING_NORMALS,
@@ -42,6 +43,10 @@ import {
     clutchAxis,
     clutchEngaged,
     clutchId,
+    isPulleyId,
+    pulleyId,
+    pulleyPowered,
+    pulleyUp,
     doorFacing,
     doorHalf,
     doorId,
@@ -327,7 +332,7 @@ export function updateRedstoneNetwork() {
     const blocks = state.blocks;
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
-    const doors = [], tnts = [], pistons = [], observers = [], clutches = [];
+    const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [];
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -348,21 +353,27 @@ export function updateRedstoneNetwork() {
                     pistons.push({ x, y, z, id });
                 } else if (isObserverId(id)) {
                     observers.push({ x, y, z, id });
-                } else if (id >= CLUTCH_BASE && isClutchId(id)) {
+                } else if (id >= CLUTCH_BASE) {
                     // 前置 id>=CLUTCH_BASE 短路：全图扫描对每个非零方块都要过这条 else-if 链，
-                    // 世界绝大多数方块 ID<202，一次比较即跳出（G3 P01 压线超门 0.3ms 的成因）
-                    clutches.push({ x, y, z, id });
+                    // 世界绝大多数方块 ID<202，一次比较即跳出（G3 P01 压线超门 0.3ms 的成因）。
+                    // L2 滑轮并入本分支内部细分（202+ 的方块才多一次 isPulleyId）——**不延长链**：
+                    // 链尾每多一条 else-if 会让 1M 格的分支形态变化（P01 实测 +1.2ms，组1 二分定位）
+                    if (isClutchId(id)) {
+                        clutches.push({ x, y, z, id });
+                    } else if (isPulleyId(id)) {
+                        pulleys.push({ x, y, z, id });
+                    }
                 }
             }
         }
     }
     plateRegistry = plates;
     syncObserverRegistry(observers); // 活塞组：观察者注册进每帧侦测表（piston.js）
-    // 早退门条件含离合器（G2 裁决 R1-03/R2-03）：拆掉最后一根信号源后，
-    // 断开态离合器仍能被这里的重算收敛回接合（电平语义天然自愈）
+    // 早退门条件含离合器与滑轮（G2 裁决 R1-03/R2-03 同源，L2 追加 pulleys）：拆掉最后
+    // 一根信号源后，断开态离合器/卷绳态滑轮仍能被这里的重算收敛回接合/放绳
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
         plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
-        pistons.length === 0 && observers.length === 0 && clutches.length === 0) {
+        pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0) {
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
         pistonPoweredPrev = new Map();
@@ -525,6 +536,18 @@ export function updateRedstoneNetwork() {
     // 仅离合器 engaged 实际变化才触发动力全网重算（电平写出门的出口；动力求解不再改
     // 红石状态，递归有界——见 plan §3.2）
     if (kineticDirty) updateKineticNetwork();
+
+    // 滑轮（Create-lite L2 电梯）：同款电平写出门回写 powered 变体——红石充能 = 卷绳
+    // （平台向滑轮收拢）/ 断电 = 放绳（plan §3.3）。**与离合器的差异：不触发动力重算**
+    // （滑轮无论 powered 都传动，拓扑不变——变体只改机器方向与视觉指示；跨格节拍由
+    // updatePulleys 每 tick 现读 powered 编码，回写后下一次跨格即换向）。
+    for (const pu of pulleys) {
+        const powered = isCellActive(pu.x, pu.y, pu.z) ? 1 : 0;
+        if (pulleyPowered(pu.id) !== powered) {
+            setBlockSafe(pu.x, pu.y, pu.z, pulleyId(pulleyUp(pu.id), powered));
+            refreshPropAt(pu.x, pu.y, pu.z);
+        }
+    }
 }
 
 // 火把翻转入队：同格旧目标作废（后到覆盖），节拍重置为 RTORCH_DELAY

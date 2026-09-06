@@ -179,9 +179,10 @@ function flushChunks(set) {
     }
 }
 
-// ==================== 活塞载客（电梯 T1）====================
+// ==================== 活塞载客（电梯 T1，L2 滑轮复用导出）====================
 // carryRiders(cells, n)：把与 cells 发生「占据/承载」关系的实体沿 n 整体平移 1 格
-// （伸出 = 新占格集合 ∪ 活塞头格；收回 = 被拉集合的原位置格，n 取反向）。
+// （活塞伸出 = 新占格集合 ∪ 活塞头格；活塞收回 = 被拉集合的原位置格，n 取反向；
+//   L2 滑轮电梯的平台跨格 = 旧平台格 ∪ 前方格——见 js/kinetic.js 的 updatePulleys）。
 // 命中判定从旧实现的「中心列格匹配」升级为 AABB（玩家 0.6 宽身体横跨方块边缘时
 // 中心列不在被占格 → 漏判被埋；水平推动站方块顶也永远不命中 → 悬空坠落）：
 // - 占据（原推挤语义）：实体水平 AABB 与格子水平范围相交，且身体竖直区间与格子
@@ -205,7 +206,7 @@ function entityHitsCells(e, half, height, cells) {
     return false;
 }
 
-function carryRiders(cells, n) {
+export function carryRiders(cells, n) {
     if (cells.length === 0) return;
     const move = (e, half, height) => {
         if (entityHitsCells(e, half, height, cells)) {
