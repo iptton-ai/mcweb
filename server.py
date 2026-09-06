@@ -9,8 +9,11 @@
 #      GET  /api/file?path=...    读取单个文件
 #      POST /api/file             写入文件 {path, content}（自动备份原文件）
 #   3. GET  /api/events           SSE 事件流：文件被助手修改后推送 change 事件（热加载通知）
+#   4. POST /codex/v1/chat/completions  本地 Codex 订阅反代（codex_proxy.py：把 OpenAI
+#      兼容请求桥接到 ChatGPT Codex 后端，凭据复用 ~/.codex 的 CLI 登录态，详见该文件头）
 #
-# LLM 请求不经本服务器：助手在浏览器内直连 OpenAI 兼容上游接口。
+# 公网 OpenAI 兼容上游仍由助手在浏览器内直连；Codex 订阅因 OAuth 凭据与协议差异必须经
+# 本地桥接（同源无 CORS 问题）。server-rust 不实现此路由（纯本机开发功能）。
 #
 # 启动：python3 server.py [--port 8000] [--host 127.0.0.1]
 
@@ -22,6 +25,8 @@ import threading
 import time
 import urllib.parse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+import codex_proxy
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ENTRY_HTML = "index.html"                         # 唯一入口（重命名需同步 server-rust 与 AGENTS.md）
@@ -119,6 +124,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         try:
             if route == "/api/file":
                 return self.api_file_write()
+            if route == "/codex/v1/chat/completions":
+                return self.api_codex_chat()
         except (BrokenPipeError, ConnectionResetError):
             self.close_connection = True
             return
@@ -214,6 +221,48 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         broadcast_event("change", {"path": rel, "bytes": len(body), "backup": backup})
         self._send_json({"ok": True, "path": rel, "bytes": len(body), "backup": backup})
 
+    # ---------- /codex/v1/chat/completions（本地 Codex 订阅反代） ----------
+
+    def api_codex_chat(self):
+        body = self._read_json_body()
+        gen = codex_proxy.stream_chat_completions(body)
+        # 先取首块：连接/认证/协议错误在写 SSE 头之前抛出，前端能拿到正确的 HTTP 错误码
+        try:
+            first = next(gen)
+        except StopIteration:
+            return self._send_json({"error": "Codex 上游返回空响应"}, 502)
+        except codex_proxy.CodexProxyError as e:
+            return self._send_json({"error": str(e)}, e.status)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        def write_chunk(obj):
+            self.wfile.write(b"data: " + json.dumps(obj, ensure_ascii=False).encode("utf-8") + b"\n\n")
+            self.wfile.flush()
+
+        try:
+            write_chunk(first)
+            for obj in gen:
+                write_chunk(obj)
+        except codex_proxy.CodexProxyError as e:  # 流中途的桥接层错误，以错误块透出
+            try:
+                write_chunk({"error": {"message": str(e)}})
+            except OSError:
+                pass
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass  # 前端中止（用户点停止），无需处理
+        finally:
+            try:
+                self.wfile.write(b"data: [DONE]\n\n")
+                self.wfile.flush()
+            except OSError:
+                pass
+            self.close_connection = True
+
     # ---------- /api/events (SSE) ----------
 
     def api_events(self):
@@ -264,6 +313,7 @@ def main():
     print(f"⛏ 我的世界 - 网页复刻版 服务器已启动")
     print(f"   游戏入口: http://{args.host}:{args.port}/")
     print(f"   助手 API: /api/files /api/file /api/events （LLM 由浏览器直连上游）")
+    print(f"   Codex 反代: /codex/v1/chat/completions （助手配置 baseUrl=http://localhost:{args.port}/codex/v1 可复用本地 Codex 订阅）")
     print(f"   文件备份目录: {BACKUP_DIR}/  （Ctrl+C 退出）")
     try:
         server.serve_forever()

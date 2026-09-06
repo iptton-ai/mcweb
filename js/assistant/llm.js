@@ -16,6 +16,7 @@ export const DEFAULT_CONFIG = {
     model: 'deepseek-chat',
     temperature: 0.7,
     maxToolIterations: 30,  // 单轮对话最多工具调用循环次数
+    reasoningEffort: '',    // 推理深度（可选）：'' 不发送；minimal/low/medium/high（Codex 反代/gpt-5.x 等支持，其余上游忽略）
     extraInstructions: '',  // 用户自定义附加说明（追加到系统提示词）
 };
 
@@ -65,6 +66,9 @@ export async function chatCompletion({ messages, tools, signal, onDelta, onReaso
     if (tools && tools.length > 0) {
         payload.tools = tools;
         payload.tool_choice = 'auto';
+    }
+    if (cfg.reasoningEffort) {
+        payload.reasoning_effort = cfg.reasoningEffort;  // 可选：本地 Codex 反代转 reasoning.effort，其他上游一般忽略
     }
 
     // 内部控制器：把「用户点停止」与「超时」统一作用到 fetch/流上，且两者错误可区分

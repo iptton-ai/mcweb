@@ -196,6 +196,11 @@ function scrollBottom() {
 // 打开设置时按当前地址反向匹配高亮预设，对不上就显示「自定义」。
 // 地址均为 OpenAI 兼容 baseUrl（llm.js 自动拼 /chat/completions）。
 const PROVIDER_PRESETS = [
+    // 本机 Codex 订阅反代（server.py 的 /codex 路由桥接 ChatGPT Codex 后端）：
+    // 需本机已 `codex login`（ChatGPT 账号）且 server.py 跑在默认 8000 端口；
+    // API Key 不校验、随便填（如 codex），额度与 Codex CLI 共享同一订阅。
+    { id: 'codex', name: '本地 Codex 订阅（需 codex login）', baseUrl: 'http://localhost:8000/codex/v1',
+      models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'] },
     { id: 'zhipu', name: '智谱 GLM Coding Plan', baseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
       models: ['glm-4.6', 'glm-4.5', 'glm-4.5-air'] },
     { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1',
@@ -267,6 +272,14 @@ function buildDom() {
               <div><label>温度</label><input type="number" id="ai-set-temp" step="0.1" min="0" max="2"></div>
               <div><label>工具轮数上限</label><input type="number" id="ai-set-iters" step="1" min="1" max="100"></div>
             </div>
+            <label style="margin-top:9px;">推理深度（本地 Codex 订阅生效：自动=服务端默认 low；更深=更聪明更慢）</label>
+            <select id="ai-set-effort">
+              <option value="">自动（不发该参数）</option>
+              <option value="minimal">minimal 最浅</option>
+              <option value="low">low 快</option>
+              <option value="medium">medium 中</option>
+              <option value="high">high 深</option>
+            </select>
           </div>
           <div class="ai-set-card">
             <h4>✍️ 个性化</h4>
@@ -566,6 +579,7 @@ function openSettings() {
     els.settings.querySelector('#ai-set-model').value = c.model;
     els.settings.querySelector('#ai-set-temp').value = c.temperature;
     els.settings.querySelector('#ai-set-iters').value = c.maxToolIterations;
+    els.settings.querySelector('#ai-set-effort').value = c.reasoningEffort || '';
     els.settings.querySelector('#ai-set-extra').value = c.extraInstructions || '';
     fillModelSuggestions(hit);
     els.settings.classList.remove('hidden');
@@ -578,6 +592,7 @@ function saveSettings() {
         model: els.settings.querySelector('#ai-set-model').value.trim() || DEFAULT_CONFIG.model,
         temperature: Number(els.settings.querySelector('#ai-set-temp').value) || 0.7,
         maxToolIterations: Number(els.settings.querySelector('#ai-set-iters').value) || 30,
+        reasoningEffort: els.settings.querySelector('#ai-set-effort').value,
         extraInstructions: els.settings.querySelector('#ai-set-extra').value,
     });
     els.settings.classList.add('hidden');
