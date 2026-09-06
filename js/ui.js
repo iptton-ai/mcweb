@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes } from './config.js';
+import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { camera } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -46,6 +46,9 @@ export function setGameMode(mode) {
             state.player.inventory[BELT_ITEM_ID] = 16;
             state.player.inventory[CLUTCH_ITEM_ID] = 2;
             state.player.inventory[DEPLOYER_ITEM_ID] = 1;
+            // 电梯组（Create-lite L2）：滑轮+平台 = 绳升降电梯（拉杆换向，见 js/kinetic.js）
+            state.player.inventory[PULLEY_ITEM_ID] = 2;
+            state.player.inventory[PLATFORM_ITEM_ID] = 8;
         }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {

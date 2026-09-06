@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, PLATFORM_BASE, PULLEY_ROPE_MAX, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isPulleyId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, pulleyPowered, pulleyUp, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -418,6 +418,10 @@ function buildKineticMesh(blockType) {
     // 投料器：无旋转件的静止机身（方箱+正面喷嘴），照锯的机身 orient 逻辑摆朝向——
     // 不挂 userData.kinetic、无 spinner（投料器不转，放置动作本身就是工作反馈，链 3）
     if (isDeployerId(blockType)) return buildDeployerMesh(blockType);
+    // 滑轮（L2 电梯）：绞盘进 spinner（卷绳视觉上在转）、绳线段挂 root（沿世界竖直方向，
+    // 跨格后 js/kinetic.js 改 userData.rope.scale，零区块重建）。电梯平台是普通实心立方体
+    // （无 customMesh），零 propMesh。
+    if (isPulleyId(blockType)) return buildPulleyMesh(blockType);
     const spinner = new THREE.Group(); // 几何一律沿局部 +Y 构建（= 旋转轴）
     const orient = new THREE.Group();
     orient.add(spinner); // spinner 必须是第一个子节点（见上方约定）
@@ -523,8 +527,52 @@ function buildCrusherMesh(spinner) {
 // 离合器（Create-lite L1）：中央通轴 + 两片法兰盘。接合 = 两盘贴合在格心传动力（木色，
 // 随全网旋转动画转动）；断开 = 两盘各退向两端、中间露出红色指示点 + 盘面变暗灰——
 // 断开后该格自成无动力分量不转，靠变色 + 红点一眼可辨「开关断开了」
-function buildClutchMesh(spinner, engaged) {
-    const rod = new THREE.Mesh(
+// 滑轮（Create-lite L2 电梯）：绞盘轮（spinner，卷绳时旋转）+ 方向指示色块（powered
+// 金色=卷绳 / 灰色=放绳，挂 orient 不随转）+ 绳线段（挂 root，沿世界竖直：几何以顶端为
+// 原点向下延伸 1，scale.y=绳长；朝上顶举变体整体绕 Z 翻转 π 使绳向上）。绳长按各格世界
+// 自扫在 addPropAt 设定（共享缓存 mesh 的 clone 独立 transform），跨格后由
+// js/kinetic.js 的 updateRopeVisual 跟随（零区块重建）。userData.rope 引用随 clone 浅复制。
+const pulleyRopeGeo = new THREE.BoxGeometry(0.05, 1, 0.05);
+pulleyRopeGeo.translate(0, -0.5, 0); // 顶端在原点、向下延伸 1 格（scale.y = 绳长）
+
+function buildPulleyMesh(blockType) {
+    const spinner = new THREE.Group(); // 绞盘轮：绕局部 Y 旋转（俯视像转盘绞车）
+    const orient = new THREE.Group();
+    orient.add(spinner);
+    orient.position.set(0, 0.5, 0);
+    const root = new THREE.Group();
+    root.add(orient);
+    root.userData.kinetic = true;
+    // 绞盘：双层木轮 + 轮毂 + 4 根辐条（运转时旋转动画由 kinetic.js 驱动）
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.22, 14), new THREE.MeshLambertMaterial({ color: 0x9c7a48 }));
+    spinner.add(drum);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.34, 8), new THREE.MeshLambertMaterial({ color: 0x5a4222 }));
+    spinner.add(hub);
+    const spokeGeo = new THREE.BoxGeometry(0.76, 0.06, 0.07);
+    for (let i = 0; i < 2; i++) {
+        const spoke = new THREE.Mesh(spokeGeo, new THREE.MeshLambertMaterial({ color: 0xb08d58 }));
+        spoke.rotation.y = i * Math.PI / 2;
+        spinner.add(spoke);
+    }
+    // 方向指示色块（挂 orient 不随转）：金色=卷绳（充能）/ 灰蓝=放绳
+    const dot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.1, 0.16),
+        new THREE.MeshLambertMaterial({ color: pulleyPowered(blockType) ? 0xc9a227 : 0x7d848c }),
+    );
+    dot.position.y = 0.34;
+    orient.add(dot);
+    // 绳线段（挂 root，世界竖直方向）：初始 1 格占位，addPropAt 按世界自扫定长。
+    // 【约定】userData 只存纯数据（见上方注释）——绳引用不进 userData，靠 name 定位
+    // （clone() 会把 userData 做 JSON round-trip，存 Object3D 会循环引用报错）
+    const rope = new THREE.Mesh(pulleyRopeGeo, new THREE.MeshLambertMaterial({ color: 0xd8c9a3 }));
+    rope.name = 'pulley_rope';
+    rope.position.set(0, 0.5, 0); // 从格中心伸出
+    if (pulleyUp(blockType)) rope.rotation.z = Math.PI; // 朝上顶举：绳向上
+    root.add(rope);
+    return root;
+}
+
+function buildClutchMesh(spinner, engaged) {    const rod = new THREE.Mesh(
         new THREE.CylinderGeometry(0.1, 0.1, 1, 8),
         new THREE.MeshLambertMaterial({ color: 0x5a4222 }),
     );
@@ -858,11 +906,13 @@ export function updateChunkMeshes() {
     }
 }
 
-// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组）
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组）。
+// 电梯平台（L2）除外——它是普通实心立方体（BlockInfo 无 customMesh），走普通面渲染零 propMesh
 function isPropBlock(bt) {
     return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
         isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||
-        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) || isKineticId(bt);
+        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) ||
+        (isKineticId(bt) && bt !== PLATFORM_BASE);
 }
 
 // 在 (x,y,z) 放置该格对应的道具网格（火把/亮灯/亮红石火把含光源），挂入 state.droppedItems
@@ -886,6 +936,22 @@ function addPropAt(bt, x, y, z) {
     if (!m) return;
     m.position.set(x + 0.5, y, z + 0.5);
     m.userData.propKey = `${x},${y},${z}`;
+    // 滑轮绳长按当前世界自扫（缓存 mesh 的 clone 各自独立 scale；跨格后 kinetic.js 跟随）。
+    // 绳引用按 name 定位（userData 只存纯数据的既有约定，见 buildPulleyMesh 注释）
+    if (isPulleyId(bt)) {
+        const rope = m.getObjectByName('pulley_rope');
+        if (rope) {
+            const dy = pulleyUp(bt) ? 1 : -1;
+            for (let s = 1; s <= PULLEY_ROPE_MAX; s++) {
+                const ry = y + dy * s;
+                if (ry < 0 || ry >= WORLD_HEIGHT) break;
+                const rb = getBlock(x, ry, z);
+                if (rb === BlockTypes.AIR || rb === BlockTypes.WATER) continue;
+                if (rb === PLATFORM_BASE) rope.scale.y = Math.max(0.1, s - 1 + 0.5);
+                break; // 实心挡绳（无平台）保持占位长度
+            }
+        }
+    }
     scene.add(m);
     state.droppedItems.push({ x, y, z, mesh: m, prop: true });
 }
