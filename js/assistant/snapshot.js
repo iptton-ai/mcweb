@@ -4,6 +4,7 @@
 
 import { CHUNK_SIZE, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_WIDTH, migrateLegacyGears } from '../config.js';
 import { state } from '../state.js';
+import { rleDecode, rleEncode } from '../saveGame.js'; // 快照同样压缩：世界扩容后 raw base64 会超出 sessionStorage 配额
 import { buildChunkProps, updateChunkMeshes } from '../chunk.js';
 import { updateHotbar } from '../ui.js';
 import { updateHealthUI } from '../playerLife.js';
@@ -27,14 +28,18 @@ function base64ToU8(b64) {
     return u8;
 }
 
-// 热重载前调用：序列化世界方块 + 玩家/模式/时间
+// 热重载前调用：序列化世界方块 + 玩家/模式/时间（RLE 压缩——2026-09-06 世界扩容后
+// raw base64 约 10.7MB 会超 sessionStorage 配额，热重载将丢世界；压缩后约 1~2MB）
 export function saveSnapshotForReload() {
     try {
         const p = state.player;
+        const rle = rleEncode(state.blocks);
+        const useRle = rle.length < state.blocks.length;
         const snap = {
-            v: 2, // 热重载快照版本：无 v 的旧快照含已移除的齿轮 ID，恢复时迁移
+            v: 3, // 快照版本：v3 加 enc 压缩字段；无 v 旧快照含已移除的齿轮 ID，恢复时迁移
+            enc: useRle ? 'rle' : 'raw',
             savedAt: Date.now(),
-            blocks: u8ToBase64(state.blocks),
+            blocks: u8ToBase64(useRle ? rle : state.blocks),
             player: {
                 x: p.x, y: p.y, z: p.z,
                 yaw: p.yaw, pitch: p.pitch,
@@ -69,8 +74,15 @@ export function restoreSnapshotIfAny() {
     }
     if (!snap || !snap.blocks) return false;
 
-    // 覆盖世界数据并重建全部区块网格
-    const u8 = base64ToU8(snap.blocks);
+    // 覆盖世界数据并重建全部区块网格（快照与当前页面同尺寸，无迁移路径）
+    let u8 = base64ToU8(snap.blocks);
+    if (snap.v >= 3 && snap.enc === 'rle') {
+        u8 = rleDecode(u8, state.blocks ? state.blocks.length : 0);
+        if (!u8) {
+            console.error('世界快照解码失败，放弃恢复');
+            return false;
+        }
+    }
     if (state.blocks && u8.length === state.blocks.length) {
         if (!snap.v) migrateLegacyGears(u8); // 旧快照：齿轮 ID 区间已改作红石组，清为空气
         state.blocks.set(u8);

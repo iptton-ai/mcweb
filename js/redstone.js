@@ -338,6 +338,9 @@ export function updateRedstoneNetwork() {
         for (let z = 0; z < WORLD_DEPTH; z++) {
             for (let x = 0; x < WORLD_WIDTH; x++, idx++) {
                 const id = blocks[idx];
+                // 空气早退（2026-09-06 世界扩容 128 高后空气中格占 ~3/4，一次比较替掉整条
+                // else-if 链的空转；AIR 不匹配链上任何分支，语义不变）
+                if (id === 0) continue;
                 if (id >= DUST_BASE && id < LAMP_BASE + LAMP_COUNT) {
                     if (isDustId(id)) dusts.push({ x, y, z, id });
                     else if (isRTorchId(id)) torches.push({ x, y, z, id });

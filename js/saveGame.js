@@ -3,6 +3,7 @@
 // 槽位 key：mcweb.save.v1.slotN（N=0..SAVE_SLOTS-1）；轻量索引 mcweb.save.index
 // （各槽 savedAt/gameMode + 上次游玩槽位），槽位列表 UI 只解析索引、不解码大 payload。
 // 方块数据 RLE 压缩后 base64（enc:'rle'），不可压缩时回退原始 base64（enc:'raw'）。
+// v4 起 dims 字段记录世界尺寸；老尺寸存档读入时自动迁移（种子重生成 + 老区域覆盖）。
 // 自动存档：每 SAVE_AUTOSAVE_SEC 秒一次 + 页面隐藏/关闭时兜底，写入当前槽（state.saveSlot）；
 // 手动存档：开始界面（Esc 菜单）的「保存进度」按钮；首屏槽位列表可切换世界/在空槽开新世界。
 // 存档字段对齐 assistant/snapshot.js 的热重载快照（快照不含 enc/槽位；
@@ -22,8 +23,9 @@ import {
     migrateLegacyGears,
 } from './config.js';
 import { state } from './state.js';
+import { generateWorld } from './world.js';
 import { buildChunkProps, updateChunkMeshes } from './chunk.js';
-import { updateHotbar } from './ui.js';
+import { updateHotbar, showTooltip } from './ui.js';
 import { updateHealthUI } from './playerLife.js';
 import { camera } from './engine.js';
 
@@ -32,8 +34,12 @@ const INDEX_KEY = 'mcweb.save.index';
 const LEGACY_KEY = 'mcweb.save.v1'; // 旧单槽存档：发现时自动迁入槽 0
 // v2（2026-09-01 红石组重做）：v1 的「齿轮」方块 ID 已改作红石组，读入时迁移清为空气。
 // v3（2026-09-01 多存档位）：方块数据 RLE 压缩（enc 字段），槽位化 key。v1/v2 读入走原始 base64。
-const SAVE_VERSION = 3;
-const LOADABLE_VERSIONS = [1, 2, 3];
+// v4（2026-09-06 世界扩容）：dims 字段记录世界尺寸 [宽,高,深]；尺寸与当前不符的老档自动迁移
+//     （种子重生成 + 老区域覆盖，见 migrateBlocksToCurrentSize）。
+const SAVE_VERSION = 4;
+const LOADABLE_VERSIONS = [1, 2, 3, 4];
+// v1..v3 存档没有尺寸字段：那三代固定为 128×128×64（当时唯一用过的尺寸）
+const LEGACY_DIMS = [128, 64, 128];
 
 function u8ToBase64(u8) {
     let s = '';
@@ -53,7 +59,8 @@ function base64ToU8(b64) {
 
 // RLE 压缩：[value, countHi, countLo] 三元组流，单段最长 65535。
 // 体素世界大量连续（空气/石头），通常能压到原始体积的几分之一；是否采用由 saveGame 按体积取舍。
-function rleEncode(u8) {
+// （导出供 assistant/snapshot.js 复用——热重载快照同样需要压缩，否则扩容后超出 sessionStorage 配额）
+export function rleEncode(u8) {
     const out = [];
     let i = 0;
     while (i < u8.length) {
@@ -67,7 +74,7 @@ function rleEncode(u8) {
 }
 
 // 解码到指定总长度的 Uint8Array；长度不符（数据损坏）返回 null
-function rleDecode(u8, total) {
+export function rleDecode(u8, total) {
     const out = new Uint8Array(total);
     let pos = 0;
     for (let i = 0; i + 2 < u8.length; i += 3) {
@@ -77,6 +84,37 @@ function rleDecode(u8, total) {
         pos += run;
     }
     return pos === total ? out : null;
+}
+
+// ==================== 世界尺寸与老档迁移（2026-09-06 扩容）====================
+
+// 读存档记录的世界尺寸 [宽,高,深]：v4 起存 dims 字段，v1..v3 用固定老尺寸。
+// 返回 null = 尺寸字段损坏（按读档失败处理）。上限校验防损坏数据触发超大分配。
+function saveDimsOf(save) {
+    if (save.version >= 4) {
+        const d = save.dims;
+        if (!Array.isArray(d) || d.length !== 3 ||
+            !d.every((n) => Number.isInteger(n) && n > 0 && n <= 1024) ||
+            d[0] * d[1] * d[2] > 268435456) return null;
+        return d;
+    }
+    return LEGACY_DIMS;
+}
+
+// 老尺寸存档迁移到当前世界尺寸：先用存档种子按当前尺寸重生成地形（地形公式只依赖坐标与种子，
+// 老区域边缘与新生成地形同源无缝衔接），再把老区域逐格覆盖回去——玩家的全部改动原样保留，
+// 重生成只负责补四周延伸与头顶净空。远古档缺 worldSeed 时种子按 0 生成周边，仅四周与当年无关。
+// 调用前需先把 state.worldSeed 恢复为存档种子。
+function migrateBlocksToCurrentSize(u8, sw, sh, sd) {
+    generateWorld(); // 按当前尺寸重生成（内部会重置 state.blocks）
+    const w = Math.min(sw, WORLD_WIDTH), h = Math.min(sh, WORLD_HEIGHT), d = Math.min(sd, WORLD_DEPTH);
+    for (let y = 0; y < h; y++) {
+        for (let z = 0; z < d; z++) {
+            const src = (y * sd + z) * sw; // 老布局：x + z*sw + y*sw*sd，按行整段拷贝
+            const dst = (y * WORLD_DEPTH + z) * WORLD_WIDTH;
+            state.blocks.set(u8.subarray(src, src + w), dst);
+        }
+    }
 }
 
 // ==================== 槽位索引 ====================
@@ -161,6 +199,7 @@ export function saveGame() {
         const useRle = rle.length < state.blocks.length;
         const save = {
             version: SAVE_VERSION,
+            dims: [WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH], // 世界尺寸（读档时与当前不符则走迁移）
             enc: useRle ? 'rle' : 'raw',
             savedAt: Date.now(),
             blocks: u8ToBase64(useRle ? rle : state.blocks),
@@ -214,7 +253,8 @@ function clampSlot(slot) {
 }
 
 // 读档并恢复世界与玩家（重建全部区块网格），成功返回 true。
-// 失败（无存档/数据损坏/世界尺寸不符）返回 false，调用方回退到生成新世界。
+// 失败（无存档/数据损坏）返回 false，调用方回退到生成新世界。
+// 存档尺寸与当前不符时自动迁移（migrateBlocksToCurrentSize），老档内容完整保留。
 // 读档成功即把当前槽切换为该槽（state.saveSlot）。
 export function loadGame(slot = state.saveSlot) {
     const i = clampSlot(slot);
@@ -227,25 +267,34 @@ export function loadGame(slot = state.saveSlot) {
     }
     if (!save || !LOADABLE_VERSIONS.includes(save.version) || !save.blocks) return false;
 
-    const total = WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH;
+    const dims = saveDimsOf(save);
+    if (!dims) return false;
+    const [sw, sh, sd] = dims;
+    const saveTotal = sw * sh * sd;
     let u8;
     try {
         u8 = base64ToU8(save.blocks);
-    } catch {
-        return false;
-    }
-    if (save.version >= 3 && save.enc === 'rle') {
-        u8 = rleDecode(u8, total);
-        if (!u8) return false;
-    } else if (u8.length !== total) {
-        console.error('存档世界尺寸不符，放弃恢复');
-        return false;
-    }
-    // 旧版存档：齿轮 ID 区间已改作红石组，清为空气（拉杆/红石灯/门不受影响）
-    if (save.version === 1) migrateLegacyGears(u8);
+        if (save.version >= 3 && save.enc === 'rle') {
+            u8 = rleDecode(u8, saveTotal);
+            if (!u8) return false;
+        } else if (u8.length !== saveTotal) {
+            console.error('存档数据长度与尺寸不符，放弃恢复');
+            return false;
+        }
+        // 旧版存档：齿轮 ID 区间已改作红石组，清为空气（拉杆/红石灯/门不受影响）
+        if (save.version === 1) migrateLegacyGears(u8);
 
-    // 覆盖世界数据并重建全部区块网格
-    state.blocks = u8;
+        // 尺寸与当前一致：直接采用；不一致：迁移（老区域内容原样保留 + 同种子重生成四周）
+        state.worldSeed = save.worldSeed | 0; // 迁移路径重生成依赖种子，先恢复
+        if (sw === WORLD_WIDTH && sh === WORLD_HEIGHT && sd === WORLD_DEPTH) {
+            state.blocks = u8;
+        } else {
+            migrateBlocksToCurrentSize(u8, sw, sh, sd);
+        }
+    } catch (e) {
+        console.error('存档解码/迁移失败：', e);
+        return false;
+    }
     updateChunkMeshes();
     const cxCount = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
     const czCount = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
@@ -274,7 +323,6 @@ export function loadGame(slot = state.saveSlot) {
         xp: p.xp || 0,
         toolWear: p.toolWear || {},
     });
-    state.worldSeed = save.worldSeed | 0;
     if (save.gameMode) state.gameMode = save.gameMode;
     if (typeof save.time === 'number') state.time = save.time;
     if (save.spawn) state.spawn = save.spawn;
@@ -326,9 +374,21 @@ export function importSlotJson(text, slot = state.saveSlot) {
 }
 
 // 自动存档：定时 + 页面隐藏/关闭兜底（开始界面停留时存的是当前世界，无害）
+// 失败可见化（2026-09-06 世界扩容后）：每档体积约 ×4，多世界并存更易撞 localStorage 配额——
+// 自动存档连续失败时提示一次（成功后复位），避免进度默默丢到最后一次成功存档。
+let autosaveFailNotified = false;
+function notifyAutosaveResult(ok) {
+    if (!ok && !autosaveFailNotified) {
+        autosaveFailNotified = true;
+        showTooltip('⚠️ 自动存档失败：浏览器存储空间不足。可删除旧世界或导出存档备份');
+    } else if (ok) {
+        autosaveFailNotified = false;
+    }
+}
+
 export function initAutoSave() {
     setInterval(() => {
-        if (state.blocks && !state.player.dead) saveGame();
+        if (state.blocks && !state.player.dead) notifyAutosaveResult(saveGame());
     }, SAVE_AUTOSAVE_SEC * 1000);
 
     window.addEventListener('pagehide', () => {

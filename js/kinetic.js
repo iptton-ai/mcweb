@@ -232,6 +232,8 @@ export function updateKineticNetwork() {
         for (let z = 0; z < WORLD_DEPTH; z++) {
             for (let x = 0; x < WORLD_WIDTH; x++, idx++) {
                 const id = blocks[idx];
+                // 空气早退（2026-09-06 世界扩容后空气中格占大头，一次比较替掉 isKineticId 多区间判断）
+                if (id === 0) continue;
                 if (!isKineticId(id)) continue;
                 cells.push({ x, y, z, id, axis: kineticAxisOf(id), saw: isSawId(id), front: frontNormalOf(id) });
             }

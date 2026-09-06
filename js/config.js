@@ -1,13 +1,15 @@
 // ==================== config.js ====================
 
 // ==================== 常量定义 ====================
-export const WORLD_WIDTH = 128;
+// 世界尺寸（2026-09-06 从 128×128×64 扩容：面积 4 倍 + 高度翻倍——地形公式只依赖坐标与种子，
+// 扩容不改老地形；老尺寸存档由 saveGame.js 按种子重生成 + 老区域覆盖迁移，见 migrateBlocksToCurrentSize）
+export const WORLD_WIDTH = 256;
 
 // 世界宽度（方块数）
-export const WORLD_DEPTH = 128;
+export const WORLD_DEPTH = 256;
 
 // 世界深度（方块数）
-export const WORLD_HEIGHT = 64;
+export const WORLD_HEIGHT = 128;
 
 // 世界高度（方块数）
 export const CHUNK_SIZE = 16;
@@ -59,7 +61,7 @@ export const MAX_TORCH_LIGHTS = 24;
 // ---- 刷怪规则（对齐原版 Minecraft）----
 export const MAX_ENEMIES = 15;
 
-// 敌对生物容量：原版 cap = 70 × 加载区块/289，本世界 8×8=64 区块 ≈ 15
+// 敌对生物容量：刻意保持 ≈15 封顶约束性能（区块全常驻，不随世界面积放大追原版公式）
 export const SPAWN_MIN_DIST = 24;
 
 // 最小生成距离：24 格内不刷（防贴脸）
