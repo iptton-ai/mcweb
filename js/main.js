@@ -21,11 +21,11 @@ import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
 import { mouseDown, mouseMoveDelta, setupInput } from './input.js';
 import { getUIState, initUIModal, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
-import { updateCameraRig } from './cameraRig.js';
+import { updateCameraRig, updateBuildFilming, resetBuildFilming } from './cameraRig.js';
+import { captureRecordingFrame, stopRecording } from './recording.js';
 import { updateDayNightCycle } from './daynight.js';
 import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
-import { resetCamMode } from './cameraRig.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
 import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
 
@@ -46,6 +46,8 @@ function gameLoop(timestamp) {
         state.fpsTimer = 0;
     }
 
+    updateBuildFilming(dt); // 先检测开工、取景、开录，再消费施工队列
+
     // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）。
     // 自由摄像头时鼠标转的是摄像头朝向（freeCam），玩家视角保持不动
     if (mouseLocked) {
@@ -57,7 +59,7 @@ function gameLoop(timestamp) {
             fc.pitch -= mouseMoveDelta.y * sensitivity;
             const maxPitch = Math.PI / 2 - 0.01;
             fc.pitch = Math.max(-maxPitch, Math.min(maxPitch, fc.pitch));
-        } else {
+        } else if (state.camMode === 'player') {
             state.player.yaw -= mouseMoveDelta.x * sensitivity;
             state.player.pitch -= mouseMoveDelta.y * sensitivity;
             const maxPitch = Math.PI / 2 - 0.01;
@@ -130,6 +132,7 @@ function gameLoop(timestamp) {
     // 渲染（先世界，再清深度叠加第一人称手部，见 js/viewmodel.js）
     renderer.render(scene, camera);
     renderViewmodel(renderer);
+    captureRecordingFrame();
 }
 
 // ==================== 初始化 ====================
@@ -211,7 +214,8 @@ function clearTransientEntities() {
 // 放弃当前世界与存档，按所选模式开新世界（slot 省略 = 覆盖当前槽）
 function startNewWorld(mode, tip, slot = state.saveSlot) {
     state.saveSlot = slot;
-    resetCamMode(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
+    stopRecording();
+    resetBuildFilming(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
     clearBuildQueue(); // 旧世界未放完的 AI 施工绝不能写进新世界（幽灵建筑）
     freshWorld();
     // 清掉旧世界残留的怪物/掉落物/点燃的TNT
@@ -232,7 +236,8 @@ function loadSlot(slot) {
         return;
     }
     saveGame(); // 旧世界进度兜底（失败也继续切换，最近一次自动存档仍在）
-    resetCamMode();
+    stopRecording();
+    resetBuildFilming();
     clearBuildQueue(); // 旧世界的 AI 施工队列不留到新世界（幽灵建筑）
     clearTransientEntities();
     if (!loadGame(slot)) {
@@ -314,7 +319,9 @@ function deleteSlotAndRecover(i) {
     showTooltip(`🗑️ 已删除世界 ${i + 1} 的存档`);
     if (i === state.saveSlot) {
         const next = listSaves().findIndex((m) => m);
-        resetCamMode();
+        stopRecording();
+        resetBuildFilming();
+        clearBuildQueue();
         clearTransientEntities();
         if (next >= 0 && loadGame(next)) {
             initRedstone();

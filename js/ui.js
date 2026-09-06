@@ -2,7 +2,7 @@
 
 import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes } from './config.js';
 import { isCreative, isNight, state } from './state.js';
-import { canvas, camera, renderer, scene } from './engine.js';
+import { camera } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 import { raycastBlocks } from './interaction.js';
 import { isSolid } from './chunk.js';
@@ -10,10 +10,10 @@ import { getBlock } from './world.js';
 import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { addXp, updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
-import { camModeText, toggleBuildCam } from './cameraRig.js';
-import { setState } from './uiModal.js';
-import { audioCtx, getRecAudioStream } from './audio.js';
-import { renderViewmodel } from './viewmodel.js';
+import { camModeText, getBuildFilmingStatus, setCamMode } from './cameraRig.js';
+import { getUIState, mouseLocked, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
+import { downloadRecording, getRecordingStatus, initRecording, toggleBuildRecording } from './recording.js';
+export { isRecording, isCamOwnedRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 
 // ==================== 游戏模式切换 ====================
@@ -382,97 +382,127 @@ export function updateDebugInfo() {
     }
 }
 
-// ==================== 施工进度控件 + 游戏画面录制 ====================
-// AI 渐进施工时顶部显示进度条；[ ] 调速、P 暂停（键位在 input.js），
-// R 键用 MediaRecorder 把画布录成 webm 下载，方便记录 AI 建造过程。
-
+// ==================== 施工进度与常驻拍摄面板 ====================
 const BUILD_WIDGET_STYLE = `
 #build-widget{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:120;
-/* z-index 120：盖过开始界面(100)/死亡界面(90)——AI 施工时在暂停菜单或死亡界面里也能暂停、调速、传送 */
-  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;
-  background:rgba(20,20,34,.85);border:2px solid #4a4a6a;color:#e8e8f4;
-  font-size:12.5px;user-select:none;white-space:nowrap;}
-#build-widget.hidden{display:none;}
-#build-title{max-width:220px;overflow:hidden;text-overflow:ellipsis;}
-#build-bar{width:130px;height:10px;border:1px solid #3d3d5c;border-radius:5px;background:#14142a;overflow:hidden;}
-#build-fill{height:100%;width:0%;background:#7ec850;}
-#build-widget button{background:#2d2d4a;border:1px solid #4a4a6a;border-radius:5px;color:#e0e0e0;
-  cursor:pointer;font-size:12px;padding:2px 7px;font-family:inherit;}
-#build-widget button:hover{border-color:#7ec850;}
-#build-rec.rec-on{color:#ff7a6a;border-color:#a03030;}
-#build-cam.cam-on{color:#8fd0ff;border-color:#3a70a0;}
-#build-save{color:#ffd88f;}
-#build-save.hidden{display:none;}
-#build-hint{color:#8888a8;font-size:11px;}
-`;
-
-let buildEls = null;     // 控件 DOM 引用
-let wasActive = false;   // 上一帧是否有施工任务（用于完成后延迟隐藏）
-let rec = null;          // MediaRecorder 实例（null = 未在录；stop 即置空，收尾在闭包里）
-let recOwner = null;     // 本次录像的开启者：'cam' = 建造跟拍自动开（建完自动停）；'user' = 手动 R/⏺（绝不自动停）
-let recStartAt = 0;
-let recAutoStopTimer = null; // 录像时长上限计时器
-const REC_MAX_SEC = 600;     // 录像数据块全攒在内存（约 60MB/分钟），超 10 分钟自动停录防内存失控
-let lastRecUrl = null;       // 刚停的这条录像的 blob URL：自动下载可能被浏览器拦，60 秒内可手动重存
-let lastRecName = '';
-let recSaveTimer = null;
-let saveWindow = false;      // 重存窗口是否开着（updateBuildWidget 据此保持控件可见）
-const REC_SAVE_WINDOW_SEC = 60;
-let recKeepalive = null;     // 录像补帧保活计时器（见 toggleBuildRecording 内注释）
-let recStallWarn = null;     // 「没捕到帧」告警计时器
-let recGotData = false;      // 本次录像是否已捕获到任何数据块
-
-function stopRecTimers() {
-    clearInterval(recKeepalive);
-    recKeepalive = null;
-    clearTimeout(recStallWarn);
-    recStallWarn = null;
+ display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px 10px;border-radius:10px;
+ max-width:calc(100vw - 24px);box-sizing:border-box;background:rgba(20,20,34,.92);
+ border:1px solid #55556a;color:#e8e8f4;font-size:12px;user-select:none;}
+#build-widget.hidden,#recording-panel.hidden,#recording-panel .hidden{display:none;}
+#build-title{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#build-bar{width:90px;height:6px;border-radius:5px;background:#37374a;overflow:hidden;}
+#build-fill{height:100%;width:0%;background:#9bc879;}
+#build-widget button,#recording-panel button{border:1px solid #565a67;border-radius:6px;
+ background:#303541;color:#edf0f7;cursor:pointer;font:inherit;padding:6px 9px;}
+#build-widget button:hover,#recording-panel button:hover{border-color:#acd58c;background:#404958;}
+#recording-panel button:focus-visible,#recording-panel input:focus-visible{outline:2px solid #b9db98;outline-offset:3px;}
+#recording-panel{position:fixed;bottom:18px;left:14px;z-index:120;width:326px;max-width:calc(100vw - 28px);
+ box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #525968;background:rgba(19,25,34,.94);
+ color:#edf0f7;font:12px/1.5 system-ui,sans-serif;box-shadow:0 4px 18px #0005;user-select:none;}
+#recording-panel .record-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#recording-panel .record-heading{font-weight:650;letter-spacing:.08em;}
+#recording-panel #build-rec{background:#b43e47;border-color:#c95460;color:white;font-weight:650;min-width:144px;}
+#recording-panel #build-rec.rec-on{background:#7f2933;}
+#record-status{color:#bcc8d6;font-size:11px;min-height:17px;margin:6px 0;}
+#camera-choices{display:flex;gap:5px;margin:8px 0;}
+#camera-choices button{flex:1;padding:6px 2px;white-space:nowrap;}
+#camera-choices button[aria-pressed="true"]{background:#354936;border-color:#a2c883;color:#d9efc9;}
+#recording-options{border-top:1px solid #414956;padding-top:8px;}
+#recording-panel label{display:flex;align-items:center;gap:5px;cursor:pointer;}
+#recording-panel input{accent-color:#a2c883;}
+#camera-help{color:#b2bdcb;font-size:11px;margin:7px 0 0;}
+#recording-panel .record-shortcut{color:#bcc8d6;font-size:11px;}
+#recording-panel #build-save{margin-top:8px;width:100%;color:#ffe1aa;}
+#recording-panel.compact #recording-options{display:none;}
+@media(min-width:1000px){#recording-panel.menu-mode{top:24%;bottom:auto;}}
+#recording-panel.compact #camera-help{display:none;}
+#recording-panel #record-controls{padding:2px 5px;font-size:11px;}
+body.hud-hidden #recording-panel,body.hud-hidden #build-widget{display:none;}
+@media(max-width:800px){
+ #recording-panel{bottom:auto;top:12px;left:12px;width:310px;}
+ #build-widget{top:auto;bottom:165px;left:12px;transform:none;max-width:310px;}
+ #debug-info{top:270px;max-width:280px;}
 }
+`;
+let buildEls = null;
 
 export function initBuildWidget() {
     if (buildEls) return;
+    initRecording({ notify: showTooltip });
+    try { state.buildAutoRecord = localStorage.getItem('mcweb.buildAutoRecord') !== 'false'; } catch { /* 禁用存储仍可使用 */ }
     const style = document.createElement('style');
     style.textContent = BUILD_WIDGET_STYLE;
     document.head.appendChild(style);
-
     const root = document.createElement('div');
     root.id = 'build-widget';
     root.className = 'hidden';
     root.innerHTML = `
-      <span id="build-title">🏗️ 施工</span>
-      <div id="build-bar"><div id="build-fill"></div></div>
-      <span id="build-count">0/0</span>
-      <button id="build-goto" title="传送到施工现场（G 键）">📍</button>
-      <button id="build-slower" title="减速（[ 键）">−</button>
-      <span id="build-speed">极速</span>
-      <button id="build-faster" title="加速（] 键）">＋</button>
-      <button id="build-pause" title="暂停/继续施工（P 键）">⏸</button>
-      <button id="build-cam" title="建造跟拍：俯视拍摄施工全过程，建完自动停录（C 键循环切换视角；无任务时先挂机位等待）">🎥</button>
-      <button id="build-rec" title="录制游戏画面（R 键），含游戏声音、不含界面，停止后存为 webm">⏺</button>
-      <button id="build-save" class="hidden" title="自动下载可能被浏览器拦截，点此重新保存刚才的录像（60 秒内有效）">⬇ 保存录像</button>
-      <span id="build-hint">[ ]调速 · P暂停 · C视角 · R录像 · G前往</span>`;
-    document.body.appendChild(root);
-    // 面板内点击不冒泡，避免触发「点击重新锁定指针」
-    root.addEventListener('click', (e) => e.stopPropagation());
-
-    buildEls = {
-        root,
-        title: root.querySelector('#build-title'),
-        fill: root.querySelector('#build-fill'),
-        count: root.querySelector('#build-count'),
-        speed: root.querySelector('#build-speed'),
-        pause: root.querySelector('#build-pause'),
-        camBtn: root.querySelector('#build-cam'),
-        recBtn: root.querySelector('#build-rec'),
-        saveBtn: root.querySelector('#build-save'),
-    };
-    buildEls.root.querySelector('#build-goto').addEventListener('click', () => teleportToBuildSite());
-    buildEls.root.querySelector('#build-slower').addEventListener('click', () => adjustBuildSpeed(-1));
-    buildEls.root.querySelector('#build-faster').addEventListener('click', () => adjustBuildSpeed(1));
-    buildEls.pause.addEventListener('click', () => toggleBuildPaused());
-    buildEls.camBtn.addEventListener('click', () => toggleBuildCam());
-    buildEls.recBtn.addEventListener('click', () => toggleBuildRecording());
-    buildEls.saveBtn.addEventListener('click', () => { if (lastRecUrl) downloadRecording(); });
+      <span id="build-title">施工</span>
+      <div id="build-bar"><div id="build-fill"></div></div><span id="build-count"></span>
+      <button id="build-goto" title="G：前往施工现场">前往</button>
+      <button id="build-slower" title="[：施工减速">−</button><span id="build-speed"></span>
+      <button id="build-faster" title="]：施工加速">＋</button>
+      <button id="build-pause" title="P：暂停 / 继续施工">暂停</button>`;
+    const panel = document.createElement('section');
+    panel.id = 'recording-panel';
+    panel.className = 'hidden';
+    panel.setAttribute('aria-label', '游戏拍摄');
+    panel.innerHTML = `
+      <div class="record-row"><span class="record-heading">游戏拍摄</span>
+        <button id="build-rec" title="R：开始录制 / 停止并保存">● 开始录制</button></div>
+      <div id="record-status" role="status">随时录下当前游戏画面</div>
+      <div id="camera-choices" role="group" aria-label="拍摄镜头">
+        <button id="camera-player" aria-pressed="true">玩家视角</button>
+        <button id="camera-auto" aria-pressed="false">自动取景</button>
+        <button id="camera-manual" aria-pressed="false">手动调镜</button></div>
+      <div class="record-row"><span class="record-shortcut">R 录制 / 停止 · Tab 操作面板</span>
+        <button id="record-controls">设置</button></div>
+      <div id="recording-options">
+        <label><input id="build-auto-record" type="checkbox">AI 施工自动录制</label>
+        <div id="camera-help"></div>
+      </div>
+      <button id="build-save" class="hidden">↓ 保存上一段</button>`;
+    document.body.append(root, panel);
+    for (const el of [root, panel]) el.addEventListener('click', e => e.stopPropagation());
+    buildEls = { root, panel, title: root.querySelector('#build-title'), fill: root.querySelector('#build-fill'),
+        count: root.querySelector('#build-count'), speed: root.querySelector('#build-speed'),
+        pause: root.querySelector('#build-pause'), recBtn: panel.querySelector('#build-rec'),
+        saveBtn: panel.querySelector('#build-save'), status: panel.querySelector('#record-status'),
+        auto: panel.querySelector('#build-auto-record'), help: panel.querySelector('#camera-help'),
+        controls: panel.querySelector('#record-controls') };
+    root.querySelector('#build-goto').addEventListener('click', teleportToBuildSite);
+    root.querySelector('#build-slower').addEventListener('click', () => adjustBuildSpeed(-1));
+    root.querySelector('#build-faster').addEventListener('click', () => adjustBuildSpeed(1));
+    buildEls.pause.addEventListener('click', toggleBuildPaused);
+    buildEls.recBtn.addEventListener('click', () => { toggleBuildRecording(); updateBuildWidget(); });
+    buildEls.saveBtn.addEventListener('click', downloadRecording);
+    buildEls.controls.addEventListener('click', () => {
+        if (mouseLocked) setRecordingControlsOpen(true);
+        else {
+            setRecordingControlsOpen(false);
+            if (['pause', 'inventory', 'settings'].includes(getUIState())) setState('playing');
+            if (getUIState() === 'playing') requestLock();
+        }
+        updateBuildWidget();
+    });
+    buildEls.auto.checked = state.buildAutoRecord;
+    buildEls.auto.addEventListener('change', () => {
+        state.buildAutoRecord = buildEls.auto.checked;
+        try { localStorage.setItem('mcweb.buildAutoRecord', String(state.buildAutoRecord)); } catch { /* 本次会话仍然生效 */ }
+        showTooltip(state.buildAutoRecord ? '下次施工将自动取景并录制' : '下次施工不再自动录制；当前录像可点停止并保存');
+        buildEls.auto.blur();
+    });
+    for (const [id, mode] of [['camera-player', 'player'], ['camera-auto', 'build'], ['camera-manual', 'free']]) {
+        panel.querySelector('#' + id).addEventListener('click', () => {
+            setCamMode(mode);
+            if (mode === 'free' || mode === 'player') {
+                setRecordingControlsOpen(false);
+                if (['pause', 'inventory', 'settings'].includes(getUIState())) setState('playing');
+                if (getUIState() === 'playing') requestLock();
+            }
+            updateBuildWidget();
+        });
+    }
 }
 
 // 前往施工现场（G 键 / 📍 按钮）：把玩家传到施工焦点所在柱的地表上。
@@ -507,175 +537,40 @@ export function teleportToBuildSite() {
     showTooltip(`📍 已前往施工现场：${focus.label}`);
 }
 
-// 是否正在录像（HUD/调试显示用）
-export function isRecording() {
-    return !!rec;
-}
-
-// 正在录的这条是否为「建造跟拍自动开的」（cameraRig 据此决定建完要不要自动停；
-// 手动 R 开的绝不停——用户在录自己的片段，跟拍收尾不能误杀）
-export function isCamOwnedRecording() {
-    return !!rec && recOwner === 'cam';
-}
-
-// 录像文件名：任务名（buildQueue 的 label）+ 时间戳，多段录像好区分
-function recFileName(container = 'webm') {
-    const label = (getBuildStatus().label || '').replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24);
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    return `${label || '建造录像'}-${ts}.${container}`;
-}
-
-function downloadRecording() {
-    if (!lastRecUrl) return;
-    const a = document.createElement('a');
-    a.href = lastRecUrl;
-    a.download = lastRecName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-}
-
-// 重存窗口：自动下载可能被浏览器的「多文件下载」拦截（尤其连续录停几条时），
-// 60 秒内控件上保留 ⬇ 按钮，被拦的录像点一下就能补存，过期才释放 blob 内存
-function openSaveWindow() {
-    saveWindow = true;
-    buildEls.saveBtn.classList.remove('hidden');
-    clearTimeout(recSaveTimer);
-    recSaveTimer = setTimeout(() => {
-        saveWindow = false;
-        buildEls.saveBtn.classList.add('hidden');
-        if (lastRecUrl) URL.revokeObjectURL(lastRecUrl);
-        lastRecUrl = null;
-    }, REC_SAVE_WINDOW_SEC * 1000);
-}
-
-function closeSaveWindow() {
-    saveWindow = false;
-    clearTimeout(recSaveTimer);
-    recSaveTimer = null;
-    buildEls.saveBtn.classList.add('hidden');
-    if (lastRecUrl) URL.revokeObjectURL(lastRecUrl);
-    lastRecUrl = null;
-}
-
-// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频含游戏声音，不含 DOM 界面）。
-// source='cam' 由建造跟拍调用（自动开、跟拍收尾自动停）；其余一律 'user'（只能手动停）
-export function toggleBuildRecording(source = 'user') {
-    if (!buildEls) initBuildWidget();
-    if (rec) {
-        // 立即置空：stop 到 onstop 异步收尾之间再按 R 不会对已停止的 recorder 重复 stop；
-        // 收尾（打包下载）用下方闭包捕获的实例，不依赖 rec
-        const stopped = rec;
-        rec = null;
-        recOwner = null;
-        stopRecTimers();
-        if (stopped.state !== 'inactive') stopped.stop();
-        return;
-    }
-    if (typeof MediaRecorder === 'undefined') {
-        showTooltip('⚠️ 当前浏览器不支持 MediaRecorder，无法录像');
-        return;
-    }
-    closeSaveWindow(); // 上一条的重存窗口让位：释放旧 blob，避免两条录像同时在内存里
-    const stream = canvas.captureStream(60);
-    // 游戏 BGM/音效走 audio.js 的统一主输出，从这里分一条音轨合成进视频。
-    // 只有音频上下文在运行时才合入：挂起的上下文不产样本，混进轨道会拖坏时长与兼容性
-    let hasAudio = false;
-    try {
-        if (audioCtx && audioCtx.state === 'running') {
-            const audioStream = getRecAudioStream();
-            if (audioStream) audioStream.getAudioTracks().forEach((t) => stream.addTrack(t));
-        }
-    } catch (e) { /* 音频栈不可用：降级为无声视频 */ }
-    hasAudio = stream.getAudioTracks().length > 0;
-    // 优先 mp4（H.264）：文件自带时长元数据、QuickTime/微信等直接能播；
-    // 不支持（旧浏览器/Safari 差异）再退回 webm
-    const mimes = hasAudio
-        ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        : ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-    const mime = mimes.find((m) => MediaRecorder.isTypeSupported(m)) || '';
-    const container = mime.includes('mp4') ? 'mp4' : 'webm';
-    const mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8000000 } : undefined);
-    // 数据块/起始时间收进闭包：stop 与新一次录制并发时互不污染
-    const chunks = [];
-    mr.ondataavailable = (e) => { if (e.data.size) { chunks.push(e.data); recGotData = true; } };
-    mr.onstop = () => {
-        stopRecTimers();
-        const totalBytes = chunks.reduce((s, c) => s + c.size, 0);
-        if (totalBytes < 8192) {
-            // 全程一帧都没捕到（页面后台/最小化时画布不重绘，captureStream 无帧可录）：
-            // 不落 0 字节废片，直接丢弃并说明
-            stream.getTracks().forEach((t) => t.stop());
-            showTooltip('⚠️ 本次录像没有捕获到任何画面（页面在后台时画布不更新），已丢弃');
-            return;
-        }
-        const blob = new Blob(chunks, { type: mime.split(';')[0] || 'video/webm' });
-        chunks.length = 0; // 释放录像数据块（blob 已持有数据，数组别再占着）
-        lastRecUrl = URL.createObjectURL(blob);
-        lastRecName = recFileName(container);
-        downloadRecording();
-        // 停掉捕获轨道：MediaRecorder 停止后 track 仍是 live，不断开会一直占着画布捕获管线（泄漏）
-        stream.getTracks().forEach((t) => t.stop());
-        openSaveWindow();
-        showTooltip(hasAudio ? `🎥 录像已保存（${container}，含游戏声音）` : `🎥 录像已保存（${container}，无声）`);
-    };
-    rec = mr;
-    recOwner = source;
-    recGotData = false;
-    recStartAt = Date.now();
-    recAutoStopTimer = setTimeout(() => {
-        if (rec !== mr) return; // 已被手动停止
-        showTooltip(`⏺ 录像已达 ${REC_MAX_SEC / 60} 分钟上限，自动停止并保存`);
-        toggleBuildRecording();
-    }, REC_MAX_SEC * 1000);
-    mr.start(1000); // 每秒落一个数据块，崩溃时最多丢 1 秒
-    // 补帧保活：captureStream 只在画布重绘时出帧，而后台/最小化/遮挡时 rAF 停摆、画布不再
-    // 重绘 → 整段无帧，成片只有开头几秒甚至 0 字节。录制期间低频手动重绘强制出帧
-    // （可见时 2fps，后台被浏览器节流到 ~1fps），保证成片时长贴墙钟。
-    recKeepalive = setInterval(() => {
-        if (!rec) return;
-        renderer.render(scene, camera);
-        renderViewmodel(renderer);
-    }, 500);
-    recStallWarn = setTimeout(() => {
-        if (rec === mr && !recGotData) showTooltip('⚠️ 还没捕获到画面帧——页面可能在后台/被遮挡，录到的时长会缩水');
-    }, 3000);
-    showTooltip(`🎥 开始录制游戏画面…（R 停止，最多 ${REC_MAX_SEC / 60} 分钟；${hasAudio ? '含游戏声音' : '无声'}，不含界面）`);
-}
-
-// 每帧刷新控件（main.js gameLoop 调用）：有任务或录像中常显，任务结束后停留 3 秒；
-// 跟拍模式（含预挂待机）也常显——否则没任务时 🎥/暂停/调速按钮无处可点，挂机位没入口
+// 常驻入口与施工状态各自更新，普通游玩时也能发现录像按钮。
 export function updateBuildWidget() {
     if (!buildEls) return;
     const st = getBuildStatus();
-    const recOn = !!rec;
-    if (st.active) wasActive = true;
-    const show = st.active || recOn || wasActive || saveWindow || state.camMode === 'build' || lastFinishedAgeMs() < 3000;
-    if (!st.active && wasActive) {
-        wasActive = false;
-        if (!recOn) {
-            showTooltip(`✅ 施工完成：${st.label}（${st.applied}/${st.total} 格）`);
-        }
-    }
-    buildEls.root.classList.toggle('hidden', !show);
-    if (!show) return;
-
-    buildEls.title.textContent = st.label ? `🏗️ ${st.label}` : '🏗️ 施工';
-    const pct = st.total ? Math.round((st.applied / st.total) * 100) : 0;
-    buildEls.fill.style.width = pct + '%';
+    const rec = getRecordingStatus();
+    const filming = getBuildFilmingStatus();
+    const visible = getUIState() !== 'title' || st.active || rec.recording || rec.hasDownload;
+    buildEls.panel.classList.toggle('hidden', !visible);
+    buildEls.panel.classList.toggle('menu-mode', ['pause', 'inventory', 'settings'].includes(getUIState()));
+    const expanded = state.recordingControlsOpen || !mouseLocked;
+    buildEls.panel.classList.toggle('compact', !expanded);
+    buildEls.controls.textContent = mouseLocked ? '设置' : '回到画面';
+    buildEls.controls.setAttribute('aria-expanded', String(expanded));
+    buildEls.root.classList.toggle('hidden', !(st.active || (filming.active && filming.waiting) || lastFinishedAgeMs() < 3000));
+    buildEls.title.textContent = filming.waiting ? '等待 AI 继续施工' : st.label || '施工';
+    buildEls.fill.style.width = (st.total ? Math.round(st.applied / st.total * 100) : 0) + '%';
     buildEls.count.textContent = `${st.applied}/${st.total}`;
     buildEls.speed.textContent = speedText();
-    buildEls.pause.textContent = st.paused ? '▶' : '⏸';
-    buildEls.pause.title = st.paused ? '继续施工（P 键）' : '暂停施工（P 键）';
-    buildEls.camBtn.classList.toggle('cam-on', state.camMode === 'build');
-    buildEls.camBtn.textContent = state.camMode === 'build' ? '🎥 跟拍中' : '🎥';
-    if (recOn) {
-        const sec = Math.floor((Date.now() - recStartAt) / 1000);
-        buildEls.recBtn.textContent = `⏹ ${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-    } else {
-        buildEls.recBtn.textContent = '⏺';
+    buildEls.pause.textContent = st.paused ? '继续' : '暂停';
+    buildEls.auto.checked = state.buildAutoRecord;
+    buildEls.saveBtn.classList.toggle('hidden', !rec.hasDownload);
+    buildEls.saveBtn.title = rec.filename;
+    buildEls.recBtn.textContent = rec.recording ? '■ 停止并保存' : '● 开始录制';
+    buildEls.recBtn.classList.toggle('rec-on', rec.recording);
+    const time = `${String(Math.floor(rec.elapsedSec / 60)).padStart(2, '0')}:${String(rec.elapsedSec % 60).padStart(2, '0')}`;
+    buildEls.status.textContent = rec.recording
+        ? `● ${time} · ${rec.owner === 'cam' ? '施工自动录制' : '游戏录制'}${filming.finishing && rec.owner === 'cam' ? ' · 成品展示后保存' : ''}`
+        : rec.saving ? '正在生成录像…' : rec.error || (filming.active ? '施工进行中 · 可随时开始录制' : '随时录下当前游戏画面');
+    for (const [id, mode] of [['camera-player', 'player'], ['camera-auto', 'build'], ['camera-manual', 'free']]) {
+        document.getElementById(id).setAttribute('aria-pressed', String(state.camMode === mode));
     }
-    buildEls.recBtn.classList.toggle('rec-on', recOn);
+    buildEls.help.textContent = state.camMode === 'free'
+        ? '点击画面调镜：鼠标转向 · WASD 移动 · 空格 / Shift 升降 · 滚轮调速；Tab 返回面板。'
+        : state.camMode === 'build'
+            ? (filming.bounds ? '已对准施工全景。切到手动调镜可调整位置，录像保持连续。' : '等待 AI 开工后自动对准施工范围。')
+            : '录制当前视角与游戏声音，不含界面。AI 开工自动取景，完工展示 4 秒后保存。';
 }

@@ -57,6 +57,8 @@ export const state = {
     viewMode: 0, // 0=第一人称 1=第三人称(背后)
     camMode: 'player', // 摄像头模式（js/cameraRig.js）：'player'=跟随玩家 / 'free'=自由摄像头 / 'build'=建造跟拍
     freeCam: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, // 自由摄像头的位姿（进入时从玩家相机初始化）
+    buildAutoRecord: true, // AI 施工自动录制偏好，由拍摄面板载入持久化设置
+    recordingControlsOpen: false, // Tab 释放鼠标操作拍摄面板，不暂停施工
     camSpeed: 1, // 自由摄像头速度倍率（滚轮调节）
     assistantOpen: false, // AI 助手会话面板是否打开（由 uiModal.js 状态机维护的镜像字段）
     buildSpeedIdx: BUILD_DEFAULT_SPEED_IDX, // 施工速度档位（BUILD_SPEED_LEVELS 下标，[ ] 键可调）

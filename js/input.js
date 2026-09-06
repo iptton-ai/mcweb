@@ -13,7 +13,7 @@ import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
 import { openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
-import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setState } from './uiModal.js';
+import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
 
 // ==================== 输入状态 ====================
 export const keys = {};
@@ -44,6 +44,7 @@ export function clearKeys() {
     for (const k in keys) keys[k] = false;
     mouseDown.left = false;
     mouseDown.right = false;
+    mouseMoveDelta.x = mouseMoveDelta.y = 0;
 }
 
 export function setupInput() {
@@ -52,7 +53,12 @@ export function setupInput() {
 
     document.addEventListener('keydown', (e) => {
         if (isTypingTarget(e)) return; // 在助手聊天/设置等输入框打字时，游戏键全部让路
-        keys[e.code] = true;
+        if (e.code === 'Tab' && getUIState() !== 'title') {
+            e.preventDefault();
+            if (!e.repeat) setRecordingControlsOpen(!state.recordingControlsOpen);
+            return;
+        }
+        keys[e.code] = !state.recordingControlsOpen;
 
         const st = getUIState();
         if (e.code === 'Space' && st === 'playing') e.preventDefault();
@@ -78,7 +84,7 @@ export function setupInput() {
             else setState('playing');
             return;
         }
-        if (st !== 'playing') {
+        if (st !== 'playing' || state.recordingControlsOpen) {
             // 暂停菜单/背包/助手面板/死亡界面里：只放行 AI 施工控制键
             if (st !== 'title') handleBuildKeys(e);
             return;
@@ -89,7 +95,7 @@ export function setupInput() {
             dropHeldItem();
         }
         // 空格双击（创造）：切换飞行
-        if (e.code === 'Space' && isCreative() && !e.repeat) {
+        if (e.code === 'Space' && state.camMode === 'player' && isCreative() && !e.repeat) {
             const now = performance.now();
             if (now - lastSpaceAt < 300) {
                 state.player.flying = !state.player.flying;
@@ -219,7 +225,7 @@ export function setupInput() {
     document.addEventListener('click', () => {
         // playing 但指针未锁定（如冷却期锁定失败）：任意点击重新锁定。
         // 助手面板打开时鼠标归面板，不在此抢锁。
-        if (getUIState() === 'playing' && !isAssistantVisible() && !isPlaying()) requestLock();
+        if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen && !isPlaying()) requestLock();
     });
 }
 

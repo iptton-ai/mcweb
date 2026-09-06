@@ -22,15 +22,14 @@ export const WALK_SPEED = 4.5;
 export const FLY_SPEED = 10.0;
 
 // ---- 摄像头模式（js/cameraRig.js：自由摄像头 + 建造跟拍）----
-export const CAM_FOV = 75; // 与 engine.js 的相机视场角保持一致（跟拍高度按它反推）
+export const CAM_FOV = 75; // 默认视场角；施工取景读取 camera.fov 适配用户设置
 export const FREE_CAM_BASE_SPEED = FLY_SPEED * 2.5; // 自由摄像头基础速度，滚轮可调倍速
 export const FREE_CAM_SPEED_MIN = 0.25;
 export const FREE_CAM_SPEED_MAX = 8;
 export const BUILD_CAM_MARGIN = 8; // 跟拍画面四周预留余量（格）
 export const BUILD_CAM_MIN_HEIGHT = 16; // 跟拍相机最低高度（格）
-export const BUILD_CAM_DONE_DELAY = 4; // 建造完成后跟拍停留秒数：缓慢拉远做成品展示，随后自动停录并回玩家视角
+export const BUILD_CAM_DONE_DELAY = 4; // 建造完成后跟拍停留秒数：缓慢拉远做成品展示，随后停止自动录像；手动录像和用户所选镜头保留
 export const BUILD_CAM_REVEAL_SCALE = 0.6; // 收官展示的拉远幅度（在取景高度基础上再抬高 60%）
-export const BUILD_CAM_HOLD_MAX_SEC = 60; // 助手工具循环未结束（跨轮次等 LLM）时跟拍保持最后取景的最长秒数，超时按完成收尾
 export const BUILD_CAM_CINEMATIC_IDX = 0; // 跟拍自动降到该档位观影（延时 20bps）：极速档建造一帧建完，录出来是静止画面
 export const BUILD_CAM_CINEMATIC_MAX_IDX = 1; // 当前档位 ≤ 此值（延时/慢速）已够慢，进跟拍不再降速
 

@@ -13,13 +13,14 @@ cfg/st/w/rs/ps/kn/it/itm/eng/um/ui/sg 模块对象与 gb/sb/sleep/pump 等助手
 """
 
 import json
+import os
 import re
 import sys
 
 sys.path.insert(0, "/Users/zxnap/.agents/skills/browser-cdp/scripts")
 from cdp import Page  # noqa: E402
 
-BASE = "http://127.0.0.1:8000"
+BASE = os.environ.get("E2E_BASE", "http://127.0.0.1:8000")
 
 # 页面侧公共前导：每次 evaluate 自包含（skill 坑：不假设 window.__xxx 还在）
 PREAMBLE = r"""
@@ -72,8 +73,8 @@ function aimPlayer(px,py,pz,yaw,pitch){S.player.x=px;S.player.y=py;S.player.z=pz
 
 
 class E2E:
-    def __init__(self, port=19401, nav=True):
-        self.page = Page(port=port)
+    def __init__(self, port=None, nav=True):
+        self.page = Page(port=port or int(os.environ.get("CDP_PORT", "19401")))
         if nav:
             self.page.nav(BASE + "/", settle=6.0)
 

@@ -42,7 +42,7 @@ export function getUIState() {
 
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板
 function wantLockNow() {
-    return uiState === 'playing' && !assistantVisible;
+    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen;
 }
 
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）
@@ -52,7 +52,7 @@ export function isPlaying() {
 
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
-    return uiState === 'playing';
+    return uiState === 'playing' && !state.recordingControlsOpen;
 }
 
 export function isAssistantVisible() {
@@ -72,6 +72,7 @@ export function onUIStateChange(cb) {
 // ==================== 状态切换（唯一入口） ====================
 export function setState(next) {
     if (next === 'playing' && state.player.dead) next = 'dead'; // 死亡时不可能回到 playing
+    if (next !== 'playing') state.recordingControlsOpen = false;
     if (next !== uiState) {
         const prev = uiState;
         uiState = next;
@@ -81,6 +82,14 @@ export function setState(next) {
     }
     syncOverlays();
     applyPointerPolicy();
+}
+
+// 拍摄面板是非暂停浮层：解锁鼠标但保持施工与录像继续。
+export function setRecordingControlsOpen(open) {
+    state.recordingControlsOpen = !!open;
+    emit(uiState, uiState); // 清空按键，避免打开面板后仍在移动
+    applyPointerPolicy();
+    syncOverlays();
 }
 
 // 助手面板开关（不改变游戏状态：面板开着也能继续玩游戏）
@@ -155,6 +164,7 @@ function syncOverlays() {
 
 // ==================== 指针锁管理（全游戏仅此处调用） ====================
 export function requestLock() {
+    state.recordingControlsOpen = false;
     if (mouseLocked || lockPending) return;
     lockPending = true;
     wantLock = true;
@@ -199,10 +209,16 @@ function onPointerLockChange() {
     state.player.mouseLocked = mouseLocked;
     lockPending = false;
     if (mouseLocked) {
+        // 锁定请求异步返回期间可能已按 Tab 打开面板；迟到的成功不能抢回鼠标。
+        if (state.recordingControlsOpen || uiState !== 'playing') {
+            exitLock();
+            syncOverlays();
+            return;
+        }
         wantLock = false;
         stopRetry();
         hideLockHint();
-    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible) {
+    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen) {
         // 用户按 Esc（锁定状态下浏览器截获 Esc，页面收不到 keydown）或系统夺走指针 → 暂停菜单
         // （面板开着时指针本就不该被锁定，此时解锁不弹菜单）
         setState('pause');

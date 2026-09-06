@@ -5,7 +5,7 @@
 - REC-2 键盘自动重复忽略：按住 R 触发 e.repeat 连发不得停开录像（修复前 0.5s 连发
   会落 3 个垃圾视频、把区间拦腰斩断，第二次真实按键反而变成开始录）
 - REC-3 跟拍录像所有权：跟拍自动开的录像（'cam' 所有）建完自动停；用户手动 R 接管后
-  （停 cam 录像再自己开录）跟拍收尾只退视角、绝不误停用户录像（修复前 autoRecStarted
+  （停 cam 录像再自己开录）跟拍收尾保留当前镜头、绝不误停用户录像（修复前 autoRecStarted
   残留 true 导致误停）
 
 重跑：cd tests/e2e && python3 run_rec.py [case ...]（缺省全跑）
@@ -25,6 +25,9 @@ def case(fn):
 
 # 页面侧公共段：抓 blob（patch URL.createObjectURL）+ 真实 R 键派发 + 时长探测
 REC_HELPERS = r"""
+if (window.__recOriginalCreate) URL.createObjectURL = window.__recOriginalCreate;
+window.__recOriginalCreate = URL.createObjectURL;
+S.buildAutoRecord = true;
 const blobs = [];
 const origCreate = URL.createObjectURL.bind(URL);
 URL.createObjectURL = (b) => { blobs.push({blob: b, size: b && b.size, type: b && b.type}); return origCreate(b); };
@@ -106,7 +109,7 @@ const cam = await import(B+'cameraRig.js');
 const ops = [];
 for (let i = 0; i < 8; i++) ops.push([40+i, 60, 40, BT.STONE]);
 const jobP = bq.enqueueBuildOps('跟拍验证塔', ops);
-cam.setCamMode('build');                      // 有任务在队：进跟拍即自动开录（'cam' 所有）
+cam.updateBuildFilming(0.05);                      // 有任务在队：开工自动取景并开录（'cam' 所有）
 await sleep(400);
 const camRec = ui.isRecording();
 pressR(); await sleep(150); pressR();         // 手动停 cam 录像、再手动开 user 录像
@@ -115,17 +118,17 @@ const userRec = ui.isRecording();
 await jobP;                                   // 施工完成
 await sleep(4 * 1000 + 1500);                 // 等 BUILD_CAM_DONE_DELAY 收尾（config 默认 4s）
 const recAfterFinish = ui.isRecording();      // 修复点：user 录像不被跟拍收尾误停
-const backToPlayer = S.camMode === 'player';
+const cameraPreserved = S.camMode === 'build';
 pressR();                                     // 手动停出片
 const n = await waitBlob(2);
-return { camRec, userRec, recAfterFinish, backToPlayer, blobCount: n, recAfter: ui.isRecording() };
+return { camRec, userRec, recAfterFinish, cameraPreserved, blobCount: n, recAfter: ui.isRecording() };
 """)
     d = res if isinstance(res, dict) else {}
     checks = [
         ("进跟拍自动开录", d.get("camRec") is True, f"camRec={d.get('camRec')}"),
         ("手动接管后用户在录", d.get("userRec") is True, f"userRec={d.get('userRec')}"),
         ("跟拍收尾不误停用户录像", d.get("recAfterFinish") is True, f"recAfterFinish={d.get('recAfterFinish')}"),
-        ("跟拍收尾已回玩家视角", d.get("backToPlayer") is True, f"backToPlayer={d.get('backToPlayer')}"),
+        ("用户录像镜头不会被收尾切走", d.get("cameraPreserved") is True, f"cameraPreserved={d.get('cameraPreserved')}"),
         ("两条成片(cam+user)", d.get("blobCount") == 2, f"blobCount={d.get('blobCount')}"),
         ("手动停后不在录", d.get("recAfter") is False, f"recAfter={d.get('recAfter')}"),
     ]
@@ -137,6 +140,7 @@ ALL = {fn.__name__: fn for fn in [REC_1, REC_2, REC_3]}
 if __name__ == "__main__":
     names = sys.argv[1:] or list(ALL)
     e2e = lib.E2E()
+    e2e.page.cmd('Browser.setDownloadBehavior', {'behavior': 'deny'})
     e2e.fresh_page()
     results = {}
     for n in names:
@@ -145,3 +149,4 @@ if __name__ == "__main__":
     print("\n==== 录像验收汇总 ====")
     for n, ok in results.items():
         print(f"  {n}: {'PASS' if ok else 'FAIL'}")
+    sys.exit(0 if all(results.values()) else 1)
