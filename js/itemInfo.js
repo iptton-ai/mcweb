@@ -10,7 +10,7 @@ import {
     DOOR_ITEM_ID, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID,
     PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID,
     WATERWHEEL_ITEM_ID, SHAFT_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, SAW_ITEM_ID,
-    CLUTCH_ITEM_ID, BELT_ITEM_ID, DEPLOYER_ITEM_ID,
+    CLUTCH_ITEM_ID, BELT_ITEM_ID, DEPLOYER_ITEM_ID, PULLEY_ITEM_ID, PLATFORM_ITEM_ID,
 } from './config.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 
@@ -52,6 +52,8 @@ const SPECIAL_HINTS = {
     [CLUTCH_ITEM_ID]: ['串进传动轴的红石开关 · 充能 = 断开传动（水车侧照转，下游停）'],
     [BELT_ITEM_ID]: ['贴顶面放置 · 通电后以 1.5 格/秒沿箭头运送物品（玩家站上会被带动）'],
     [DEPLOYER_ITEM_ID]: ['通电后每 0.5 秒把捕获到的方块物品放进朝向格（投料口自动化）'],
+    [PULLEY_ITEM_ID]: ['贴方块底面（朝下垂挂）或顶面（朝上顶举）放置，背面接传动轴', '红石充能 = 卷绳（平台向滑轮收拢）· 断电 = 放绳；无动力 = 平台悬停', '正下方/上方 32 格内放一块电梯平台即自动绑绳（应力 32，平台另计 8）'],
+    [PLATFORM_ITEM_ID]: ['被滑轮绳绑定后随卷放绳升降（1.5 格/秒），站上去的人和物品一起走', '也可当普通建材：实心平台，能放东西、能被活塞推动'],
     [BlockTypes.WATER]: ['静态水：供水车/造水景 · 只能被方块覆盖，不可挖掘'],
     [BlockTypes.TORCH]: ['光源 · 照到的格子夜间不刷怪'],
     [BlockTypes.COAL_ORE]: ['生成于 y<44 的岩层'],

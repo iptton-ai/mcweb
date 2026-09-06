@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -206,6 +206,8 @@ export function generateAllTextures() {
         // ---- 物流+控制组（Create-lite L1）：传送带 tile 73..74（顶面箭头 / 带沿侧面）、投料器 tile 75..76（正面投料口 / 机身侧面） ----
         { type: BELT_ITEM_ID, top: 73, side: 74, bottom: 74, name: 'belt' }, // 传送带（实际是 3D 薄板道具，顶面箭头指北为基准、按 dir 旋转整板）
         { type: DEPLOYER_ITEM_ID, top: 75, side: 76, bottom: 76, name: 'deployer' }, // 投料器（实际是 3D 方箱+喷嘴道具，正面投料口 tile 75 按朝向旋转）
+        // ---- 电梯组（Create-lite L2）：电梯平台 tile 81（铁框格栅板，普通立方体三面同图；滑轮为 3D 纯色道具照离合器惯例不占 tile） ----
+        { type: PLATFORM_ITEM_ID, top: 81, side: 81, bottom: 81, name: 'platform' },
     ];
 
     const drawFunctions = {
@@ -1024,6 +1026,25 @@ export function generateAllTextures() {
             ctx.fillRect(x + 2, y + s - 4, 2, 2);
             ctx.fillRect(x + s - 4, y + s - 4, 2, 2);
         },
+        // ---- 电梯组（Create-lite L2）：电梯平台 81 格栅板（铁框 + 横栅 + 铆钉，普通立方体三面同图） ----
+        81: (ctx, x, y, s) => {
+            ctx.fillStyle = '#8f9aa6'; // 钢灰底
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6d7784';
+            for (let i = 3; i < s - 2; i += 3) ctx.fillRect(x + 2, y + i, s - 4, 1); // 横向格栅槽
+            ctx.fillStyle = '#aab4bf';
+            for (let i = 3; i < s - 2; i += 3) ctx.fillRect(x + 2, y + i - 1, s - 4, 1); // 槽上沿高光
+            ctx.fillStyle = '#5d6672';
+            ctx.fillRect(x, y, s, 2); // 铁框上沿
+            ctx.fillRect(x, y + s - 2, s, 2); // 铁框下沿
+            ctx.fillRect(x, y, 2, s); // 铁框左沿
+            ctx.fillRect(x + s - 2, y, 2, s); // 铁框右沿
+            ctx.fillStyle = '#c8d0d8';
+            ctx.fillRect(x + 2, y + 2, 1, 1); // 角铆钉
+            ctx.fillRect(x + s - 3, y + 2, 1, 1);
+            ctx.fillRect(x + 2, y + s - 3, 1, 1);
+            ctx.fillRect(x + s - 3, y + s - 3, 1, 1);
+        },
         76: (ctx, x, y, s) => { // 投料器机身侧面：铜木机壳 + 两道横向散热格栅 + 中央接缝
             ctx.fillStyle = '#7e7052';
             ctx.fillRect(x, y, s, s);
@@ -1138,6 +1159,7 @@ export function generateAllTextures() {
     for (let i = 0; i < BELT_COUNT; i++) blockUVs[BELT_BASE + i] = blockUVs[BELT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
     // 投料器 6 变体共享物品图标 tile（实际是 3D 方箱+喷嘴道具，手模型/物品栏/掉落物走这里的 UV）
     for (let i = 0; i < DEPLOYER_COUNT; i++) blockUVs[DEPLOYER_BASE + i] = blockUVs[DEPLOYER_ITEM_ID] || blockUVs[BlockTypes.STONE];
+    for (let i = 0; i < PULLEY_COUNT; i++) blockUVs[PULLEY_BASE + i] = blockUVs[PLATFORM_ITEM_ID] || blockUVs[BlockTypes.STONE]; // 滑轮变体兜底平台 tile（物品图标，照离合器先例）
 
     // 门上半 tile（21）没有对应的方块 ID，单独注册进 tileMap：
     // 覆盖加载器（TILE_OVERRIDES）与门板纹理裁取（getDoorTileTexture）都靠它定位
