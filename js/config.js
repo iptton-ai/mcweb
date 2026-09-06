@@ -621,11 +621,55 @@ export function deployerFacing(id) {
     return id - DEPLOYER_BASE;
 }
 
-// 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组，用常量判段界；
-// 动力求解器全图扫描的热路径——两次范围比较，无函数调用，成本不变）
+// ==================== 有状态方块：电梯组（Create-lite 批次 L2，方案见 docs/l2-elevator-plan.md） ====================
+// 滑轮（rope pulley）：绳升降机头。ID = PULLEY_BASE + up*2 + powered：
+//   up=0 朝下垂挂（贴方块底面放置，绳与平台在下方）/ 1 朝上顶举（贴顶面，绳在上方）
+//   powered=1 充能=卷绳（平台向滑轮收拢）/ 0 断电（有动力时）=放绳（远离滑轮）
+//   powered 由红石网络每轮重算按电平回写变体（js/redstone.js，照离合器先例——但不触发
+//   动力重算：滑轮无论 powered 都传动，拓扑不变）。无动力（停转/过载/卡死）=平台悬停。
+// 电梯平台 ID = PLATFORM_BASE（单 ID 无变体）：普通实心立方体（无 customMesh，零 propMesh），
+// 被滑轮沿朝向 ≤PULLEY_ROPE_MAX 格内第一个平台「绳绑定」（纯派生态，js/kinetic.js 求解时
+// 重建）；平台跨格时由 carryRiders（js/piston.js，电梯 T1 导出）载着站顶/占据实体一起走。
+export const PULLEY_BASE = 218;
+export const PULLEY_COUNT = 4;
+export const PLATFORM_BASE = 222;
+export const PLATFORM_COUNT = 1;
+export const PULLEY_ITEM_ID = PULLEY_BASE; // 物品栏「滑轮」用朝下·放绳变体代表
+export const PLATFORM_ITEM_ID = PLATFORM_BASE; // 物品栏「电梯平台」
+
+// 滑轮/电梯平台数值常量（集中此处便于调平）
+export const PULLEY_SU_LOAD = 32; // 每台已绑定滑轮的应力负载（未绑定不计，照「配对粉碎轮」先例）
+export const PLATFORM_SU_LOAD = 8; // 每格平台的应力负载（绳绑定边进滑轮分量计）
+export const LIFT_SPEED = 1.5; // 升降速度（格/秒）——跨格节拍 = 1/LIFT_SPEED ≈ 0.667s/格
+export const PULLEY_ROPE_MAX = 32; // 绳长上限（格）：滑轮沿朝向扫描平台的最远距离
+
+// 滑轮 ID 编解码（纯函数，供 redstone.js / kinetic.js / chunk.js / interaction.js 共用）
+export function pulleyId(up, powered) {
+    return PULLEY_BASE + (up ? 2 : 0) + (powered ? 1 : 0);
+}
+
+export function isPulleyId(id) {
+    return id >= PULLEY_BASE && id < PULLEY_BASE + PULLEY_COUNT;
+}
+
+export function pulleyUp(id) {
+    return ((id - PULLEY_BASE) >> 1) === 1;
+}
+
+export function pulleyPowered(id) {
+    return ((id - PULLEY_BASE) & 1) === 1 ? 1 : 0;
+}
+
+export function isPlatformId(id) {
+    return id === PLATFORM_BASE;
+}
+
+// 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组 ∪ 218..222 电梯组，
+// 用常量判段界；动力求解器全图扫描的热路径——三次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
     return (id >= SHAFT_BASE && id < SAW_BASE + 6) ||
-        (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT);
+        (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT) ||
+        (id >= PULLEY_BASE && id < PULLEY_BASE + PULLEY_COUNT + PLATFORM_COUNT);
 }
 
 // 动力方块的传动轴：轴类方块取编码轴，机械锯/投料器取朝向法线所在轴
@@ -633,6 +677,7 @@ export function isKineticId(id) {
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
 export function kineticAxisOf(id) {
     if (isBeltId(id)) return null;
+    if (isPlatformId(id)) return null; // 电梯平台：被动载荷，无传动轴（neighborsOf 直接 return，L2 plan §3.1）
     if (isSawId(id) || isDeployerId(id)) {
         const f = isSawId(id) ? sawFacing(id) : deployerFacing(id);
         return f <= 1 ? AXIS_Y : (f === 2 || f === 4) ? AXIS_Z : AXIS_X;
@@ -641,6 +686,7 @@ export function kineticAxisOf(id) {
     if (isCogId(id)) return cogAxis(id);
     if (isWaterwheelId(id)) return waterwheelAxis(id);
     if (isClutchId(id)) return clutchAxis(id);
+    if (isPulleyId(id)) return AXIS_Y; // 滑轮：竖直轴——正面（朝向）是绳出口被 front 排除、背面接传动
     return crusherAxis(id);
 }
 
@@ -653,6 +699,8 @@ export function kineticItemId(id) {
     if (isClutchId(id)) return CLUTCH_ITEM_ID;
     if (isBeltId(id)) return BELT_ITEM_ID;
     if (isDeployerId(id)) return DEPLOYER_ITEM_ID;
+    if (isPulleyId(id)) return PULLEY_ITEM_ID;
+    if (isPlatformId(id)) return PLATFORM_ITEM_ID;
     return SAW_ITEM_ID;
 }
 
@@ -912,6 +960,8 @@ export const HotbarBlocks = [
     CRUSHER_ITEM_ID, // 粉碎轮：水平相邻两轮同轴配对，上方格投料碾碎（石头→圆石→沙砾→沙）
     SAW_ITEM_ID, // 机械锯：朝向格自动锯切（原木→木板×4）
     CLUTCH_ITEM_ID, // 离合器：串进传动轴的红石开关——充能断开传动、断电接合（见 js/kinetic.js）
+    PULLEY_ITEM_ID, // 滑轮（L2 电梯）：贴顶/底面放置、背面接轴；充能=卷绳·断电=放绳（见 js/kinetic.js）
+    PLATFORM_ITEM_ID, // 电梯平台（L2 电梯）：被滑轮绳绑定，载人载货升降（见 js/kinetic.js）
     BELT_ITEM_ID, // 传送带：通电后把落上的物品沿箭头运走，玩家站上也会被带动（见 js/kinetic.js / js/items.js）
     DEPLOYER_ITEM_ID, // 投料器：通电后把头顶/朝向格的方块物品变回方块塞进朝向格（粉碎链回流的钥匙，见 js/kinetic.js）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
@@ -1120,6 +1170,27 @@ for (let dir = 0; dir < 4; dir++) {
         drop: BELT_ITEM_ID,
     };
 }
+// 滑轮（Create-lite L2 电梯）：绳升降机头。贴方块底面=朝下垂挂 / 贴顶面=朝上顶举，
+// 正面（朝向）是绳出口不传动、背面接传动（照锯/投料器）；powered 编码进 ID 由红石电平
+// 回写（充能=卷绳·平台向滑轮收拢 / 断电=放绳；无动力=平台悬停）。drop 固定代表变体。
+for (let up = 0; up < 2; up++) {
+    for (let powered = 0; powered < 2; powered++) {
+        BlockInfo[pulleyId(up, powered)] = {
+            name: `滑轮（${up ? '朝上顶举' : '朝下垂挂'}${powered ? '·卷绳' : '·放绳'}）`,
+            solid: true, transparent: true, customMesh: true, kinetic: true,
+            color: powered ? '#c9a227' : '#7d848c',
+            hardness: 1.2, tool: 'axe',
+            drop: PULLEY_ITEM_ID,
+        };
+    }
+}
+// 电梯平台（Create-lite L2 电梯）：普通实心立方体（无 customMesh，普通面渲染零 propMesh），
+// 被滑轮绳绑定后随卷放绳升降（站顶/占据实体由 carryRiders 载运）；也可当普通建材用
+BlockInfo[PLATFORM_BASE] = {
+    name: '电梯平台',
+    solid: true, transparent: false, customMesh: false, kinetic: true,
+    color: '#8f9aa6', hardness: 1.0, tool: 'axe',
+};
 // 投料器（Create-lite L1 链 3）：通电后每 0.5 秒把捕获三格 {T, T+up, D+up} 里的可放置
 // 方块物品变回方块塞进朝向格 T（部署器-lite：只做「放置」动词，差异 5）。solid 动力块
 // （物品能落在头顶被捕获），照锯只背面接传动；drop 固定代表变体，防变体 ID 进背包不叠堆
