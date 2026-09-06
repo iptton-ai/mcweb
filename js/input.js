@@ -226,6 +226,11 @@ export function setupInput() {
 // AI 施工控制：[ ] 调速 / P 暂停 / G 传送 / R 录像 / C 摄像头（自由视角·建造跟拍）。
 // 不依赖指针锁定：AI 建造时在暂停菜单或助手面板里也能暂停、调速、前往施工现场、切跟拍机位。
 function handleBuildKeys(e) {
+    // 键盘自动重复对开关型施工键是灾难：按住 R 半秒会连发 keydown，
+    // 录像被停开停开——每次停都落一个垃圾视频文件，还可能留下没人要的孤儿录像
+    // （第二次按 R 反而变成开始录，两次按键之间的画面就丢了）。
+    // 只放行 [ ]：调速的连续步进有意义；其余键只认首次按下。
+    if (e.repeat && e.code !== 'BracketLeft' && e.code !== 'BracketRight') return;
     if (e.code === 'BracketLeft') {
         adjustBuildSpeed(-1);
         showTooltip(`🏗️ 施工速度：${speedText()}`);

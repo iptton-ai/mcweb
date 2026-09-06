@@ -409,6 +409,7 @@ const BUILD_WIDGET_STYLE = `
 let buildEls = null;     // 控件 DOM 引用
 let wasActive = false;   // 上一帧是否有施工任务（用于完成后延迟隐藏）
 let rec = null;          // MediaRecorder 实例（null = 未在录；stop 即置空，收尾在闭包里）
+let recOwner = null;     // 本次录像的开启者：'cam' = 建造跟拍自动开（建完自动停）；'user' = 手动 R/⏺（绝不自动停）
 let recStartAt = 0;
 let recAutoStopTimer = null; // 录像时长上限计时器
 const REC_MAX_SEC = 600;     // 录像数据块全攒在内存（约 60MB/分钟），超 10 分钟自动停录防内存失控
@@ -506,9 +507,15 @@ export function teleportToBuildSite() {
     showTooltip(`📍 已前往施工现场：${focus.label}`);
 }
 
-// 是否正在录像（cameraRig.js 判断跟拍该不该自动停录用）
+// 是否正在录像（HUD/调试显示用）
 export function isRecording() {
     return !!rec;
+}
+
+// 正在录的这条是否为「建造跟拍自动开的」（cameraRig 据此决定建完要不要自动停；
+// 手动 R 开的绝不停——用户在录自己的片段，跟拍收尾不能误杀）
+export function isCamOwnedRecording() {
+    return !!rec && recOwner === 'cam';
 }
 
 // 录像文件名：任务名（buildQueue 的 label）+ 时间戳，多段录像好区分
@@ -553,14 +560,16 @@ function closeSaveWindow() {
     lastRecUrl = null;
 }
 
-// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频含游戏声音，不含 DOM 界面）
-export function toggleBuildRecording() {
+// R 键 / 控件按钮共用：开始或停止录制游戏画布（视频含游戏声音，不含 DOM 界面）。
+// source='cam' 由建造跟拍调用（自动开、跟拍收尾自动停）；其余一律 'user'（只能手动停）
+export function toggleBuildRecording(source = 'user') {
     if (!buildEls) initBuildWidget();
     if (rec) {
         // 立即置空：stop 到 onstop 异步收尾之间再按 R 不会对已停止的 recorder 重复 stop；
         // 收尾（打包下载）用下方闭包捕获的实例，不依赖 rec
         const stopped = rec;
         rec = null;
+        recOwner = null;
         stopRecTimers();
         if (stopped.state !== 'inactive') stopped.stop();
         return;
@@ -613,6 +622,7 @@ export function toggleBuildRecording() {
         showTooltip(hasAudio ? `🎥 录像已保存（${container}，含游戏声音）` : `🎥 录像已保存（${container}，无声）`);
     };
     rec = mr;
+    recOwner = source;
     recGotData = false;
     recStartAt = Date.now();
     recAutoStopTimer = setTimeout(() => {

@@ -26,7 +26,7 @@ import {
 import { state } from './state.js';
 import { camera, scene } from './engine.js';
 import { getBuildBounds, isAgentHold, setBuildSpeedIdx } from './buildQueue.js';
-import { isRecording, showTooltip, toggleBuildRecording } from './ui.js';
+import { isCamOwnedRecording, isRecording, showTooltip, toggleBuildRecording } from './ui.js';
 import { keys } from './input.js';
 import { isGameActive } from './uiModal.js';
 
@@ -34,7 +34,9 @@ const TAN_HALF_FOV = Math.tan(((CAM_FOV / 2) * Math.PI) / 180);
 
 let buildBoundsCache = null;  // 跟拍取景用的最后一次施工范围（任务完成瞬间队列已空，靠它撑到收尾）
 let buildDoneTimer = 0;       // >0 = 施工已全部完成，倒计时收尾（缓慢拉远做成品展示）
-let autoRecStarted = false;   // 本次跟拍的录像是否由本模块开启（负责自动停止；手动 R 开的不动）
+// 自动开停的录像归属由 ui.js 记账（isCamOwnedRecording）：跟拍开的是 'cam' 所有、建完自动停；
+// 手动 R 开的是 'user' 所有、绝不自动停——旧 autoRecStarted 标志在「用户手动停掉跟拍录像
+// 再自己开录」后会残留 true，导致建完时误停用户的手动录像
 let camWaiting = false;       // 预挂待机：进跟拍时还没有任务，等任务入队才自动开拍开录
 let holdWaitTimer = 0;        // 助手工具循环未结束时的保持取景计时（跨轮次等 LLM，超 BUILD_CAM_HOLD_MAX_SEC 收尾）
 let savedSpeedIdx = null;     // 跟拍自动降速前的档位（观影结束恢复；null = 本次未降过）
@@ -106,14 +108,10 @@ export function setCamMode(next) {
         camPos.z = camera.position.z;
         if (b) {
             cinematicSlowDown(); // 有任务在建：降速观影（慢于慢速的档位不动）
-            if (!isRecording()) {
-                toggleBuildRecording();
-                autoRecStarted = isRecording(); // 浏览器不支持 MediaRecorder 时为 false，不影响跟拍
-            }
+            if (!isRecording()) toggleBuildRecording('cam'); // 不支持 MediaRecorder 时内部只弹提示，不影响跟拍
         }
-    } else if (prev === 'build' && autoRecStarted && isRecording()) {
-        toggleBuildRecording(); // 跟拍结束（手动退出）自动停录
-        autoRecStarted = false;
+    } else if (prev === 'build' && isCamOwnedRecording()) {
+        toggleBuildRecording(); // 跟拍结束（手动退出）自动停录（只停跟拍自己开的）
     }
 
     applyEnvForMode(next);
@@ -141,17 +139,13 @@ function applyEnvForMode(mode) {
 // 重置回玩家视角（死亡重生 / 开新世界时调用，相机与玩家重新绑定）
 export function resetCamMode() {
     if (state.camMode === 'player') return;
-    const prev = state.camMode;
     state.camMode = 'player';
     buildDoneTimer = 0;
     holdWaitTimer = 0;
     camWaiting = false;
     buildBoundsCache = null;
     cinematicRestore();
-    if (prev === 'build' && autoRecStarted && isRecording()) {
-        toggleBuildRecording();
-        autoRecStarted = false;
-    }
+    if (isCamOwnedRecording()) toggleBuildRecording();
     applyEnvForMode('player');
 }
 
@@ -204,10 +198,7 @@ function updateBuildCam(dt) {
             // 必须在施工消费任务前降速——极速档任务一帧内建完，录出来只剩静止成品
             camWaiting = false;
             cinematicSlowDown();
-            if (!isRecording()) {
-                toggleBuildRecording();
-                autoRecStarted = isRecording();
-            }
+            if (!isRecording()) toggleBuildRecording('cam');
             showTooltip('🎥 检测到施工任务，开始俯拍…');
         }
         buildBoundsCache = b;
@@ -264,10 +255,7 @@ function finishBuildCam() {
     holdWaitTimer = 0;
     buildBoundsCache = null;
     state.camMode = 'player';
-    if (autoRecStarted && isRecording()) {
-        toggleBuildRecording();
-    }
-    autoRecStarted = false;
+    if (isCamOwnedRecording()) toggleBuildRecording();
     cinematicRestore(); // 观影结束，恢复进跟拍前的施工档位
     applyEnvForMode('player');
     showTooltip('✅ 建造完成，跟拍结束');
