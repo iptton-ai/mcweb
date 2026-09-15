@@ -58,6 +58,8 @@ import {
     isClutchId,
     isDoorId,
     isDustId,
+    isKeypadId,
+    keypadSolved,
     isLampId,
     isLeverId,
     isObserverId,
@@ -332,7 +334,7 @@ export function updateRedstoneNetwork() {
     const blocks = state.blocks;
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
-    const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [];
+    const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [], keypads = [];
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -365,6 +367,8 @@ export function updateRedstoneNetwork() {
                         clutches.push({ x, y, z, id });
                     } else if (isPulleyId(id)) {
                         pulleys.push({ x, y, z, id });
+                    } else if (isKeypadId(id)) {
+                        keypads.push({ x, y, z, id });
                     }
                 }
             }
@@ -376,7 +380,8 @@ export function updateRedstoneNetwork() {
     // 一根信号源后，断开态离合器/卷绳态滑轮仍能被这里的重算收敛回接合/放绳
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
         plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
-        pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0) {
+        pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0 &&
+        keypads.length === 0) {
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
         pistonPoweredPrev = new Map();
@@ -390,6 +395,7 @@ export function updateRedstoneNetwork() {
     for (const pl of plates) if (platePressed(pl.id) === 1) activeSources.push(pl);
     for (const tc of torches) if (rtorchLit(tc.id) === 1) activeSources.push(tc);
     for (const ob of observers) if (observerPowered(ob.id) === 1) activeSources.push(ob); // 观察者脉冲
+    for (const kp of keypads) if (keypadSolved(kp.id) === 1) activeSources.push(kp); // 答题机已解锁=常供能（Edu M1）
     const activeSourceKeys = new Set(activeSources.map((s) => keyOf(s.x, s.y, s.z)));
 
     // ---- 红石粉强度 BFS：源 15 级直接送进邻粉，粉与粉每格 -1 ----

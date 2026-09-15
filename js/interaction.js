@@ -1,7 +1,7 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, isKineticId, isLampId, isLeverId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, HANZI_ORE, isKeypadId, isKineticId, isLampId, isLeverId, isMerchantId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, keypadSolved, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
@@ -22,6 +22,11 @@ import { keys } from './input.js'; // Shift 绕过台/炉交互用（运行时�
 // 注意：ui.js 也 import 本模块的 raycastBlocks，循环依赖均为运行时函数调用，安全
 // （mining.js ↔ 本模块同理：本模块只运行时调用 getHeldTool）
 import { openItemPicker, showTooltip, updateHotbar } from './ui.js';
+import { interactKeypadAt } from './eduKeypad.js'; // 答题机右键答题（Edu M1）
+import { interactMerchantAt } from './eduMerchant.js'; // 英语商人右键交易（Edu M2）
+import { ensureHanziBank, collectHanziAt } from './eduRewards.js'; // 识字矿石记字（Edu M2）
+
+ensureHanziBank(); // 预热识字表（异步，不阻塞；首次挖矿前通常已就绪，未就绪则该次只掉物不记字）
 
 // 视线方向：forward = (-sin(yaw)·cos(pitch), sin(pitch), -cos(yaw)·cos(pitch))
 function lookDirection() {
@@ -249,8 +254,23 @@ export function breakBlockAt(hit) {
         if (!isCreative()) updateHotbar();
         return;
     }
+    // 答题机（Edu M1）：普通立方体走默认掉落路径；已解锁态是信号源，清格后重算红石网络
+    const brokeSolvedKeypad = isKeypadId(hit.block) && keypadSolved(hit.block) === 1;
+    // 识字矿石（Edu M2）：挖开按格子哈希认领一个生字入图鉴 + 25% 概率附赠苹果
+    let hanziToast = null;
+    if (hit.block === HANZI_ORE) {
+        const r = collectHanziAt(hit.x, hit.y, hit.z);
+        if (r) hanziToast = r.isNew
+            ? `🔤 认识新字：「${r.ch}」（识字图鉴 ${r.total} 字）`
+            : `🔁 「${r.ch}」已经认识过啦（识字图鉴 ${r.total} 字）`;
+        if (!isCreative() && Math.random() < 0.25) {
+            state.player.inventory[ItemTypes.APPLE] = (state.player.inventory[ItemTypes.APPLE] || 0) + 1;
+        }
+    }
     const idx = getBlockIndex(hit.x, hit.y, hit.z);
     state.blocks[idx] = BlockTypes.AIR;
+    if (brokeSolvedKeypad) updateRedstoneNetwork();
+    if (hanziToast) showTooltip(hanziToast);
     // 生存模式按掉落映射采集（null=无掉落，缺省=自身；石头→圆石、草方块→泥土等原版规则）。
     // needsTool 方块（石头/圆石/砖/矿石）徒手或用错/低档工具挖开时「无掉落」——原版采集规则；
     // 树叶特例：不掉自身，12% 概率掉苹果（食物来源）；矿石采到给经验（煤/铁 +2、钻 +7）
@@ -332,6 +352,16 @@ export function placeBlock() {
     }
     if (hit && isLeverId(hit.block)) {
         toggleLeverAt(hit.x, hit.y, hit.z);
+        return;
+    }
+    // 右键答题机 = 开始答题（Edu M1：答对翻转为常供能信号源，数学密码门）
+    if (hit && isKeypadId(hit.block)) {
+        interactKeypadAt(hit.x, hit.y, hit.z);
+        return;
+    }
+    // 右键英语商人 = 单词交易（Edu M2：中文释义三选一，答对拿奖励入图鉴）
+    if (hit && isMerchantId(hit.block)) {
+        interactMerchantAt(hit.x, hit.y, hit.z);
         return;
     }
     if (hit && hit.face) {

@@ -1,0 +1,1295 @@
+{
+  "source": "统编版语文三年级上册·识字表（p113-115 提取，258 字）。2026-09 升级：pinyin 标三上课文常用读音（多音字组词与所标读音一致，如 挨 ái 挨打、磨 mó 磨刀/镜未磨、挑 tiǎo 挑战/挑促织），word 为常用组词；「吗」为轻声。顺序与旧字符串表一致（保持格子哈希→生字映射）。",
+  "chars": [
+    {
+      "ch": "绒",
+      "pinyin": "róng",
+      "word": "绒毛"
+    },
+    {
+      "ch": "昂",
+      "pinyin": "áng",
+      "word": "昂首"
+    },
+    {
+      "ch": "扬",
+      "pinyin": "yáng",
+      "word": "飘扬"
+    },
+    {
+      "ch": "凤",
+      "pinyin": "fèng",
+      "word": "凤凰"
+    },
+    {
+      "ch": "墙",
+      "pinyin": "qiáng",
+      "word": "墙壁"
+    },
+    {
+      "ch": "晃",
+      "pinyin": "huàng",
+      "word": "摇晃"
+    },
+    {
+      "ch": "轰",
+      "pinyin": "hōng",
+      "word": "轰响"
+    },
+    {
+      "ch": "湿",
+      "pinyin": "shī",
+      "word": "湿润"
+    },
+    {
+      "ch": "荒",
+      "pinyin": "huāng",
+      "word": "荒野"
+    },
+    {
+      "ch": "笛",
+      "pinyin": "dí",
+      "word": "笛子"
+    },
+    {
+      "ch": "罚",
+      "pinyin": "fá",
+      "word": "罚站"
+    },
+    {
+      "ch": "假",
+      "pinyin": "jià",
+      "word": "放假"
+    },
+    {
+      "ch": "臂",
+      "pinyin": "bì",
+      "word": "双臂"
+    },
+    {
+      "ch": "诵",
+      "pinyin": "sòng",
+      "word": "背诵"
+    },
+    {
+      "ch": "例",
+      "pinyin": "lì",
+      "word": "例题"
+    },
+    {
+      "ch": "糊",
+      "pinyin": "hú",
+      "word": "糊涂"
+    },
+    {
+      "ch": "戒",
+      "pinyin": "jiè",
+      "word": "戒尺"
+    },
+    {
+      "ch": "厉",
+      "pinyin": "lì",
+      "word": "厉害"
+    },
+    {
+      "ch": "详",
+      "pinyin": "xiáng",
+      "word": "详细"
+    },
+    {
+      "ch": "挨",
+      "pinyin": "ái",
+      "word": "挨打"
+    },
+    {
+      "ch": "庭",
+      "pinyin": "tíng",
+      "word": "家庭"
+    },
+    {
+      "ch": "未",
+      "pinyin": "wèi",
+      "word": "未来"
+    },
+    {
+      "ch": "磨",
+      "pinyin": "mó",
+      "word": "磨刀"
+    },
+    {
+      "ch": "斜",
+      "pinyin": "xié",
+      "word": "倾斜"
+    },
+    {
+      "ch": "萧",
+      "pinyin": "xiāo",
+      "word": "萧瑟"
+    },
+    {
+      "ch": "挑",
+      "pinyin": "tiǎo",
+      "word": "挑战"
+    },
+    {
+      "ch": "促",
+      "pinyin": "cù",
+      "word": "促织"
+    },
+    {
+      "ch": "粘",
+      "pinyin": "zhān",
+      "word": "粘贴"
+    },
+    {
+      "ch": "印",
+      "pinyin": "yìn",
+      "word": "印象"
+    },
+    {
+      "ch": "列",
+      "pinyin": "liè",
+      "word": "列车"
+    },
+    {
+      "ch": "凌",
+      "pinyin": "líng",
+      "word": "凌乱"
+    },
+    {
+      "ch": "增",
+      "pinyin": "zēng",
+      "word": "增加"
+    },
+    {
+      "ch": "棕",
+      "pinyin": "zōng",
+      "word": "棕色"
+    },
+    {
+      "ch": "钥",
+      "pinyin": "yào",
+      "word": "钥匙"
+    },
+    {
+      "ch": "匙",
+      "pinyin": "chí",
+      "word": "汤匙"
+    },
+    {
+      "ch": "缤",
+      "pinyin": "bīn",
+      "word": "缤纷"
+    },
+    {
+      "ch": "枚",
+      "pinyin": "méi",
+      "word": "一枚"
+    },
+    {
+      "ch": "邮",
+      "pinyin": "yóu",
+      "word": "邮票"
+    },
+    {
+      "ch": "爽",
+      "pinyin": "shuǎng",
+      "word": "凉爽"
+    },
+    {
+      "ch": "橘",
+      "pinyin": "jú",
+      "word": "橘子"
+    },
+    {
+      "ch": "频",
+      "pinyin": "pín",
+      "word": "频道"
+    },
+    {
+      "ch": "梨",
+      "pinyin": "lí",
+      "word": "梨树"
+    },
+    {
+      "ch": "勾",
+      "pinyin": "gōu",
+      "word": "勾画"
+    },
+    {
+      "ch": "喇",
+      "pinyin": "lǎ",
+      "word": "喇叭"
+    },
+    {
+      "ch": "叭",
+      "pinyin": "bā",
+      "word": "喇叭"
+    },
+    {
+      "ch": "抖",
+      "pinyin": "dǒu",
+      "word": "发抖"
+    },
+    {
+      "ch": "振",
+      "pinyin": "zhèn",
+      "word": "振动"
+    },
+    {
+      "ch": "韵",
+      "pinyin": "yùn",
+      "word": "韵母"
+    },
+    {
+      "ch": "掠",
+      "pinyin": "lüè",
+      "word": "掠过"
+    },
+    {
+      "ch": "吟",
+      "pinyin": "yín",
+      "word": "吟诵"
+    },
+    {
+      "ch": "辽",
+      "pinyin": "liáo",
+      "word": "辽阔"
+    },
+    {
+      "ch": "阔",
+      "pinyin": "kuò",
+      "word": "宽阔"
+    },
+    {
+      "ch": "眯",
+      "pinyin": "mī",
+      "word": "笑眯眯"
+    },
+    {
+      "ch": "哦",
+      "pinyin": "é",
+      "word": "吟哦"
+    },
+    {
+      "ch": "喵",
+      "pinyin": "miāo",
+      "word": "喵喵"
+    },
+    {
+      "ch": "孵",
+      "pinyin": "fū",
+      "word": "孵化"
+    },
+    {
+      "ch": "叽",
+      "pinyin": "jī",
+      "word": "叽喳"
+    },
+    {
+      "ch": "缝",
+      "pinyin": "féng",
+      "word": "缝补"
+    },
+    {
+      "ch": "偶",
+      "pinyin": "ǒu",
+      "word": "偶尔"
+    },
+    {
+      "ch": "尔",
+      "pinyin": "ěr",
+      "word": "偶尔"
+    },
+    {
+      "ch": "陶",
+      "pinyin": "táo",
+      "word": "陶醉"
+    },
+    {
+      "ch": "适",
+      "pinyin": "shì",
+      "word": "适合"
+    },
+    {
+      "ch": "谈",
+      "pinyin": "tán",
+      "word": "谈话"
+    },
+    {
+      "ch": "婚",
+      "pinyin": "hūn",
+      "word": "结婚"
+    },
+    {
+      "ch": "庆",
+      "pinyin": "qìng",
+      "word": "庆祝"
+    },
+    {
+      "ch": "典",
+      "pinyin": "diǎn",
+      "word": "典礼"
+    },
+    {
+      "ch": "途",
+      "pinyin": "tú",
+      "word": "旅途"
+    },
+    {
+      "ch": "括",
+      "pinyin": "kuò",
+      "word": "包括"
+    },
+    {
+      "ch": "史",
+      "pinyin": "shǐ",
+      "word": "历史"
+    },
+    {
+      "ch": "倍",
+      "pinyin": "bèi",
+      "word": "倍数"
+    },
+    {
+      "ch": "几",
+      "pinyin": "jǐ",
+      "word": "几个"
+    },
+    {
+      "ch": "持",
+      "pinyin": "chí",
+      "word": "坚持"
+    },
+    {
+      "ch": "官",
+      "pinyin": "guān",
+      "word": "官员"
+    },
+    {
+      "ch": "吗",
+      "pinyin": "ma",
+      "word": "好吗"
+    },
+    {
+      "ch": "讨",
+      "pinyin": "tǎo",
+      "word": "讨论"
+    },
+    {
+      "ch": "厌",
+      "pinyin": "yàn",
+      "word": "讨厌"
+    },
+    {
+      "ch": "访",
+      "pinyin": "fǎng",
+      "word": "访问"
+    },
+    {
+      "ch": "记",
+      "pinyin": "jì",
+      "word": "记住"
+    },
+    {
+      "ch": "忍",
+      "pinyin": "rěn",
+      "word": "忍住"
+    },
+    {
+      "ch": "委",
+      "pinyin": "wěi",
+      "word": "委员"
+    },
+    {
+      "ch": "屈",
+      "pinyin": "qū",
+      "word": "委屈"
+    },
+    {
+      "ch": "中",
+      "pinyin": "zhōng",
+      "word": "中间"
+    },
+    {
+      "ch": "弹",
+      "pinyin": "tán",
+      "word": "弹琴"
+    },
+    {
+      "ch": "疯",
+      "pinyin": "fēng",
+      "word": "疯狂"
+    },
+    {
+      "ch": "局",
+      "pinyin": "jú",
+      "word": "邮局"
+    },
+    {
+      "ch": "汪",
+      "pinyin": "wāng",
+      "word": "汪汪"
+    },
+    {
+      "ch": "搞",
+      "pinyin": "gǎo",
+      "word": "搞笑"
+    },
+    {
+      "ch": "恒",
+      "pinyin": "héng",
+      "word": "恒心"
+    },
+    {
+      "ch": "圣",
+      "pinyin": "shèng",
+      "word": "圣诞"
+    },
+    {
+      "ch": "萌",
+      "pinyin": "méng",
+      "word": "萌芽"
+    },
+    {
+      "ch": "妥",
+      "pinyin": "tuǒ",
+      "word": "妥当"
+    },
+    {
+      "ch": "轴",
+      "pinyin": "zhóu",
+      "word": "车轴"
+    },
+    {
+      "ch": "阁",
+      "pinyin": "gé",
+      "word": "阁楼"
+    },
+    {
+      "ch": "培",
+      "pinyin": "péi",
+      "word": "培养"
+    },
+    {
+      "ch": "厘",
+      "pinyin": "lí",
+      "word": "厘米"
+    },
+    {
+      "ch": "少",
+      "pinyin": "shǎo",
+      "word": "多少"
+    },
+    {
+      "ch": "矩",
+      "pinyin": "jǔ",
+      "word": "矩形"
+    },
+    {
+      "ch": "丫",
+      "pinyin": "yā",
+      "word": "丫头"
+    },
+    {
+      "ch": "宫",
+      "pinyin": "gōng",
+      "word": "迷宫"
+    },
+    {
+      "ch": "掘",
+      "pinyin": "jué",
+      "word": "挖掘"
+    },
+    {
+      "ch": "希",
+      "pinyin": "xī",
+      "word": "希望"
+    },
+    {
+      "ch": "冲",
+      "pinyin": "chōng",
+      "word": "冲出"
+    },
+    {
+      "ch": "联",
+      "pinyin": "lián",
+      "word": "联系"
+    },
+    {
+      "ch": "系",
+      "pinyin": "jì",
+      "word": "系鞋带"
+    },
+    {
+      "ch": "葵",
+      "pinyin": "kuí",
+      "word": "向日葵"
+    },
+    {
+      "ch": "瘦",
+      "pinyin": "shòu",
+      "word": "瘦小"
+    },
+    {
+      "ch": "罢",
+      "pinyin": "bà",
+      "word": "罢工"
+    },
+    {
+      "ch": "应",
+      "pinyin": "yīng",
+      "word": "应该"
+    },
+    {
+      "ch": "及",
+      "pinyin": "jí",
+      "word": "及格"
+    },
+    {
+      "ch": "卷",
+      "pinyin": "juàn",
+      "word": "试卷"
+    },
+    {
+      "ch": "骨",
+      "pinyin": "gǔ",
+      "word": "骨头"
+    },
+    {
+      "ch": "碌",
+      "pinyin": "lù",
+      "word": "忙碌"
+    },
+    {
+      "ch": "齿",
+      "pinyin": "chǐ",
+      "word": "牙齿"
+    },
+    {
+      "ch": "嚼",
+      "pinyin": "jué",
+      "word": "咀嚼"
+    },
+    {
+      "ch": "吞",
+      "pinyin": "tūn",
+      "word": "吞下"
+    },
+    {
+      "ch": "胃",
+      "pinyin": "wèi",
+      "word": "胃口"
+    },
+    {
+      "ch": "咽",
+      "pinyin": "yān",
+      "word": "咽喉"
+    },
+    {
+      "ch": "处",
+      "pinyin": "chù",
+      "word": "到处"
+    },
+    {
+      "ch": "恐",
+      "pinyin": "kǒng",
+      "word": "恐龙"
+    },
+    {
+      "ch": "诱",
+      "pinyin": "yòu",
+      "word": "诱人"
+    },
+    {
+      "ch": "毅",
+      "pinyin": "yì",
+      "word": "毅力"
+    },
+    {
+      "ch": "强",
+      "pinyin": "qiáng",
+      "word": "强壮"
+    },
+    {
+      "ch": "纪",
+      "pinyin": "jì",
+      "word": "纪律"
+    },
+    {
+      "ch": "性",
+      "pinyin": "xìng",
+      "word": "性格"
+    },
+    {
+      "ch": "渣",
+      "pinyin": "zhā",
+      "word": "面包渣"
+    },
+    {
+      "ch": "犯",
+      "pinyin": "fàn",
+      "word": "犯规"
+    },
+    {
+      "ch": "禁",
+      "pinyin": "jìn",
+      "word": "禁止"
+    },
+    {
+      "ch": "旧",
+      "pinyin": "jiù",
+      "word": "破旧"
+    },
+    {
+      "ch": "聚",
+      "pinyin": "jù",
+      "word": "聚集"
+    },
+    {
+      "ch": "申",
+      "pinyin": "shēn",
+      "word": "申请"
+    },
+    {
+      "ch": "介",
+      "pinyin": "jiè",
+      "word": "介绍"
+    },
+    {
+      "ch": "绍",
+      "pinyin": "shào",
+      "word": "介绍"
+    },
+    {
+      "ch": "宗",
+      "pinyin": "zōng",
+      "word": "祖宗"
+    },
+    {
+      "ch": "旨",
+      "pinyin": "zhǐ",
+      "word": "主旨"
+    },
+    {
+      "ch": "占",
+      "pinyin": "zhàn",
+      "word": "占领"
+    },
+    {
+      "ch": "乏",
+      "pinyin": "fá",
+      "word": "缺乏"
+    },
+    {
+      "ch": "啦",
+      "pinyin": "lā",
+      "word": "啦啦队"
+    },
+    {
+      "ch": "鹦",
+      "pinyin": "yīng",
+      "word": "鹦鹉"
+    },
+    {
+      "ch": "鹉",
+      "pinyin": "wǔ",
+      "word": "鹦鹉"
+    },
+    {
+      "ch": "衔",
+      "pinyin": "xián",
+      "word": "衔接"
+    },
+    {
+      "ch": "英",
+      "pinyin": "yīng",
+      "word": "英雄"
+    },
+    {
+      "ch": "耍",
+      "pinyin": "shuǎ",
+      "word": "玩耍"
+    },
+    {
+      "ch": "茸",
+      "pinyin": "róng",
+      "word": "毛茸茸"
+    },
+    {
+      "ch": "欠",
+      "pinyin": "qiàn",
+      "word": "哈欠"
+    },
+    {
+      "ch": "拢",
+      "pinyin": "lǒng",
+      "word": "合拢"
+    },
+    {
+      "ch": "优",
+      "pinyin": "yōu",
+      "word": "优美"
+    },
+    {
+      "ch": "崖",
+      "pinyin": "yá",
+      "word": "悬崖"
+    },
+    {
+      "ch": "参",
+      "pinyin": "cān",
+      "word": "参加"
+    },
+    {
+      "ch": "懒",
+      "pinyin": "lǎn",
+      "word": "懒洋洋"
+    },
+    {
+      "ch": "划",
+      "pinyin": "huá",
+      "word": "划船"
+    },
+    {
+      "ch": "威",
+      "pinyin": "wēi",
+      "word": "威风"
+    },
+    {
+      "ch": "武",
+      "pinyin": "wǔ",
+      "word": "威武"
+    },
+    {
+      "ch": "插",
+      "pinyin": "chā",
+      "word": "插图"
+    },
+    {
+      "ch": "栖",
+      "pinyin": "qī",
+      "word": "栖息"
+    },
+    {
+      "ch": "厚",
+      "pinyin": "hòu",
+      "word": "厚度"
+    },
+    {
+      "ch": "粪",
+      "pinyin": "fèn",
+      "word": "粪便"
+    },
+    {
+      "ch": "辈",
+      "pinyin": "bèi",
+      "word": "长辈"
+    },
+    {
+      "ch": "胳",
+      "pinyin": "gē",
+      "word": "胳膊"
+    },
+    {
+      "ch": "滩",
+      "pinyin": "tān",
+      "word": "沙滩"
+    },
+    {
+      "ch": "睬",
+      "pinyin": "cǎi",
+      "word": "理睬"
+    },
+    {
+      "ch": "载",
+      "pinyin": "zài",
+      "word": "满载"
+    },
+    {
+      "ch": "逢",
+      "pinyin": "féng",
+      "word": "相逢"
+    },
+    {
+      "ch": "融",
+      "pinyin": "róng",
+      "word": "融化"
+    },
+    {
+      "ch": "侧",
+      "pinyin": "cè",
+      "word": "侧面"
+    },
+    {
+      "ch": "欣",
+      "pinyin": "xīn",
+      "word": "欣赏"
+    },
+    {
+      "ch": "封",
+      "pinyin": "fēng",
+      "word": "信封"
+    },
+    {
+      "ch": "浸",
+      "pinyin": "jìn",
+      "word": "浸透"
+    },
+    {
+      "ch": "乳",
+      "pinyin": "rǔ",
+      "word": "乳白"
+    },
+    {
+      "ch": "梢",
+      "pinyin": "shāo",
+      "word": "树梢"
+    },
+    {
+      "ch": "宿",
+      "pinyin": "sù",
+      "word": "宿舍"
+    },
+    {
+      "ch": "舍",
+      "pinyin": "shě",
+      "word": "舍不得"
+    },
+    {
+      "ch": "药",
+      "pinyin": "yào",
+      "word": "药品"
+    },
+    {
+      "ch": "眠",
+      "pinyin": "mián",
+      "word": "冬眠"
+    },
+    {
+      "ch": "愧",
+      "pinyin": "kuì",
+      "word": "惭愧"
+    },
+    {
+      "ch": "仅",
+      "pinyin": "jǐn",
+      "word": "仅仅"
+    },
+    {
+      "ch": "议",
+      "pinyin": "yì",
+      "word": "会议"
+    },
+    {
+      "ch": "政",
+      "pinyin": "zhèng",
+      "word": "政府"
+    },
+    {
+      "ch": "府",
+      "pinyin": "fǔ",
+      "word": "政府"
+    },
+    {
+      "ch": "赠",
+      "pinyin": "zèng",
+      "word": "赠送"
+    },
+    {
+      "ch": "幻",
+      "pinyin": "huàn",
+      "word": "幻想"
+    },
+    {
+      "ch": "焰",
+      "pinyin": "yàn",
+      "word": "火焰"
+    },
+    {
+      "ch": "澳",
+      "pinyin": "ào",
+      "word": "澳门"
+    },
+    {
+      "ch": "扮",
+      "pinyin": "bàn",
+      "word": "扮演"
+    },
+    {
+      "ch": "角",
+      "pinyin": "jiǎo",
+      "word": "三角形"
+    },
+    {
+      "ch": "苔",
+      "pinyin": "tái",
+      "word": "青苔"
+    },
+    {
+      "ch": "亦",
+      "pinyin": "yì",
+      "word": "人云亦云"
+    },
+    {
+      "ch": "抹",
+      "pinyin": "mǒ",
+      "word": "涂抹"
+    },
+    {
+      "ch": "宜",
+      "pinyin": "yí",
+      "word": "适宜"
+    },
+    {
+      "ch": "奏",
+      "pinyin": "zòu",
+      "word": "演奏"
+    },
+    {
+      "ch": "呢",
+      "pinyin": "ní",
+      "word": "呢喃"
+    },
+    {
+      "ch": "喃",
+      "pinyin": "nán",
+      "word": "呢喃"
+    },
+    {
+      "ch": "激",
+      "pinyin": "jī",
+      "word": "激动"
+    },
+    {
+      "ch": "伟",
+      "pinyin": "wěi",
+      "word": "伟大"
+    },
+    {
+      "ch": "充",
+      "pinyin": "chōng",
+      "word": "充满"
+    },
+    {
+      "ch": "击",
+      "pinyin": "jī",
+      "word": "击掌"
+    },
+    {
+      "ch": "器",
+      "pinyin": "qì",
+      "word": "乐器"
+    },
+    {
+      "ch": "汇",
+      "pinyin": "huì",
+      "word": "汇合"
+    },
+    {
+      "ch": "哩",
+      "pinyin": "lī",
+      "word": "哩哩啦啦"
+    },
+    {
+      "ch": "旋",
+      "pinyin": "xuán",
+      "word": "旋转"
+    },
+    {
+      "ch": "序",
+      "pinyin": "xù",
+      "word": "顺序"
+    },
+    {
+      "ch": "贞",
+      "pinyin": "zhēn",
+      "word": "坚贞"
+    },
+    {
+      "ch": "姿",
+      "pinyin": "zī",
+      "word": "姿势"
+    },
+    {
+      "ch": "笋",
+      "pinyin": "sǔn",
+      "word": "竹笋"
+    },
+    {
+      "ch": "超",
+      "pinyin": "chāo",
+      "word": "超过"
+    },
+    {
+      "ch": "凡",
+      "pinyin": "fán",
+      "word": "平凡"
+    },
+    {
+      "ch": "俗",
+      "pinyin": "sú",
+      "word": "俗语"
+    },
+    {
+      "ch": "奥",
+      "pinyin": "ào",
+      "word": "奥秘"
+    },
+    {
+      "ch": "秘",
+      "pinyin": "mì",
+      "word": "秘密"
+    },
+    {
+      "ch": "螺",
+      "pinyin": "luó",
+      "word": "田螺"
+    },
+    {
+      "ch": "螃",
+      "pinyin": "páng",
+      "word": "螃蟹"
+    },
+    {
+      "ch": "蟹",
+      "pinyin": "xiè",
+      "word": "螃蟹"
+    },
+    {
+      "ch": "鲤",
+      "pinyin": "lǐ",
+      "word": "鲤鱼"
+    },
+    {
+      "ch": "鲫",
+      "pinyin": "jì",
+      "word": "鲫鱼"
+    },
+    {
+      "ch": "鲨",
+      "pinyin": "shā",
+      "word": "鲨鱼"
+    },
+    {
+      "ch": "皆",
+      "pinyin": "jiē",
+      "word": "皆大欢喜"
+    },
+    {
+      "ch": "弃",
+      "pinyin": "qì",
+      "word": "放弃"
+    },
+    {
+      "ch": "差",
+      "pinyin": "chā",
+      "word": "差别"
+    },
+    {
+      "ch": "均",
+      "pinyin": "jūn",
+      "word": "平均"
+    },
+    {
+      "ch": "资",
+      "pinyin": "zī",
+      "word": "资料"
+    },
+    {
+      "ch": "欧",
+      "pinyin": "ōu",
+      "word": "欧洲"
+    },
+    {
+      "ch": "洲",
+      "pinyin": "zhōu",
+      "word": "亚洲"
+    },
+    {
+      "ch": "授",
+      "pinyin": "shòu",
+      "word": "教授"
+    },
+    {
+      "ch": "项",
+      "pinyin": "xiàng",
+      "word": "项目"
+    },
+    {
+      "ch": "验",
+      "pinyin": "yàn",
+      "word": "实验"
+    },
+    {
+      "ch": "构",
+      "pinyin": "gòu",
+      "word": "结构"
+    },
+    {
+      "ch": "耐",
+      "pinyin": "nài",
+      "word": "耐心"
+    },
+    {
+      "ch": "励",
+      "pinyin": "lì",
+      "word": "鼓励"
+    },
+    {
+      "ch": "大",
+      "pinyin": "dà",
+      "word": "大小"
+    },
+    {
+      "ch": "血",
+      "pinyin": "xuè",
+      "word": "血液"
+    },
+    {
+      "ch": "硝",
+      "pinyin": "xiāo",
+      "word": "硝烟"
+    },
+    {
+      "ch": "危",
+      "pinyin": "wēi",
+      "word": "危险"
+    },
+    {
+      "ch": "险",
+      "pinyin": "xiǎn",
+      "word": "冒险"
+    },
+    {
+      "ch": "势",
+      "pinyin": "shì",
+      "word": "山势"
+    },
+    {
+      "ch": "瓦",
+      "pinyin": "wǎ",
+      "word": "瓦片"
+    },
+    {
+      "ch": "帘",
+      "pinyin": "lián",
+      "word": "窗帘"
+    },
+    {
+      "ch": "担",
+      "pinyin": "dān",
+      "word": "担心"
+    },
+    {
+      "ch": "迅",
+      "pinyin": "xùn",
+      "word": "迅速"
+    },
+    {
+      "ch": "速",
+      "pinyin": "sù",
+      "word": "速度"
+    },
+    {
+      "ch": "夺",
+      "pinyin": "duó",
+      "word": "夺取"
+    },
+    {
+      "ch": "秒",
+      "pinyin": "miǎo",
+      "word": "秒表"
+    },
+    {
+      "ch": "赵",
+      "pinyin": "zhào",
+      "word": "赵州桥"
+    },
+    {
+      "ch": "抗",
+      "pinyin": "kàng",
+      "word": "抗日"
+    },
+    {
+      "ch": "束",
+      "pinyin": "shù",
+      "word": "花束"
+    },
+    {
+      "ch": "缸",
+      "pinyin": "gāng",
+      "word": "水缸"
+    },
+    {
+      "ch": "还",
+      "pinyin": "hái",
+      "word": "还有"
+    },
+    {
+      "ch": "顿",
+      "pinyin": "dùn",
+      "word": "顿时"
+    },
+    {
+      "ch": "灶",
+      "pinyin": "zào",
+      "word": "灶台"
+    },
+    {
+      "ch": "沾",
+      "pinyin": "zhān",
+      "word": "沾湿"
+    },
+    {
+      "ch": "锅",
+      "pinyin": "guō",
+      "word": "火锅"
+    },
+    {
+      "ch": "侦",
+      "pinyin": "zhēn",
+      "word": "侦察"
+    },
+    {
+      "ch": "睁",
+      "pinyin": "zhēng",
+      "word": "睁开"
+    },
+    {
+      "ch": "眨",
+      "pinyin": "zhǎ",
+      "word": "眨眼"
+    },
+    {
+      "ch": "瞪",
+      "pinyin": "dèng",
+      "word": "瞪眼"
+    },
+    {
+      "ch": "瞅",
+      "pinyin": "chǒu",
+      "word": "瞅见"
+    },
+    {
+      "ch": "怒",
+      "pinyin": "nù",
+      "word": "愤怒"
+    },
+    {
+      "ch": "眶",
+      "pinyin": "kuàng",
+      "word": "眼眶"
+    },
+    {
+      "ch": "呆",
+      "pinyin": "dāi",
+      "word": "发呆"
+    },
+    {
+      "ch": "睹",
+      "pinyin": "dǔ",
+      "word": "目睹"
+    }
+  ]
+}

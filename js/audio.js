@@ -269,3 +269,52 @@ export function playPickupSound() {
         osc.stop(t0 + 0.11);
     } catch (e) {}
 }
+
+// ==================== 教学音效（Edu M1，2026-09-07）====================
+// assets/audio/edu_{correct,wrong,unlock}.wav（MusicGen 本地生成，tools/gen_edu_sfx.py），
+// 首次播放 fetch+decode 缓存；文件缺失/解码失败回退 WebAudio 合成短音，绝不报错。
+const eduBuffers = {};
+
+async function playEduSound(kind, fallbackFreqs) {
+    if (!audioCtx) return;
+    try {
+        let buf = eduBuffers[kind];
+        if (buf === undefined) {
+            const resp = await fetch(`assets/audio/edu_${kind}.wav`);
+            buf = resp.ok ? await audioCtx.decodeAudioData(await resp.arrayBuffer()) : null;
+            eduBuffers[kind] = buf;
+        }
+        if (buf) {
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.85;
+            src.connect(gain);
+            gain.connect(getSfxOut());
+            src.start();
+            return;
+        }
+    } catch (e) { /* 落到合成兜底 */ }
+    // 合成兜底：fallbackFreqs = [起音, 结音]，0.18s 滑音
+    try {
+        const t0 = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        osc.type = kind === 'wrong' ? 'square' : 'sine';
+        osc.frequency.setValueAtTime(fallbackFreqs[0], t0);
+        osc.frequency.exponentialRampToValueAtTime(fallbackFreqs[1], t0 + 0.18);
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.16, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+        osc.connect(gain);
+        gain.connect(getSfxOut());
+        osc.start(t0);
+        osc.stop(t0 + 0.22);
+    } catch (e) {}
+}
+
+// 答对：清脆上行琶音（文件缺失回退 520→1040Hz 滑音）
+export function playEduCorrectSound() { return playEduSound('correct', [520, 1040]); }
+// 答错：低沉短促 buzz（回退 220→140Hz 方波）
+export function playEduWrongSound() { return playEduSound('wrong', [220, 140]); }
+// 全部解锁/任务达成：小号式 fanfare（回退 440→880Hz）
+export function playEduUnlockSound() { return playEduSound('unlock', [440, 880]); }

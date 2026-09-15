@@ -97,7 +97,11 @@ function finish(session, attempt, error = null) {
     if (error) {
         lastError = '编码器中断，已尝试保存中断前的片段，请检查文件后重新录制';
         notify('⚠️ ' + lastError);
-    } else notify(`🎬 录像已生成（${attempt.hasAudio ? '含游戏声音' : '无声'}）；未下载可点「保存上一段」`);
+    } else {
+        // Opus 音轨 QuickTime 放不出声（仅不支持 AAC 的浏览器会走到），提示改用 VLC/IINA。
+        const opusHint = attempt.hasAudio && mime.includes('opus') ? '，音轨为 Opus：QuickTime 中无声，建议用 VLC/IINA 播放' : '';
+        notify(`🎬 录像已生成（${attempt.hasAudio ? '含游戏声音' : '无声'}${opusHint}）；未下载可点「保存上一段」`);
+    }
 }
 
 export function stopRecording() {
@@ -176,10 +180,16 @@ export function toggleBuildRecording(source = 'user') {
         surface.height = Math.max(2, Math.floor(canvas.height * scale / 2) * 2);
         const ctx = surface.getContext('2d', { alpha: false });
         if (!ctx) throw new Error('无法创建录像画布');
-        // MP4 优先；失败后先试兼容性较好的 VP8，最后让浏览器自己选择。
+        // MP4 优先，但必须显式锁定 H.264+AAC：裸 video/mp4 由浏览器自行协商编码，
+        // Chrome 实测会混出 VP9 视频或 Opus 音轨——QuickTime 一个都解不了，播放时弹
+        // 「包含不兼容的部分媒体」。AAC（mp4a.40.2）是 QuickTime 唯一兼容的 mp4 音轨
+        // （Chrome 152+ / Safari 实测可编）；不支持 AAC 的环境退到 avc1+opus（画面可放，
+        // 音轨需 VLC/IINA）；webm 系仅作无 mp4 能力浏览器（如 Firefox）的兜底。
         const hasAudio = audioCtx?.state === 'running';
-        const formats = ['video/mp4', hasAudio ? 'video/webm;codecs=vp8,opus' : 'video/webm;codecs=vp8',
-            'video/webm', hasAudio ? 'video/webm;codecs=vp9,opus' : 'video/webm;codecs=vp9'];
+        const mp4NoAudio = ['video/mp4;codecs=avc1'];
+        const mp4WithAudio = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=avc1,opus', 'video/mp4;codecs=avc1'];
+        const webmFallback = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'];
+        const formats = (hasAudio ? mp4WithAudio : mp4NoAudio).concat(webmFallback);
         const candidates = formats.filter(m => MediaRecorder.isTypeSupported(m));
         candidates.push('');
         const status = getBuildStatus();

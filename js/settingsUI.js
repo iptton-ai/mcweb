@@ -14,6 +14,8 @@ import { closeSettingsState, getUIState, openSettingsState } from './uiModal.js'
 import { BGM_PACKS, getBgmStyle, getBgmVolume, setBgmStyle, setBgmVolume } from './bgm.js';
 import { getSfxVolume, setSfxVolume } from './audio.js';
 import { exportSlotJson, importSlotJson, listSaves, savedAtText } from './saveGame.js';
+import { EDU_STORE_KEY, loadEduProgress, ensureHanziBank, hanziInfo } from './eduRewards.js'; // 学习报告页（Edu M2）
+import { eduSubjects } from './eduKeypad.js'; // 答题机学科元信息（多学科引擎）
 import { camera } from './engine.js';
 
 const TAB_KEY = 'mcweb.gameSettings.tab'; // 记住上次停留的页签
@@ -76,7 +78,7 @@ const STYLE = `
 /* 音量滑块行 */
 .vol-row{display:flex;align-items:center;gap:10px;}
 .vol-row + .vol-row{margin-top:9px;}
-.vol-row label{width:34px;color:#9ab;font-size:12px;margin:0;flex:0 0 auto;}
+.vol-row label{min-width:34px;width:fit-content;color:#9ab;font-size:12px;margin:0;flex:0 0 auto;white-space:nowrap;}
 .vol-row input[type=range]{flex:1;accent-color:#7ec850;padding:0;border:none;background:transparent;}
 .vol-row .val{width:42px;text-align:right;color:#c0c0d8;font-size:12px;flex:0 0 auto;}
 /* 存档页 */
@@ -87,6 +89,13 @@ const STYLE = `
 .gs-btn:hover{border-color:#7ec850;background:rgba(60,70,90,.95);}
 #gs-slot-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 @media (max-width:560px){#gs-slot-list{grid-template-columns:1fr;}}
+/* 识字图鉴卡片：单字 + 下方注音（题库新格式才有；悬停看组词） */
+#gs-edu-hanzi{display:flex;flex-wrap:wrap;gap:6px;}
+.gs-hz{display:flex;flex-direction:column;align-items:center;width:42px;padding:5px 2px 4px;
+  background:rgba(40,40,66,.6);border:1px solid #2d2d44;border-radius:7px;}
+.gs-hz b{font-size:18px;color:#fff;line-height:1.2;font-weight:normal;}
+.gs-hz i{font-size:10px;color:#8fb573;font-style:normal;margin-top:3px;max-width:38px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 `;
 
 // ---------- 模块状态 ----------
@@ -121,6 +130,7 @@ export function initSettingsUI(injected) {
             <button class="gs-tab" data-tab="audio">🎵 音频</button>
             <button class="gs-tab" data-tab="video">🎛 画面</button>
             <button class="gs-tab" data-tab="saves">💾 存档</button>
+            <button class="gs-tab" data-tab="edu">📚 学习</button>
           </div>
           <button class="gs-close" title="关闭（Esc）">✕</button>
         </div>
@@ -173,6 +183,26 @@ export function initSettingsUI(injected) {
           <div id="gs-slot-list"></div>
           <div class="gs-hint">点击有档槽位切换世界（当前世界会先自动保存）；空槽位可开新世界；✕ 删除需再点一次确认。</div>
         </div>
+        <div class="gs-body hidden" data-page="edu">
+          <div class="gs-card">
+            <h4>📈 学习进度（家长报告）</h4>
+            <p class="card-desc">孩子在游戏里的学习足迹：答题机（数学 / 科学 / 道法 / 语文）、英语商人（单词）、识字矿石（生字）。数据保存在本机浏览器。</p>
+            <div id="gs-edu-stats"></div>
+          </div>
+          <div class="gs-card">
+            <h4>🔤 识字图鉴</h4>
+            <p class="card-desc" id="gs-edu-hanzi-count"></p>
+            <div id="gs-edu-hanzi"></div>
+          </div>
+          <div class="gs-card">
+            <h4>🧹 重置学习进度</h4>
+            <p class="card-desc">清空全部学习记录（答题/单词/生字/里程碑），需点两次确认。世界与存档不受影响。</p>
+            <div class="gs-save-row">
+              <button class="gs-btn" id="gs-btn-edu-reset">🧹 清空学习记录</button>
+              <span class="gs-note" id="gs-edu-reset-note"></span>
+            </div>
+          </div>
+        </div>
       </div>`;
     document.body.appendChild(modal);
 
@@ -194,6 +224,22 @@ export function initSettingsUI(injected) {
     // 页签切换
     for (const btn of modal.querySelectorAll('.gs-tab')) {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    }
+    // 学习页：清空学习记录（二次确认）
+    const eduResetBtn = modal.querySelector('#gs-btn-edu-reset');
+    if (eduResetBtn) {
+        eduResetBtn.addEventListener('click', () => {
+            const note = modal.querySelector('#gs-edu-reset-note');
+            if (!eduResetArmed) {
+                eduResetArmed = true;
+                note.textContent = '⚠️ 再点一次确认清空（不可恢复）';
+                setTimeout(() => { eduResetArmed = false; if (note.textContent.startsWith('⚠️')) note.textContent = ''; }, 4000);
+                return;
+            }
+            try { localStorage.removeItem(EDU_STORE_KEY); } catch (e) {}
+            note.textContent = '✅ 已清空';
+            renderEduReport();
+        });
     }
     // 音量滑块：input 即时生效并写入 localStorage（拖动后滑块保持焦点，Esc 由下方捕获兜底）
     const bindVolume = (rangeId, valId, apply) => {
@@ -302,6 +348,84 @@ function switchTab(tab) {
     }
     for (const page of els.modal.querySelectorAll('.gs-body')) {
         page.classList.toggle('hidden', page.dataset.page !== tab);
+    }
+    if (tab === 'edu') renderEduReport(); // 学习页每次切入实时刷新
+}
+
+// ---------- 学习报告页（Edu M2 家长报告） ----------
+let eduResetArmed = false;
+
+function renderEduReport() {
+    const stats = els.modal.querySelector('#gs-edu-stats');
+    if (!stats) return;
+    const p = loadEduProgress();
+    const solved = p.solved || 0, wrong = p.wrong || 0;
+    const acc = solved + wrong > 0 ? Math.round((solved / (solved + wrong)) * 100) : null;
+    const words = (p.words || []).length, trades = p.trades || 0;
+    const hanzi = p.hanzi || [];
+    const rows = [
+        ['🧮 答题机解锁', `${solved} 台`],
+        ['🎯 答题正确率', acc === null ? '暂无记录' : `${acc}%（答错 ${wrong} 次）`],
+        ['🔥 当前连对', `${p.streak || 0} 次`],
+    ];
+    // 分学科答对/答错（多学科引擎新增 p.subjects，契约 §6；无该字段时自动省略本段）
+    const metaMap = {};
+    for (const m of eduSubjects()) metaMap[m.subject] = m;
+    for (const [key, cnt] of Object.entries(p.subjects || {})) {
+        if (!cnt || typeof cnt !== 'object') continue;
+        const m = metaMap[key] || { emoji: '📚', name: key };
+        rows.push([`${m.emoji} ${m.name}（答对/答错）`, `${cnt.solved || 0} / ${cnt.wrong || 0}`]);
+    }
+    rows.push(
+        ['🛒 英语交易达成', `${trades} 次`],
+        ['🔤 已学会单词', `${words} 个（课本词表 150 词）`],
+        ['📖 识字图鉴', `${hanzi.length} 字（课本识字表 258 字）`],
+        ['🏅 已领里程碑', `${(p.claimed || []).length}/4（5/10/20/50 累计）`],
+    );
+    stats.innerHTML = rows.map(([k, v]) =>
+        `<div class="vol-row"><label>${k}</label><span style="color:#c0c0d8;">${v}</span></div>`).join('');
+    renderHanziCollection(hanzi);
+    // 识字表注音异步加载（题库文件懒 fetch）：打开页面时 best-effort——
+    // 首次渲染用当前已有注音，加载完成且仍停在学习页时补渲染一次
+    ensureHanziBank().then(() => {
+        const page = els.modal && els.modal.querySelector('[data-page="edu"]');
+        if (page && !page.classList.contains('hidden')) {
+            renderHanziCollection(loadEduProgress().hanzi || []);
+        }
+    });
+    eduResetArmed = false;
+    const note = els.modal.querySelector('#gs-edu-reset-note');
+    if (note) note.textContent = '';
+}
+
+// 识字图鉴渲染：每字一张小卡，下方注音（hanziInfo 查询自题库新格式），
+// 悬停看组词；注音查不到（旧格式/未加载）就只显示字
+function renderHanziCollection(hanzi) {
+    const hanziBox = els.modal.querySelector('#gs-edu-hanzi');
+    const hanziCount = els.modal.querySelector('#gs-edu-hanzi-count');
+    if (!hanziBox || !hanziCount) return;
+    hanziCount.textContent = `挖到识字矿石就能认识新字，已收集 ${hanzi.length} 个：`;
+    hanziBox.innerHTML = '';
+    if (!hanzi.length) {
+        hanziBox.textContent = '还没有开始收集，去挖矿吧！⛏️';
+        return;
+    }
+    for (const ch of hanzi) {
+        const info = hanziInfo(ch);
+        const card = document.createElement('span');
+        card.className = 'gs-hz';
+        const b = document.createElement('b');
+        b.textContent = ch;
+        card.appendChild(b);
+        if (info) {
+            card.title = info.word ? `${info.pinyin} · ${info.word}` : (info.pinyin || ch);
+            if (info.pinyin) {
+                const i = document.createElement('i');
+                i.textContent = info.pinyin;
+                card.appendChild(i);
+            }
+        }
+        hanziBox.appendChild(card);
     }
 }
 

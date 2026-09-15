@@ -674,6 +674,50 @@ export function isKineticId(id) {
         (id >= PULLEY_BASE && id < PULLEY_BASE + PULLEY_COUNT + PLATFORM_COUNT);
 }
 
+// ==================== 教学组（Edu M1，2026-09-07）：答题机 keypad ====================
+// 「数学密码门」玩法的核心方块（方案见 docs/edu-m1-keypad-plan.md）：右键开始答题
+// （HUD 出题、数字键输入、回车提交，题库 assets/edu/grade3-math.json 按格子坐标
+// 哈希确定性抽题——不进存档，读档后同格同题）；答对翻转为已解锁变体并成为红石
+// 信号源（js/redstone.js 的 activeSources），贴门放=直接开门，接红石粉=远程解锁。
+// ID = KEYPAD_BASE + solved（0=锁定 / 1=已解锁·发光常供能）。普通实心立方体，
+// 无 customMesh（零 propMesh），贴图 tile 77..79（textures.js，可被 assets/textures/
+// keypad_locked.png / keypad_solved.png 覆盖）。
+export const KEYPAD_BASE = 224;
+export const KEYPAD_COUNT = 2;
+export const KEYPAD_ITEM_ID = KEYPAD_BASE; // 物品栏「答题机」用锁定变体代表
+
+export function keypadId(solved) {
+    return KEYPAD_BASE + (solved ? 1 : 0);
+}
+
+export function isKeypadId(id) {
+    return id >= KEYPAD_BASE && id < KEYPAD_BASE + KEYPAD_COUNT;
+}
+
+export function keypadSolved(id) {
+    return (id - KEYPAD_BASE) & 1;
+}
+
+// ---- 教学组（Edu M2，2026-09-08）：英语商人 + 识字矿石 ----
+// 英语商人（merchant stall）：普通实心立方体，右键开始「单词/句子交易」——三模式轮换
+// （看中文选英文 / 看英文选中文 / 情景对话选英文句，按 1/2/3 三选一；题库
+// assets/edu/grade3-english.json 沪教版三上 150 词 + 50 句型，模式逻辑见 js/eduMerchant.js）；
+// 答对得交易奖励（奖励梯队见 js/eduRewards.js），词/句入「已学会」图鉴（句子 key 带 s: 前缀，
+// localStorage mcweb.edu.v1.words）。
+export const MERCHANT_BASE = 226;
+export const MERCHANT_COUNT = 1;
+export const MERCHANT_ITEM_ID = MERCHANT_BASE;
+
+export function isMerchantId(id) {
+    return id >= MERCHANT_BASE && id < MERCHANT_BASE + MERCHANT_COUNT;
+}
+
+// 识字矿石（hanzi ore）：世界生成稀有矿（world.js oreAt，y≤44 约 1% 独立分段），
+// 挖开掉煤炭 + 概率苹果，并按格子哈希从识字表（assets/edu/grade3-hanzi.json，
+// 统编版语文三上识字表 258 字）认领一个生字入图鉴——「挖矿识字」，同格永远同一个字。
+export const HANZI_ORE = 228;
+export const HANZI_ORE_ITEM_ID = HANZI_ORE; // 创造模式物品栏可摆（教学演示用）
+
 // 动力方块的传动轴：轴类方块取编码轴，机械锯/投料器取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
@@ -966,6 +1010,9 @@ export const HotbarBlocks = [
     PLATFORM_ITEM_ID, // 电梯平台（L2 电梯）：被滑轮绳绑定，载人载货升降（见 js/kinetic.js）
     BELT_ITEM_ID, // 传送带：通电后把落上的物品沿箭头运走，玩家站上也会被带动（见 js/kinetic.js / js/items.js）
     DEPLOYER_ITEM_ID, // 投料器：通电后把头顶/朝向格的方块物品变回方块塞进朝向格（粉碎链回流的钥匙，见 js/kinetic.js）
+    KEYPAD_ITEM_ID, // 答题机（Edu M1）：右键出题答对变红石信号源，贴门放=数学密码门（见 js/eduKeypad.js）
+    MERCHANT_ITEM_ID, // 英语商人（Edu M2）：右键做单词交易，答对拿奖励（见 js/eduMerchant.js）
+    HANZI_ORE_ITEM_ID, // 识字矿石（Edu M2）：挖开认领一个生字入图鉴（见 js/interaction.js）
     BlockTypes.WATER, // 水：静态水方块（无流动模拟），给水车供水/造水景（只能被方块覆盖，不可挖）
     // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛 ----
     BlockTypes.COAL_ORE, // 煤矿石：掉煤炭（燃料/火把）
@@ -1205,6 +1252,34 @@ for (let facing = 0; facing < 6; facing++) {
         drop: DEPLOYER_ITEM_ID,
     };
 }
+
+// 答题机（Edu M1）：普通实心立方体，右键答题（js/eduKeypad.js）；已解锁变体是
+// 常供能红石信号源（js/redstone.js）。drop 固定锁定变体，防变体 ID 进背包不叠堆
+for (let solved = 0; solved < 2; solved++) {
+    BlockInfo[keypadId(solved)] = {
+        name: solved ? '答题机（已解锁）' : '答题机',
+        solid: true, transparent: false, customMesh: false,
+        color: solved ? '#e8c34a' : '#7a8a6a',
+        hardness: 1.5, tool: 'pickaxe',
+        drop: KEYPAD_ITEM_ID,
+        edu: true,
+    };
+}
+
+// 英语商人（Edu M2）：普通实心立方体（右键交易见 js/eduMerchant.js）
+BlockInfo[MERCHANT_BASE] = {
+    name: '英语商人',
+    solid: true, transparent: false, customMesh: false,
+    color: '#b07a4a', hardness: 1.5, tool: 'axe',
+    drop: MERCHANT_ITEM_ID, edu: true,
+};
+// 识字矿石（Edu M2）：普通实心立方体；挖开由 interaction.js 特殊分支记字+额外掉落
+BlockInfo[HANZI_ORE] = {
+    name: '识字矿石',
+    solid: true, transparent: false, customMesh: false,
+    color: '#8a8a7a', hardness: 3.0, tool: 'pickaxe', needsTool: true,
+    drop: ItemTypes.COAL, xp: 3, edu: true,
+};
 
 // ==================== 选取形状（outline）：不满格道具的「被瞄准形状」 ====================
 // 照原版把「占一格」与「被瞄准/框选的形状」解耦：outline 是格内局部 AABB 列表

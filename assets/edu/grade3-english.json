@@ -1,0 +1,1007 @@
+{
+ "source": "沪教版（上教社）英语三年级上册·Word list（p94-96 提取，zh 已清洗为纯中文释义） + 三上情景句型（2026-09-09 补充）",
+ "words": [
+  {
+   "unit": 1,
+   "en": "happy",
+   "zh": "开心的"
+  },
+  {
+   "unit": 1,
+   "en": "sad",
+   "zh": "伤心的"
+  },
+  {
+   "unit": 1,
+   "en": "angry",
+   "zh": "生气的"
+  },
+  {
+   "unit": 1,
+   "en": "tired",
+   "zh": "疲倦的"
+  },
+  {
+   "unit": 1,
+   "en": "boy",
+   "zh": "男孩"
+  },
+  {
+   "unit": 1,
+   "en": "girl",
+   "zh": "女孩"
+  },
+  {
+   "unit": 1,
+   "en": "am",
+   "zh": "是"
+  },
+  {
+   "unit": 1,
+   "en": "cold",
+   "zh": "冷的"
+  },
+  {
+   "unit": 1,
+   "en": "OK",
+   "zh": "对；好；行"
+  },
+  {
+   "unit": 1,
+   "en": "find",
+   "zh": "找到"
+  },
+  {
+   "unit": 1,
+   "en": "pencil",
+   "zh": "铅笔"
+  },
+  {
+   "unit": 1,
+   "en": "too",
+   "zh": "也；太"
+  },
+  {
+   "unit": 1,
+   "en": "well",
+   "zh": "好；就这样；好啦"
+  },
+  {
+   "unit": 1,
+   "en": "now",
+   "zh": "现在"
+  },
+  {
+   "unit": 1,
+   "en": "look",
+   "zh": "看"
+  },
+  {
+   "unit": 1,
+   "en": "good",
+   "zh": "好的"
+  },
+  {
+   "unit": 1,
+   "en": "how",
+   "zh": "怎样；怎么"
+  },
+  {
+   "unit": 1,
+   "en": "not",
+   "zh": "不"
+  },
+  {
+   "unit": 2,
+   "en": "grandfather",
+   "zh": "（外）祖父；爷爷"
+  },
+  {
+   "unit": 2,
+   "en": "grandmother",
+   "zh": "（外）祖母；奶奶"
+  },
+  {
+   "unit": 2,
+   "en": "father",
+   "zh": "爸爸"
+  },
+  {
+   "unit": 2,
+   "en": "mother",
+   "zh": "妈妈"
+  },
+  {
+   "unit": 2,
+   "en": "sister",
+   "zh": "姐姐；妹妹"
+  },
+  {
+   "unit": 2,
+   "en": "brother",
+   "zh": "哥哥；弟弟"
+  },
+  {
+   "unit": 2,
+   "en": "me",
+   "zh": "我"
+  },
+  {
+   "unit": 2,
+   "en": "family",
+   "zh": "家庭"
+  },
+  {
+   "unit": 2,
+   "en": "my",
+   "zh": "我的"
+  },
+  {
+   "unit": 2,
+   "en": "name",
+   "zh": "名字"
+  },
+  {
+   "unit": 2,
+   "en": "is",
+   "zh": "是"
+  },
+  {
+   "unit": 2,
+   "en": "this",
+   "zh": "这；这个"
+  },
+  {
+   "unit": 2,
+   "en": "and",
+   "zh": "和"
+  },
+  {
+   "unit": 2,
+   "en": "she",
+   "zh": "她"
+  },
+  {
+   "unit": 2,
+   "en": "he",
+   "zh": "他"
+  },
+  {
+   "unit": 2,
+   "en": "who",
+   "zh": "谁"
+  },
+  {
+   "unit": 2,
+   "en": "twin",
+   "zh": "双胞胎之一"
+  },
+  {
+   "unit": 2,
+   "en": "big",
+   "zh": "大的"
+  },
+  {
+   "unit": 3,
+   "en": "head",
+   "zh": "头"
+  },
+  {
+   "unit": 3,
+   "en": "eye",
+   "zh": "眼睛"
+  },
+  {
+   "unit": 3,
+   "en": "ear",
+   "zh": "耳朵"
+  },
+  {
+   "unit": 3,
+   "en": "mouth",
+   "zh": "嘴巴"
+  },
+  {
+   "unit": 3,
+   "en": "hair",
+   "zh": "头发"
+  },
+  {
+   "unit": 3,
+   "en": "nose",
+   "zh": "鼻子"
+  },
+  {
+   "unit": 3,
+   "en": "face",
+   "zh": "脸"
+  },
+  {
+   "unit": 3,
+   "en": "a (an)",
+   "zh": "一；一个"
+  },
+  {
+   "unit": 3,
+   "en": "haircut",
+   "zh": "理发；发型"
+  },
+  {
+   "unit": 3,
+   "en": "your",
+   "zh": "你的；你们的"
+  },
+  {
+   "unit": 3,
+   "en": "long",
+   "zh": "长的"
+  },
+  {
+   "unit": 3,
+   "en": "but",
+   "zh": "但是"
+  },
+  {
+   "unit": 3,
+   "en": "like",
+   "zh": "喜欢"
+  },
+  {
+   "unit": 3,
+   "en": "see",
+   "zh": "看见"
+  },
+  {
+   "unit": 3,
+   "en": "sit",
+   "zh": "坐"
+  },
+  {
+   "unit": 3,
+   "en": "on",
+   "zh": "在……上"
+  },
+  {
+   "unit": 3,
+   "en": "chair",
+   "zh": "椅子"
+  },
+  {
+   "unit": 3,
+   "en": "please",
+   "zh": "请"
+  },
+  {
+   "unit": 3,
+   "en": "you",
+   "zh": "你；你们"
+  },
+  {
+   "unit": 3,
+   "en": "have",
+   "zh": "有"
+  },
+  {
+   "unit": 3,
+   "en": "short",
+   "zh": "短的；个子矮的"
+  },
+  {
+   "unit": 3,
+   "en": "mum",
+   "zh": "妈妈"
+  },
+  {
+   "unit": 4,
+   "en": "skip",
+   "zh": "跳绳"
+  },
+  {
+   "unit": 4,
+   "en": "run",
+   "zh": "跑"
+  },
+  {
+   "unit": 4,
+   "en": "fly",
+   "zh": "飞"
+  },
+  {
+   "unit": 4,
+   "en": "skateboard",
+   "zh": "滑滑板"
+  },
+  {
+   "unit": 4,
+   "en": "ride",
+   "zh": "骑"
+  },
+  {
+   "unit": 4,
+   "en": "in",
+   "zh": "在……里面"
+  },
+  {
+   "unit": 4,
+   "en": "the",
+   "zh": "（表示特指）"
+  },
+  {
+   "unit": 4,
+   "en": "park",
+   "zh": "公园"
+  },
+  {
+   "unit": 4,
+   "en": "are",
+   "zh": "是"
+  },
+  {
+   "unit": 4,
+   "en": "can",
+   "zh": "能够"
+  },
+  {
+   "unit": 4,
+   "en": "fun",
+   "zh": "有趣的；乐趣"
+  },
+  {
+   "unit": 4,
+   "en": "fast",
+   "zh": "快的；快；快速"
+  },
+  {
+   "unit": 4,
+   "en": "help",
+   "zh": "帮助"
+  },
+  {
+   "unit": 4,
+   "en": "together",
+   "zh": "一起"
+  },
+  {
+   "unit": 4,
+   "en": "get",
+   "zh": "去取；得到；获得"
+  },
+  {
+   "unit": 4,
+   "en": "bring",
+   "zh": "带来"
+  },
+  {
+   "unit": 4,
+   "en": "jump",
+   "zh": "跳"
+  },
+  {
+   "unit": 5,
+   "en": "milk",
+   "zh": "牛奶"
+  },
+  {
+   "unit": 5,
+   "en": "juice",
+   "zh": "果汁"
+  },
+  {
+   "unit": 5,
+   "en": "tomato",
+   "zh": "西红柿"
+  },
+  {
+   "unit": 5,
+   "en": "carrot",
+   "zh": "胡萝卜"
+  },
+  {
+   "unit": 5,
+   "en": "apple",
+   "zh": "苹果"
+  },
+  {
+   "unit": 5,
+   "en": "banana",
+   "zh": "香蕉"
+  },
+  {
+   "unit": 5,
+   "en": "grape",
+   "zh": "葡萄"
+  },
+  {
+   "unit": 5,
+   "en": "meat",
+   "zh": "肉"
+  },
+  {
+   "unit": 5,
+   "en": "fish",
+   "zh": "鱼；鱼肉"
+  },
+  {
+   "unit": 5,
+   "en": "funny",
+   "zh": "有趣的"
+  },
+  {
+   "unit": 5,
+   "en": "food",
+   "zh": "食物"
+  },
+  {
+   "unit": 5,
+   "en": "what",
+   "zh": "什么"
+  },
+  {
+   "unit": 5,
+   "en": "some",
+   "zh": "一些"
+  },
+  {
+   "unit": 5,
+   "en": "fruit",
+   "zh": "水果"
+  },
+  {
+   "unit": 5,
+   "en": "vegetable",
+   "zh": "蔬菜"
+  },
+  {
+   "unit": 5,
+   "en": "cut",
+   "zh": "切"
+  },
+  {
+   "unit": 5,
+   "en": "we",
+   "zh": "我们"
+  },
+  {
+   "unit": 5,
+   "en": "no",
+   "zh": "不；不是"
+  },
+  {
+   "unit": 5,
+   "en": "for",
+   "zh": "（表示对象、用途等）给；对"
+  },
+  {
+   "unit": 5,
+   "en": "yes",
+   "zh": "是的"
+  },
+  {
+   "unit": 5,
+   "en": "chicken",
+   "zh": "鸡肉"
+  },
+  {
+   "unit": 5,
+   "en": "soup",
+   "zh": "汤"
+  },
+  {
+   "unit": 6,
+   "en": "squirrel",
+   "zh": "松鼠"
+  },
+  {
+   "unit": 6,
+   "en": "rabbit",
+   "zh": "兔子"
+  },
+  {
+   "unit": 6,
+   "en": "cat",
+   "zh": "猫"
+  },
+  {
+   "unit": 6,
+   "en": "dog",
+   "zh": "狗"
+  },
+  {
+   "unit": 6,
+   "en": "frog",
+   "zh": "青蛙"
+  },
+  {
+   "unit": 6,
+   "en": "day",
+   "zh": "白天；一天"
+  },
+  {
+   "unit": 6,
+   "en": "it",
+   "zh": "它"
+  },
+  {
+   "unit": 6,
+   "en": "nice",
+   "zh": "美好的"
+  },
+  {
+   "unit": 6,
+   "en": "has",
+   "zh": "有（第三人称单数用）"
+  },
+  {
+   "unit": 6,
+   "en": "small",
+   "zh": "小的"
+  },
+  {
+   "unit": 6,
+   "en": "cute",
+   "zh": "可爱的"
+  },
+  {
+   "unit": 6,
+   "en": "that",
+   "zh": "那；那个"
+  },
+  {
+   "unit": 6,
+   "en": "they",
+   "zh": "他们；她们；它们"
+  },
+  {
+   "unit": 6,
+   "en": "China",
+   "zh": "中国"
+  },
+  {
+   "unit": 6,
+   "en": "Thailand",
+   "zh": "泰国"
+  },
+  {
+   "unit": 6,
+   "en": "UK",
+   "zh": "英国"
+  },
+  {
+   "unit": 6,
+   "en": "tail",
+   "zh": "尾巴"
+  },
+  {
+   "unit": 6,
+   "en": "two",
+   "zh": "二；二个（人或物）"
+  },
+  {
+   "unit": 6,
+   "en": "animal",
+   "zh": "动物"
+  },
+  {
+   "unit": 6,
+   "en": "eat",
+   "zh": "吃"
+  },
+  {
+   "unit": 6,
+   "en": "bad",
+   "zh": "坏的"
+  },
+  {
+   "unit": 6,
+   "en": "bug",
+   "zh": "虫子"
+  },
+  {
+   "unit": 7,
+   "en": "sunny",
+   "zh": "晴朗的"
+  },
+  {
+   "unit": 7,
+   "en": "sun",
+   "zh": "太阳"
+  },
+  {
+   "unit": 7,
+   "en": "windy",
+   "zh": "刮风的"
+  },
+  {
+   "unit": 7,
+   "en": "wind",
+   "zh": "风"
+  },
+  {
+   "unit": 7,
+   "en": "rainy",
+   "zh": "下雨的"
+  },
+  {
+   "unit": 7,
+   "en": "rain",
+   "zh": "雨；下雨"
+  },
+  {
+   "unit": 7,
+   "en": "cloudy",
+   "zh": "多云的"
+  },
+  {
+   "unit": 7,
+   "en": "cloud",
+   "zh": "云"
+  },
+  {
+   "unit": 7,
+   "en": "different",
+   "zh": "不同的"
+  },
+  {
+   "unit": 7,
+   "en": "weather",
+   "zh": "天气"
+  },
+  {
+   "unit": 7,
+   "en": "today",
+   "zh": "今天"
+  },
+  {
+   "unit": 7,
+   "en": "hat",
+   "zh": "帽子"
+  },
+  {
+   "unit": 7,
+   "en": "plant",
+   "zh": "植物"
+  },
+  {
+   "unit": 7,
+   "en": "hot",
+   "zh": "热的"
+  },
+  {
+   "unit": 7,
+   "en": "very",
+   "zh": "非常"
+  },
+  {
+   "unit": 7,
+   "en": "go",
+   "zh": "去"
+  },
+  {
+   "unit": 8,
+   "en": "cake",
+   "zh": "蛋糕"
+  },
+  {
+   "unit": 8,
+   "en": "candle",
+   "zh": "蜡烛"
+  },
+  {
+   "unit": 8,
+   "en": "gift",
+   "zh": "礼物"
+  },
+  {
+   "unit": 8,
+   "en": "toy",
+   "zh": "玩具"
+  },
+  {
+   "unit": 8,
+   "en": "doll",
+   "zh": "玩具娃娃"
+  },
+  {
+   "unit": 8,
+   "en": "card",
+   "zh": "卡片"
+  },
+  {
+   "unit": 8,
+   "en": "noodles",
+   "zh": "面条"
+  },
+  {
+   "unit": 8,
+   "en": "come",
+   "zh": "来"
+  },
+  {
+   "unit": 8,
+   "en": "love",
+   "zh": "爱"
+  },
+  {
+   "unit": 8,
+   "en": "dad",
+   "zh": "爸爸"
+  },
+  {
+   "unit": 8,
+   "en": "afternoon",
+   "zh": "下午"
+  },
+  {
+   "unit": 8,
+   "en": "share",
+   "zh": "分享"
+  },
+  {
+   "unit": 8,
+   "en": "his",
+   "zh": "他的"
+  },
+  {
+   "unit": 8,
+   "en": "evening",
+   "zh": "傍晚；晚上"
+  },
+  {
+   "unit": 8,
+   "en": "ten",
+   "zh": "十"
+  }
+ ],
+ "sentences": [
+  {
+   "en": "Good morning.",
+   "zh": "上午好。",
+   "unit": 1
+  },
+  {
+   "en": "Good afternoon.",
+   "zh": "下午好。",
+   "unit": 1
+  },
+  {
+   "en": "Goodbye!",
+   "zh": "再见！",
+   "unit": 1
+  },
+  {
+   "en": "How are you?",
+   "zh": "你好吗？",
+   "unit": 1
+  },
+  {
+   "en": "I'm fine, thank you.",
+   "zh": "我很好，谢谢。",
+   "unit": 1
+  },
+  {
+   "en": "Not so good.",
+   "zh": "不太好。",
+   "unit": 1
+  },
+  {
+   "en": "What's your name?",
+   "zh": "你叫什么名字？",
+   "unit": 1
+  },
+  {
+   "en": "My name is Peter.",
+   "zh": "我叫彼得。",
+   "unit": 1
+  },
+  {
+   "en": "Nice to meet you.",
+   "zh": "很高兴认识你。",
+   "unit": 1
+  },
+  {
+   "en": "Hello! I'm Joe.",
+   "zh": "你好！我是乔。",
+   "unit": 1
+  },
+  {
+   "en": "Good night.",
+   "zh": "晚安。",
+   "unit": 1
+  },
+  {
+   "en": "This is my father.",
+   "zh": "这是我爸爸。",
+   "unit": 2
+  },
+  {
+   "en": "This is my mother.",
+   "zh": "这是我妈妈。",
+   "unit": 2
+  },
+  {
+   "en": "Who is he?",
+   "zh": "他是谁？",
+   "unit": 2
+  },
+  {
+   "en": "He is my grandfather.",
+   "zh": "他是我爷爷。",
+   "unit": 2
+  },
+  {
+   "en": "Who is she?",
+   "zh": "她是谁？",
+   "unit": 2
+  },
+  {
+   "en": "I love my family.",
+   "zh": "我爱我的家。",
+   "unit": 2
+  },
+  {
+   "en": "Look at the blackboard.",
+   "zh": "看黑板。",
+   "unit": 3
+  },
+  {
+   "en": "Touch your nose.",
+   "zh": "摸摸你的鼻子。",
+   "unit": 3
+  },
+  {
+   "en": "Clap your hands.",
+   "zh": "拍拍你的手。",
+   "unit": 3
+  },
+  {
+   "en": "I have big eyes.",
+   "zh": "我有大眼睛。",
+   "unit": 3
+  },
+  {
+   "en": "She has long hair.",
+   "zh": "她有长头发。",
+   "unit": 3
+  },
+  {
+   "en": "Stand up, please.",
+   "zh": "请起立。",
+   "unit": 3
+  },
+  {
+   "en": "I can run fast.",
+   "zh": "我能跑得很快。",
+   "unit": 4
+  },
+  {
+   "en": "I can fly a kite.",
+   "zh": "我会放风筝。",
+   "unit": 4
+  },
+  {
+   "en": "Can you ride a bike?",
+   "zh": "你会骑自行车吗？",
+   "unit": 4
+  },
+  {
+   "en": "Let's go to the park.",
+   "zh": "我们去公园吧。",
+   "unit": 4
+  },
+  {
+   "en": "Let's play together.",
+   "zh": "我们一起玩吧。",
+   "unit": 4
+  },
+  {
+   "en": "I like apples.",
+   "zh": "我喜欢苹果。",
+   "unit": 5
+  },
+  {
+   "en": "Have some milk.",
+   "zh": "喝点牛奶吧。",
+   "unit": 5
+  },
+  {
+   "en": "What do you like?",
+   "zh": "你喜欢什么？",
+   "unit": 5
+  },
+  {
+   "en": "I like chicken and noodles.",
+   "zh": "我喜欢鸡肉和面条。",
+   "unit": 5
+  },
+  {
+   "en": "Here you are.",
+   "zh": "给你。",
+   "unit": 5
+  },
+  {
+   "en": "Thank you.",
+   "zh": "谢谢你。",
+   "unit": 5
+  },
+  {
+   "en": "Look at the cat.",
+   "zh": "看那只猫。",
+   "unit": 6
+  },
+  {
+   "en": "It has a long tail.",
+   "zh": "它有长尾巴。",
+   "unit": 6
+  },
+  {
+   "en": "What is it?",
+   "zh": "它是什么？",
+   "unit": 6
+  },
+  {
+   "en": "They are cute.",
+   "zh": "它们很可爱。",
+   "unit": 6
+  },
+  {
+   "en": "I like rabbits.",
+   "zh": "我喜欢兔子。",
+   "unit": 6
+  },
+  {
+   "en": "How is the weather?",
+   "zh": "天气怎么样？",
+   "unit": 7
+  },
+  {
+   "en": "It's sunny today.",
+   "zh": "今天是晴天。",
+   "unit": 7
+  },
+  {
+   "en": "It's a windy day.",
+   "zh": "今天风很大。",
+   "unit": 7
+  },
+  {
+   "en": "It's hot today.",
+   "zh": "今天很热。",
+   "unit": 7
+  },
+  {
+   "en": "Happy birthday!",
+   "zh": "生日快乐！",
+   "unit": 8
+  },
+  {
+   "en": "Here is a gift for you.",
+   "zh": "这是给你的礼物。",
+   "unit": 8
+  },
+  {
+   "en": "Let's cut the cake.",
+   "zh": "我们一起切蛋糕吧。",
+   "unit": 8
+  },
+  {
+   "en": "How old are you?",
+   "zh": "你几岁了？",
+   "unit": 8
+  },
+  {
+   "en": "I am ten years old.",
+   "zh": "我十岁了。",
+   "unit": 8
+  },
+  {
+   "en": "I'm sorry.",
+   "zh": "对不起。",
+   "unit": 8
+  },
+  {
+   "en": "That's OK.",
+   "zh": "没关系。",
+   "unit": 8
+  }
+ ]
+}

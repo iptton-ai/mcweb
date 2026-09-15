@@ -1,0 +1,9 @@
+{
+ "note": "答题机题库清单：subject 为稳定 key（进度记账用，勿改）；file 相对 assets/edu/；weight 越大被抽中概率越高",
+ "banks": [
+  { "subject": "math",    "emoji": "🧮", "name": "数学", "file": "grade3-math.json",    "weight": 2 },
+  { "subject": "science", "emoji": "🔬", "name": "科学", "file": "grade3-science.json", "weight": 1 },
+  { "subject": "daofa",   "emoji": "🧭", "name": "道法", "file": "grade3-daofa.json",   "weight": 1 },
+  { "subject": "yuwen",   "emoji": "📖", "name": "语文", "file": "grade3-yuwen.json",   "weight": 1 }
+ ]
+}

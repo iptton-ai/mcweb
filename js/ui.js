@@ -1,6 +1,6 @@
 // ==================== ui.js ====================
 
-import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, OBSERVER_ITEM_ID, PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes } from './config.js';
+import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, KEYPAD_ITEM_ID, LAMP_ITEM_ID, MERCHANT_ITEM_ID, OBSERVER_ITEM_ID, PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes, DUST_ITEM_ID } from './config.js';
 import { isCreative, isNight, state } from './state.js';
 import { camera } from './engine.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
@@ -49,6 +49,13 @@ export function setGameMode(mode) {
             // 电梯组（Create-lite L2）：滑轮+平台 = 绳升降电梯（拉杆换向，见 js/kinetic.js）
             state.player.inventory[PULLEY_ITEM_ID] = 2;
             state.player.inventory[PLATFORM_ITEM_ID] = 8;
+            // 教学组（Edu M1，2026-09-07）：答题机 + 红石件 = 「数学密码门」入门
+            // （答对即变红石信号源：贴门放直接开门，接粉可远程解锁，见 js/eduKeypad.js）
+            state.player.inventory[KEYPAD_ITEM_ID] = 3;
+            state.player.inventory[DUST_ITEM_ID] = 8;
+            state.player.inventory[LAMP_ITEM_ID] = 2;
+            // 教学组（Edu M2）：英语商人（右键单词交易拿奖励）；识字矿石挖矿自然遇到
+            state.player.inventory[MERCHANT_ITEM_ID] = 1;
         }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {

@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -208,6 +208,12 @@ export function generateAllTextures() {
         { type: DEPLOYER_ITEM_ID, top: 75, side: 76, bottom: 76, name: 'deployer' }, // 投料器（实际是 3D 方箱+喷嘴道具，正面投料口 tile 75 按朝向旋转）
         // ---- 电梯组（Create-lite L2）：电梯平台 tile 81（铁框格栅板，普通立方体三面同图；滑轮为 3D 纯色道具照离合器惯例不占 tile） ----
         { type: PLATFORM_ITEM_ID, top: 81, side: 81, bottom: 81, name: 'platform' },
+        // ---- 教学组（Edu M1）：答题机 tile 77 锁定面（绿屏键盘）/ 78 已解锁面（金屏✓）/ 79 背面顶面（铜盖板） ----
+        { type: KEYPAD_BASE, top: 79, side: 77, bottom: 79, name: 'keypad_locked' },
+        { type: KEYPAD_BASE + 1, top: 79, side: 78, bottom: 79, name: 'keypad_solved' },
+        // ---- 教学组（Edu M2）：英语商人 tile 82 正面（条纹雨棚货摊）/ 识字矿石 tile 83（金纹矿石） ----
+        { type: MERCHANT_ITEM_ID, top: 84, side: 82, bottom: 84, name: 'merchant' },
+        { type: HANZI_ORE_ITEM_ID, top: 83, side: 83, bottom: 83, name: 'hanzi_ore' },
     ];
 
     const drawFunctions = {
@@ -1045,6 +1051,109 @@ export function generateAllTextures() {
             ctx.fillRect(x + 2, y + s - 3, 1, 1);
             ctx.fillRect(x + s - 3, y + s - 3, 1, 1);
         },
+        // ---- 教学组（Edu M1）：答题机 77 锁定面（绿屏+键盘）/ 78 已解锁面（金屏✓）/ 79 背面（铜盖板） ----
+        77: (ctx, x, y, s) => { // 锁定态正面：铜壳 + 绿屏 + 3×4 键盘色块
+            ctx.fillStyle = '#5d6672';
+            ctx.fillRect(x, y, s, s); // 铜灰机身
+            ctx.fillStyle = '#3f4750';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1);
+            ctx.fillRect(x, y, 1, s);
+            ctx.fillRect(x + s - 1, y, 1, s); // 边框
+            ctx.fillStyle = '#0d2b12';
+            ctx.fillRect(x + 2, y + 2, s - 4, 3); // 屏幕底
+            ctx.fillStyle = '#39d353';
+            ctx.fillRect(x + 3, y + 3, 4, 1); // 屏幕亮条（算式区）
+            ctx.fillStyle = '#7d848c';
+            ctx.fillRect(x + 3, y + 7, s - 6, 1); // 键盘上沿
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    ctx.fillStyle = (r + c) % 2 ? '#8a6a3a' : '#9a7a4a';
+                    ctx.fillRect(x + 3 + c * 4, y + 8 + r * 2, 3, 1); // 按键行
+                }
+            }
+        },
+        78: (ctx, x, y, s) => { // 已解锁态正面：同构但金屏 + ✓ + 键盘发亮
+            ctx.fillStyle = '#6d7682';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#4a5460';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1);
+            ctx.fillRect(x, y, 1, s);
+            ctx.fillRect(x + s - 1, y, 1, s);
+            ctx.fillStyle = '#3a2b06';
+            ctx.fillRect(x + 2, y + 2, s - 4, 3);
+            ctx.fillStyle = '#ffd84a';
+            ctx.fillRect(x + 3, y + 3, s - 6, 1); // 金屏亮条
+            ctx.fillRect(x + 4, y + 3, 1, 1);
+            ctx.fillRect(x + 6, y + 3, 1, 1);
+            ctx.fillRect(x + 5, y + 4, 1, 1); // ✓
+            ctx.fillStyle = '#c9a227';
+            ctx.fillRect(x + 3, y + 7, s - 6, 1);
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    ctx.fillStyle = (r + c) % 2 ? '#c9a227' : '#e0b84a';
+                    ctx.fillRect(x + 3 + c * 4, y + 8 + r * 2, 3, 1);
+                }
+            }
+        },
+        79: (ctx, x, y, s) => { // 答题机背面/顶面：铜盖板 + 四角铆钉
+            ctx.fillStyle = '#6d7682';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#5d6672';
+            for (let i = 2; i < s - 2; i += 3) ctx.fillRect(x + 1, y + i, s - 2, 1);
+            ctx.fillStyle = '#4a5460';
+            ctx.fillRect(x, y, s, 2);
+            ctx.fillRect(x, y + s - 2, s, 2);
+            ctx.fillStyle = '#c8d0d8';
+            ctx.fillRect(x + 2, y + 2, 1, 1);
+            ctx.fillRect(x + s - 3, y + 2, 1, 1);
+            ctx.fillRect(x + 2, y + s - 3, 1, 1);
+            ctx.fillRect(x + s - 3, y + s - 3, 1, 1);
+        },
+        82: (ctx, x, y, s) => { // 英语商人正面（Edu M2）：红白条纹雨棚 + 木货架
+            ctx.fillStyle = '#7a4a22';
+            ctx.fillRect(x, y, s, s); // 木摊位
+            ctx.fillStyle = '#8a5a2e';
+            for (let i = 0; i < s; i += 4) ctx.fillRect(x + i, y + 6, 2, s - 6); // 木板纹
+            for (let i = 0; i < 8; i++) { // 条纹雨棚（上半）
+                ctx.fillStyle = i % 2 ? '#e05252' : '#f0f0f0';
+                ctx.fillRect(x + i * 2, y, 2, 6);
+            }
+            ctx.fillStyle = '#4a2a10';
+            ctx.fillRect(x, y + 6, s, 1); // 雨棚沿
+            ctx.fillStyle = '#ffd84a'; // 货架上的货
+            ctx.fillRect(x + 3, y + 9, 3, 3);
+            ctx.fillStyle = '#e05252';
+            ctx.fillRect(x + 7, y + 8, 2, 4);
+            ctx.fillStyle = '#7ec850';
+            ctx.fillRect(x + 10, y + 10, 3, 2);
+            ctx.fillStyle = '#3a352c';
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1); // 收边
+        },
+        83: (ctx, x, y, s) => { // 识字矿石（Edu M2）：灰石底 + 金色笔画纹路 + 微光
+            ctx.fillStyle = '#7a7a72';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6a6a62';
+            for (let i = 0; i < 14; i++) ctx.fillRect(x + (i * 5) % (s - 2), y + (i * 7) % (s - 2), 2, 2);
+            ctx.fillStyle = '#ffd84a'; // 金色「笔画」：横竖撇捺意象
+            ctx.fillRect(x + 4, y + 4, 7, 1);
+            ctx.fillRect(x + 7, y + 3, 1, 8);
+            ctx.fillRect(x + 10, y + 6, 2, 1);
+            ctx.fillRect(x + 5, y + 10, 3, 1);
+            ctx.fillStyle = '#fff2b0';
+            ctx.fillRect(x + 7, y + 3, 1, 2); // 高光
+        },
+        84: (ctx, x, y, s) => { // 商人背面/顶面（Edu M2）：木箱板
+            ctx.fillStyle = '#8a5a2e';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#6e4620';
+            for (let i = 2; i < s; i += 4) ctx.fillRect(x + 1, y + i, s - 2, 1);
+            ctx.strokeStyle = '#5a3a18';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+        },
         76: (ctx, x, y, s) => { // 投料器机身侧面：铜木机壳 + 两道横向散热格栅 + 中央接缝
             ctx.fillStyle = '#7e7052';
             ctx.fillRect(x, y, s, s);
@@ -1198,6 +1307,10 @@ const TILE_OVERRIDES = [
     { file: 'assets/textures/lever.png', tile: 'lever' },
     { file: 'assets/textures/lamp_off.png', tile: 'lamp_off' },
     { file: 'assets/textures/lamp_lit.png', tile: 'lamp_lit' },
+    { file: 'assets/textures/keypad_locked.png', tile: 'keypad_locked' },
+    { file: 'assets/textures/keypad_solved.png', tile: 'keypad_solved' },
+    { file: 'assets/textures/merchant.png', tile: 'merchant' },
+    { file: 'assets/textures/hanzi_ore.png', tile: 'hanzi_ore' },
 ];
 
 const tileOverrideListeners = [];

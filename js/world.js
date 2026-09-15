@@ -1,6 +1,6 @@
 // ==================== world.js ====================
 
-import { BlockTypes, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, HANZI_ORE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 
 export function hash2D(x, y, seed = 0) {
@@ -116,6 +116,7 @@ function oreAt(x, y, z) {
     if (y <= 12 && h > 0.986) return BlockTypes.DIAMOND_ORE;
     if (y <= 30 && h > 0.930 && h <= 0.955) return BlockTypes.IRON_ORE;
     if (y <= 44 && h > 0.900 && h <= 0.930) return BlockTypes.COAL_ORE;
+    if (y <= 44 && h > 0.890 && h <= 0.900) return HANZI_ORE; // 识字矿石（Edu M2）：~1% 独立分段，挖矿识字
     return BlockTypes.STONE;
 }
 
