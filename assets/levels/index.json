@@ -6,6 +6,26 @@
       "name": "村口热身赛"
     },
     {
+      "file": "level_05_academy.level.json",
+      "name": "诗文书院"
+    },
+    {
+      "file": "level_07_rulescity.level.json",
+      "name": "规矩小城"
+    },
+    {
+      "file": "level_06_lab.level.json",
+      "name": "科学实验站"
+    },
+    {
+      "file": "level_08_mine.level.json",
+      "name": "算术矿洞"
+    },
+    {
+      "file": "level_09_clocktower.level.json",
+      "name": "时光钟楼"
+    },
+    {
       "file": "castle.level.json",
       "name": "星辉城堡"
     },
@@ -16,6 +36,26 @@
     {
       "file": "skypark.level.json",
       "name": "云间跳跳乐"
+    },
+    {
+      "file": "level_10_skybounce.level.json",
+      "name": "弹跳云梯"
+    },
+    {
+      "file": "level_12_aqua.level.json",
+      "name": "深海龙宫"
+    },
+    {
+      "file": "level_11_liftworks.level.json",
+      "name": "电梯工厂"
+    },
+    {
+      "file": "level_13_maze.level.json",
+      "name": "机关迷阵"
+    },
+    {
+      "file": "level_14_grandtour.level.json",
+      "name": "全能冠军试炼"
     }
   ]
 }

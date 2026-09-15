@@ -1,147 +1,50 @@
 // ==================== gen_builtin_levels.mjs ====================
-// 内置关卡（官方随包发布）生成器：程序化搭建 4 张关卡卡（mcweb.level.v1）写入 assets/levels/。
+// 内置关卡（官方随包发布）生成器：程序化搭建关卡卡（mcweb.level.v1）写入 assets/levels/。
 // 运行：node tools/gen_builtin_levels.mjs
-// 产出：assets/levels/index.json + warmup/castle/dungeon/skypark 四个 .level.json。
+// 产出：assets/levels/index.json + 全部 .level.json（老 4 关 + tools/builtin_levels/level_*.mjs 扩展关）。
 //
 // 设计约定（与运行时机制逐条对齐）：
-//   - 锁具联动只用「答题机紧贴门」一种接线（run_workshop W04 已验证）：答题机答对翻转为
+//   - 锁具联动默认「答题机紧贴门」接线（run_workshop W04 已验证）：答题机答对翻转为
 //     常供能红石源，门块（下半）6 邻有激活源即上升沿开门；答题机头顶放红石灯=解锁正反馈。
+//     远程红石粉布线锁（答题机→粉→门）可用，但必须在 spec.lockDoorHints 里给「锁→门」映射
+//     （全封锁/解锁序校验与浏览器烟雾都靠它），布线 ≤13 格（源 15 级每格 -1）。
 //   - 门洞一律 1 宽 2 高：doorId(0,0,facing)+doorId(1,0,facing)，门洞上方用墙体封到顶
 //     （墙沿 x 走向、玩家沿 z 穿门用 facing 2；墙沿 z 走向、玩家沿 x 穿门用 facing 3）。
-//   - 楼梯 = 逐格 +1 实心台阶；楼板洞开在最后两级头顶（2 宽），保证玩家每步头顶净空、
-//     末级一步 +1 跳上楼板，同时 reachabilityBFS（6 邻泛洪）也能爬上去——校验零警告。
+//   - 楼梯 = 逐格 +1 实心台阶；楼板洞开在最后两级头顶（2 宽）——reachabilityBFS（6 邻泛洪）
+//     才能爬上去。粘液弹跳/滑轮电梯/水柱等「非 6 邻」通路只许做捷径或彩蛋：主通路
+//     （所有锁/检查点/终点）必须 6 邻可达，否则校验警告、官方卡要求零警告。
 //   - 星辉门当「半截门」用：锁定变体实心挡住门洞下半、上半留空；答对（超纲题，因人而异
 //     不进卡 questions）翻转为可通行。纯彩蛋房，不进 questions 不影响可达性判定。
 //   - 题目全部自拟（meta.source custom），对齐北师大/统编三上知识点，答案已人工复算。
 //   - 输出确定性：created 固定时间戳，重复生成字节一致（好 review、好回滚）。
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BlockTypes, FLAG_CHECKPOINT, FLAG_GOAL, FLAG_START, KEYPAD_BASE, STARLIGHT_BASE, flagId, doorId, lampId } from '../js/config.js';
+import { cardHash, reachabilityBFS, validateLevelCard } from '../js/levelWorkshop.js';
 import {
-    BlockTypes,
-    FLAG_CHECKPOINT,
-    FLAG_GOAL,
-    FLAG_START,
-    KEYPAD_BASE,
-    STARLIGHT_BASE,
-    flagId,
-    doorId,
-    lampId,
-} from '../js/config.js';
-import { rleEncode } from '../js/rle.js';
-import {
-    LEVEL_CARD_FORMAT,
-    cardHash,
-    reachabilityBFS,
-    u8ToBase64,
-    validateLevelCard,
-} from '../js/levelWorkshop.js';
+    AUTHOR,
+    CREATED,
+    Canvas,
+    borderWall,
+    buildCard,
+    crenels,
+    doorway,
+    flagAt,
+    ground,
+    inputQ,
+    choiceQ,
+    lockedSequenceCheck,
+    torchPost,
+    tree,
+} from './builtin_levels/_lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'assets', 'levels');
-const AUTHOR = 'MCWeb 学院';
-const CREATED = '2026-09-15T09:00:00.000Z'; // 固定时间戳：确定性输出
+const EXTRA_DIR = join(ROOT, 'tools', 'builtin_levels');
 
 const { AIR, GRASS, DIRT, STONE, LEAVES, SAND, WATER, BRICK, GLASS, PLANKS, COBBLESTONE, GRAVEL, LOG, TORCH, FLOWER, WOOL, COAL_ORE, DIAMOND_ORE, CRAFTING_TABLE, FURNACE, SLIME } = BlockTypes;
-
-// ==================== 画布与结构小工具 ====================
-
-// 局部方块画布：内存序与区域快照一致 decoded[lx + lz*w + ly*w*d]（x 最快）
-class Canvas {
-    constructor(w, h, d) {
-        this.w = w;
-        this.h = h;
-        this.d = d;
-        this.b = new Uint8Array(w * h * d);
-    }
-    set(x, y, z, id) {
-        if (x < 0 || y < 0 || z < 0 || x >= this.w || y >= this.h || z >= this.d) {
-            throw new Error(`越界 set(${x},${y},${z}) 画布 ${this.w}×${this.h}×${this.d}`);
-        }
-        this.b[x + z * this.w + y * this.w * this.d] = id;
-    }
-    fill(x0, y0, z0, x1, y1, z1, id) { // 含两端
-        for (let y = y0; y <= y1; y++)
-            for (let z = z0; z <= z1; z++)
-                for (let x = x0; x <= x1; x++) this.set(x, y, z, id);
-    }
-    clear(x0, y0, z0, x1, y1, z1) { this.fill(x0, y0, z0, x1, y1, z1, AIR); }
-}
-
-// 草地地基：0..gy-1 泥土 + 顶面 gy 草皮
-function ground(c, gy) {
-    c.fill(0, 0, 0, c.w - 1, gy - 1, c.d - 1, DIRT);
-    c.fill(0, gy, 0, c.w - 1, gy, c.d - 1, GRASS);
-}
-
-// 区域边框矮墙（2 高跳不上，防走出嵌入区域边缘摔进虚空）
-function borderWall(c, gy, mat) {
-    c.fill(0, gy + 1, 0, c.w - 1, gy + 2, 0, mat);
-    c.fill(0, gy + 1, c.d - 1, c.w - 1, gy + 2, c.d - 1, mat);
-    c.fill(0, gy + 1, 0, 0, gy + 2, c.d - 1, mat);
-    c.fill(c.w - 1, gy + 1, 0, c.w - 1, gy + 2, c.d - 1, mat);
-}
-
-// 树：原木杆 + 方球树冠（削角）
-function tree(c, x, gy, z) {
-    const top = gy + 4;
-    for (let y = gy + 1; y <= top; y++) c.set(x, y, z, LOG);
-    c.fill(x - 2, top - 1, z - 2, x + 2, top + 1, z + 2, LEAVES);
-    for (const [cx, cz] of [[x - 2, z - 2], [x + 2, z - 2], [x - 2, z + 2], [x + 2, z + 2]]) {
-        c.set(cx, top - 1, cz, AIR);
-        c.set(cx, top + 1, cz, AIR);
-    }
-    c.set(x, top + 2, z, LEAVES);
-}
-
-// 火把柱：2 格石柱 + 顶火把
-function torchPost(c, x, gy, z) {
-    c.set(x, gy + 1, z, COBBLESTONE);
-    c.set(x, gy + 2, z, COBBLESTONE);
-    c.set(x, gy + 3, z, TORCH);
-}
-
-// 一排城齿（墙顶 alternating）
-function crenels(c, x0, z0, x1, z1, y, mat = COBBLESTONE) {
-    let alt = 0;
-    for (let z = z0; z <= z1; z++)
-        for (let x = x0; x <= x1; x++)
-            c.set(x, y, z, (alt++ % 2 === 0) ? mat : AIR);
-}
-
-// 完整门洞（在既有墙体上开 1 宽 2 高 + 装门）+ 贴门答题机 + 头顶红石灯。
-// opening = {x, z, y0, facing}：门洞列；keypad = {x,y,z}：洞旁 1 格（会覆写墙块）。
-function doorway(c, opening, keypad) {
-    c.set(opening.x, opening.y0, opening.z, doorId(0, 0, opening.facing));
-    c.set(opening.x, opening.y0 + 1, opening.z, doorId(1, 0, opening.facing));
-    c.set(keypad.x, keypad.y, keypad.z, KEYPAD_BASE);
-    c.set(keypad.x, keypad.y + 1, keypad.z, lampId(0));
-}
-
-// 旗：立在地面 gy 之上 1 格
-function flagAt(c, x, gy, z, kind) {
-    c.set(x, gy + 1, z, flagId(kind));
-}
-
-// ==================== 题目助手（自拟·三上对齐，带双通过计数） ====================
-
-function inputQ(p, stem, answer, unit, hint) {
-    return {
-        lockType: 'keypad', x: p.x, y: p.y, z: p.z,
-        subject: 'math', kind: 'input', stem, answer,
-        hint, unit,
-        meta: { source: 'custom', verifiedPasses: 2 },
-    };
-}
-function choiceQ(p, subject, stem, options, answer, unit, hint) {
-    return {
-        lockType: 'keypad', x: p.x, y: p.y, z: p.z,
-        subject, kind: 'choice', stem, options, answer,
-        hint, unit,
-        meta: { source: 'custom', verifiedPasses: 2 },
-    };
-}
 
 // ==================== L1 村口热身赛（教学关：两道墙门·数字与科学） ====================
 
@@ -283,9 +186,9 @@ function buildCastle() {
     c.set(28, gy + 1, K.z0 - 1, TORCH);
     c.set(32, gy + 1, K.z0 - 1, TORCH);
     for (const x of [27, 28, 32, 33]) { c.set(x, gy + 3, K.z0, GLASS); c.set(x, gy + 3, K.z1, GLASS); }
-    // 一层内饰：长桌、工作角、火把
-    c.fill(29, gy + 1, 21, 31, gy + 1, 21, PLANKS);
-    c.set(29, gy + 2, 21, TORCH);
+    // 一层内饰：长桌（靠东墙，避开隔墙答题机 (29,4,22) 的正面交互格 z21）、工作角、火把
+    c.fill(30, gy + 1, 20, 32, gy + 1, 20, PLANKS);
+    c.set(31, gy + 2, 20, TORCH);
     c.set(K.x0 + 1, gy + 1, K.z1 - 1, CRAFTING_TABLE);
     c.set(K.x0 + 2, gy + 1, K.z1 - 1, FURNACE);
     c.set(K.x1 - 1, gy + 1, K.z1 - 1, TORCH);
@@ -506,34 +409,48 @@ function buildSkypark() {
 }
 
 // ==================== 组卡 + 校验 + 落盘 ====================
+// buildCard/校验器在 builtin_levels/_lib.mjs；本文件保留老 4 关 build 函数 + 注册落盘。
 
-function buildCard(spec) {
-    const c = spec.canvas;
-    const region = {
-        x0: 0, y0: 0, z0: 0, w: c.w, h: c.h, d: c.d,
-        enc: 'rle',
-        blocks: u8ToBase64(rleEncode(c.b)),
-    };
-    return {
-        format: LEVEL_CARD_FORMAT,
-        name: spec.name,
-        author: AUTHOR,
-        created: CREATED,
-        version: 1,
-        region,
-        questions: spec.questions,
-        rules: spec.rules,
-        flags: spec.flags,
-    };
-}
+// 首屏列表顺序（=难度渐进线）：教学 → 学科专场 → 综合经典 → 机关体验 → 挑战。
+const ORDER = [
+    'warmup.level.json',
+    'level_05_academy.level.json',   // 诗文书院（语文英语专场）
+    'level_07_rulescity.level.json', // 规矩小城（道法专场）
+    'level_06_lab.level.json',       // 科学实验站（科学专场）
+    'level_08_mine.level.json',      // 算术矿洞（数学专场+TNT）
+    'level_09_clocktower.level.json',// 时光钟楼（数学量感+活塞门）
+    'castle.level.json',
+    'dungeon.level.json',
+    'skypark.level.json',
+    'level_10_skybounce.level.json', // 弹跳云梯（粘液跑酷）
+    'level_12_aqua.level.json',      // 深海龙宫（水下关）
+    'level_11_liftworks.level.json', // 电梯工厂（滑轮电梯+动力组）
+    'level_13_maze.level.json',      // 机关迷阵（迷宫挑战）
+    'level_14_grandtour.level.json', // 全能冠军试炼（终极综合）
+];
 
-function main() {
+async function main() {
     const specs = [
         ['warmup.level.json', buildWarmup()],
         ['castle.level.json', buildCastle()],
         ['dungeon.level.json', buildDungeon()],
         ['skypark.level.json', buildSkypark()],
     ];
+    // 动态注册扩展关卡：tools/builtin_levels/level_*.mjs（每个导出 LEVEL_FILE + buildLevel()）
+    const extraFiles = readdirSync(EXTRA_DIR).filter((f) => /^level_.+\.mjs$/.test(f)).sort();
+    for (const f of extraFiles) {
+        const mod = await import(`file://${join(EXTRA_DIR, f)}`);
+        if (typeof mod.buildLevel !== 'function' || !mod.LEVEL_FILE) {
+            throw new Error(`${f} 缺少 LEVEL_FILE / buildLevel() 导出`);
+        }
+        specs.push([mod.LEVEL_FILE, mod.buildLevel()]);
+    }
+    // 按 ORDER 排序（清单顺序=首屏顺序），清单外的排最后
+    specs.sort((a, b) => {
+        const ia = ORDER.indexOf(a[0]), ib = ORDER.indexOf(b[0]);
+        return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+    });
+
     mkdirSync(OUT_DIR, { recursive: true });
     const manifest = [];
     let failed = 0;
@@ -542,10 +459,12 @@ function main() {
         const card = buildCard(spec);
         const v = validateLevelCard(card);
         const bfs = reachabilityBFS(card);
+        const locked = lockedSequenceCheck(card, spec.lockDoorHints);
         const problems = [
             ...v.errors.map((e) => `error: ${e}`),
             ...v.warnings.map((w) => `warning: ${w}`),
             ...(bfs.reachable ? [] : [`BFS 不可达: ${bfs.missing.join('、')}`]),
+            ...locked.problems.map((p) => `防绕行/解锁序: ${p}`),
         ];
         if (problems.length) {
             failed++;

@@ -38,6 +38,7 @@ import {
     reachabilityBFS,
     validateLevelCard,
 } from '../js/levelWorkshop.js';
+import { lockedSequenceCheck } from './builtin_levels/_lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = join(ROOT, 'assets', 'levels');
@@ -48,7 +49,10 @@ for (const entry of manifest.levels) {
     const card = JSON.parse(readFileSync(join(DIR, entry.file), 'utf8'));
     cards[card.name] = card;
 }
+// 老四关显式点名（特化断言引用）；全部关卡以 index.json 为准动态覆盖
 const NAMED = ['村口热身赛', '星辉城堡', '地牢寻宝记', '云间跳跳乐'];
+const ALL_NAMES = manifest.levels.map((e) => e.name);
+assert.ok(NAMED.every((n) => ALL_NAMES.includes(n)), 'index.json 必须包含老四关');
 
 // ---- 画布读取助手：解码区域快照为带下标访问的视图 ----
 function viewOf(card) {
@@ -67,9 +71,10 @@ function viewOf(card) {
 
 const isSolidId = (id) => id !== BlockTypes.AIR && id !== BlockTypes.WATER && !isDoorId(id) && !isFlagId(id);
 
-test('清单与文件：四关齐全、格式正确、确定性哈希稳定', () => {
-    assert.deepEqual(manifest.levels.map((e) => e.name), NAMED);
-    for (const name of NAMED) {
+test('清单与文件：格式正确、确定性哈希稳定、无重名', () => {
+    assert.ok(ALL_NAMES.length >= 14, `官方关卡至少 14 张（实为 ${ALL_NAMES.length}）`);
+    assert.equal(new Set(ALL_NAMES).size, ALL_NAMES.length, '关卡名不得重复');
+    for (const name of ALL_NAMES) {
         const card = cards[name];
         assert.equal(card.format, LEVEL_CARD_FORMAT);
         assert.equal(card.version, 1);
@@ -78,7 +83,7 @@ test('清单与文件：四关齐全、格式正确、确定性哈希稳定', ()
     }
 });
 
-for (const name of NAMED) {
+for (const name of ALL_NAMES) {
     test(`schema 校验零错误零警告：${name}`, () => {
         const v = validateLevelCard(cards[name]);
         assert.deepEqual(v.errors, []);
@@ -89,27 +94,40 @@ for (const name of NAMED) {
     });
 }
 
+for (const name of ALL_NAMES) {
+    test(`全封锁防绕行 + 解锁序（重力感知站格 BFS）：${name}`, () => {
+        const locked = lockedSequenceCheck(cards[name]);
+        assert.deepEqual(locked.problems, [], '不答题不得直通终点；锁序不得死锁');
+    });
+}
+
 test('运行时加载器：Node 无页面环境时安静降级为空数组', async () => {
     const list = await listBuiltinLevelCards(); // Node 里 fetch 相对 URL 会抛错 → 降级
     assert.deepEqual(list, []);
 });
 
-for (const name of NAMED) {
+for (const name of ALL_NAMES) {
     test(`锁具接线与门墙防绕行：${name}`, () => {
         const card = cards[name];
         const v = viewOf(card);
         // ① 每把锁：锁定态答题机 + 头顶红石灯 + 紧贴一扇关门（W04 供电模式）+ 双通过
+        //    （远程红石布线/活塞闸门锁例外：卡 meta.lockDoorHints 登记了 锁→门 映射，跳过贴门断言；
+        //     hint 门位的正确性由 lockedSequenceCheck 的解锁序模拟覆盖）
+        const doorHints = (card.meta && card.meta.lockDoorHints) || [];
         for (const q of card.questions) {
             const kp = v.get(q.x, q.y, q.z);
             assert.ok(isKeypadId(kp) && keypadSolved(kp) === 0,
                 `锁 (${q.x},${q.y},${q.z}) 处应是锁定态答题机，实为 ${kp}`);
             assert.equal(v.get(q.x, q.y + 1, q.z), lampId(0), `锁头顶应有红石灯`);
-            const adjDoor = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
-                .some(([dx, dy, dz]) => {
-                    const id = v.get(q.x + dx, q.y + dy, q.z + dz);
-                    return isDoorId(id) && doorOpen(id) === 0;
-                });
-            assert.ok(adjDoor, `锁 (${q.x},${q.y},${q.z}) 必须紧贴一扇关门（答对→红石源→开门）`);
+            const hinted = doorHints.some((h) => h.key[0] === q.x && h.key[1] === q.y && h.key[2] === q.z);
+            if (!hinted) {
+                const adjDoor = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+                    .some(([dx, dy, dz]) => {
+                        const id = v.get(q.x + dx, q.y + dy, q.z + dz);
+                        return isDoorId(id) && doorOpen(id) === 0;
+                    });
+                assert.ok(adjDoor, `锁 (${q.x},${q.y},${q.z}) 必须紧贴一扇关门（答对→红石源→开门）`);
+            }
             assert.ok((q.meta?.verifiedPasses | 0) >= 2, '官方锁必须自带双通过计数');
         }
         // ② 每扇门：上半格头顶封死（门口 2 格净高，上方不许是空气——防跳门）
@@ -127,8 +145,8 @@ for (const name of NAMED) {
     });
 }
 
-test('旗组与卡面坐标逐格对得上', () => {
-    for (const name of NAMED) {
+test('旗组与卡面坐标逐格对得上（含旗类型）', () => {
+    for (const name of ALL_NAMES) {
         const card = cards[name];
         const v = viewOf(card);
         const kindAt = (p) => {
@@ -157,7 +175,10 @@ test('关卡清单：锁数/检查点数与设计稿一致', () => {
     assert.equal(cards['星辉城堡'].rules.timeLimit, 600);
     assert.equal(cards['地牢寻宝记'].questions.length, 3);
     assert.equal(cards['云间跳跳乐'].questions.length, 1);
-    for (const name of NAMED) assert.equal(cards[name].rules.lockAIHelp, true);
+    for (const name of ALL_NAMES) {
+        assert.ok(cards[name].questions.length >= 1, `${name} 至少一把锁`);
+        assert.equal(cards[name].rules.lockAIHelp, true);
+    }
 });
 
 // ---- 门墙整行防绕行断言：墙线上不允许出现「连续 2 格可穿」的洞（1 格高缺口人钻不过，
@@ -239,7 +260,7 @@ function resetWorld() {
             state.blocks[x + z * WORLD_WIDTH] = BlockTypes.BEDROCK; // y=0
 }
 
-for (const name of NAMED) {
+for (const name of ALL_NAMES) {
     test(`嵌入临时世界：${name}`, () => {
         resetWorld();
         const card = cards[name];

@@ -73,8 +73,14 @@ function aimPlayer(px,py,pz,yaw,pitch){S.player.x=px;S.player.y=py;S.player.z=pz
 
 
 class E2E:
-    def __init__(self, port=None, nav=True):
-        self.page = Page(port=port or int(os.environ.get("CDP_PORT", "19401")))
+    def __init__(self, port=None, nav=True, url_filter=None):
+        # 并行验收隔离（2026-09-15）：E2E_TAB_FILTER 按 URL 子串选 tab（各用各的标签页，
+        # 筛不中自动新开，绝不连到别人的 tab）；E2E_NO_FRONT=1 免抢前台（后台 tab 由
+        # 页面侧 tick/pump 手动泵兜底，多个脚本可同时跑互不抢屏幕）。
+        self.page = Page(
+            port=port or int(os.environ.get("CDP_PORT", "19401")),
+            url_filter=url_filter or os.environ.get("E2E_TAB_FILTER"),
+        )
         if nav:
             self.page.nav(BASE + "/", settle=6.0)
 
@@ -87,6 +93,8 @@ class E2E:
         return r
 
     def _front(self):
+        if os.environ.get("E2E_NO_FRONT") == "1":
+            return
         try:
             self.page.cmd("Page.bringToFront")
         except Exception:

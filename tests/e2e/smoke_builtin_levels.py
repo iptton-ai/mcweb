@@ -40,14 +40,14 @@ def smoke(e2e):
 // ---- 1) 首屏打开关卡列表：内置区渲染 ----
 const ui2 = await import(B+'ui.js');
 ui2.openLevelList();
-await sleep(600);   // fetch 清单+4 卡
+await sleep(900);   // fetch 清单+全部卡（官方卡已扩到 14 张，取足余量）
 const rowsDom = document.getElementById('level-list-rows');
 const rows = [...(rowsDom ? rowsDom.querySelectorAll('.level-row') : [])];
 const rowText = rows.map(r=>r.textContent);
 const builtinRows = rows.filter(r=>r.textContent.includes('官方关卡'));
 const namesOK = ['村口热身赛','星辉城堡','地牢寻宝记','云间跳跳乐'].every(n=>rowText.some(t=>t.includes(n)));
-// 内置行只有 ▶/🎥 两个钮（无删除 ✕）
-const builtinNoDelete = builtinRows.length===4 && builtinRows.every(r=>r.querySelectorAll('button').length===2);
+// 内置行只有 ▶/🎥 两个钮（无删除 ✕）；官方卡数量随批次增长，只要求≥4（老四关在列）
+const builtinNoDelete = builtinRows.length>=4 && builtinRows.every(r=>r.querySelectorAll('button').length===2);
 // ---- 2) 点「星辉城堡」行的 ▶ 进入 ----
 const castleRow = rows.find(r=>r.textContent.includes('星辉城堡'));
 const enterBtn = castleRow ? [...castleRow.querySelectorAll('button')].find(b=>b.textContent.includes('进入')) : null;
@@ -92,7 +92,7 @@ return JSON.stringify(out);
     kp_ok = all((s.get("before") or {}).get("kp") == 224 and (s.get("after") or {}).get("kp") == 225
                 for s in (gate, keep, hall))
     checks = [
-        ("列表渲染 4 张官方卡", res["namesOK"] and res["builtinCount"] == 4,
+        ("列表渲染官方卡（≥4 张，含老四关）", res["namesOK"] and res["builtinCount"] >= 4,
          f"rows={res['listRows']} builtin={res['builtinCount']} namesOK={res['namesOK']}"),
         ("内置行无删除钮", res["builtinNoDelete"], str(res["builtinNoDelete"])),
         ("点 ▶ 进入城堡成功（levelRun 激活 + 生存态）", res["entered"] and res.get("mode") == "survival",
