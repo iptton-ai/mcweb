@@ -28,6 +28,10 @@ import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
 import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
+import { tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
+// B4 并行编写的关卡 UI 导出（updateLevelHud/updateResultPanel/openLevelList/initLevelListUI）
+// 统一走命名空间可选链：直接命名导入会在它落地前炸掉整个模块图
+import * as uiNS from './ui.js';
 
 // ==================== 游戏循环 ====================
 let lastTime = 0;
@@ -111,6 +115,9 @@ function gameLoop(timestamp) {
     // 机器产出的物品实体（磁吸/拾取，见 js/items.js）
     updateItemDrops(dt);
 
+    // 闯关运行时（关卡工坊批次 W）：计时/旗踩踏/掉界/限时结算；非闯关时内部直接跳过
+    tickLevelRun(dt);
+
     // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
     updateBGM();
 
@@ -125,6 +132,10 @@ function gameLoop(timestamp) {
 
     // 调试信息
     updateDebugInfo();
+
+    // 关卡 HUD 与结算面板（B4 导出，命名空间可选链——B4 未合流时静默跳过）
+    uiNS.updateLevelHud?.();
+    uiNS.updateResultPanel?.();
 
     // 施工进度控件（AI 建造时顶部显示）
     updateBuildWidget();
@@ -368,6 +379,13 @@ function init() {
     initBuildWidget();
     initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）
 
+    // 关卡列表 UI（关卡工坊批次 W，B4 导出 + B1 的 DOM；未合流时全部静默跳过）
+    uiNS.initLevelListUI?.();
+    document.getElementById('btn-levels')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        uiNS.openLevelList?.();
+    });
+
     // 视野（FOV）来自设置浮层「🎛 画面」页（默认 75）
     camera.fov = getFov();
     camera.updateProjectionMatrix();
@@ -407,6 +425,11 @@ function init() {
     // 手动保存：停留在菜单，方便存完直接关页面
     document.getElementById('btn-save').addEventListener('click', (e) => {
         e.stopPropagation();
+        // 闯关中不写档（saveGame 入口闸会拒写）：这里给准确文案，别误报成「存储空间不足」
+        if (state.levelRun) {
+            showTooltip('🔒 闯关中不存档：原世界已在进关前落盘，退出关卡后自动恢复');
+            return;
+        }
         showTooltip(saveGame() ? '💾 进度已保存，可放心关闭页面' : '⚠️ 存档失败：浏览器存储空间不足');
     });
     // ⚙️ 设置浮层（音频 / 存档）：首屏与暂停菜单共用

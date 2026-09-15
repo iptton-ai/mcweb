@@ -1,12 +1,14 @@
 // ==================== assistant/tools.js ====================
 // AI 助手工具集：
 //   世界类：get_game_context / scan_terrain / place_blocks / clear_area / read_blocks / run_build_script / set_build_speed
+//   关卡类（P3 AI 三角色）：check_level / gen_level_draft（关卡工坊，见 docs/edu-workshop-impl-contract.md §6）
 //   文件类：list_game_files / read_game_file / write_game_file / reload_game / get_runtime_errors
 // 全部返回字符串（通常是 JSON），直接作为 tool 消息回传给 LLM。
 // 建造类工具经 buildQueue 渐进放置（可调速/暂停，便于录制延时摄影），
 // 工具会等施工任务全部应用完才返回结果，LLM 的「放置→校验」流程不受影响。
 
-import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, HotbarBlocks, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, doorId, flagId, HotbarBlocks, keypadId, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { normalizeBank, sanitizeManifest } from '../eduKeypad.js'; // 题库归一化（纯函数，gen_level_draft 抽题用）
 import { isCreative, isNight, state } from '../state.js';
 import { getBlock } from '../world.js';
 import { isSolid } from '../chunk.js';
@@ -51,6 +53,66 @@ function groundY(x, z) {
     }
     return 0;
 }
+
+// ---------- 关卡草稿纯函数区（gen_level_draft 用；Node 可直接提取测试，禁引浏览器全局） ----------
+
+// >>> DRAFT-PURE-BEGIN
+// （无 window/document/state/fetch 依赖：tools/test_gen_draft.mjs 按区间切片 eval；
+//   改动请保持区间内零外部引用，export 关键字照常写——测试侧会剥掉）
+
+// 格子坐标 → 稳定哈希（无符号 32 位）。算法与 eduKeypad.hashCell 同族（imul 三轮+末位折叠），
+// 盐独立（0x811c9dc5 起），与 M1 抽题互不干扰；不混世界种子=跨世界同格同题，草稿语义更稳定。
+function draftHash(x, y, z) {
+    let h = 0x811c9dc5;
+    h = Math.imul(h ^ (x | 0), 0x85ebca6b) >>> 0;
+    h = Math.imul(h ^ (y | 0), 0xc2b2ae35) >>> 0;
+    h = Math.imul(h ^ (z | 0), 0x27d4eb2f) >>> 0;
+    h ^= h >>> 15;
+    return h >>> 0; // 末位折叠可能出负 int32，归一回无符号再取模（M1 踩过的负下标坑）
+}
+
+// 确定性抽 count 道不重复题：从 hash(x,y,z) 决定的起点、固定步长环形扫描题池
+// （步长与池长不互质会提前绕圈，末尾顺序补扫兜底凑满）；返回按选取顺序的题对象数组。
+// 池空 / 计数非法 / 计数超过池长 → 返回实际能给出的数量（降级语义，调用方负责向用户说明）。
+export function pickDraftQuestions(items, x, y, z, count = 1) {
+    const pool = Array.isArray(items) ? items.filter(Boolean) : [];
+    const n = pool.length;
+    const want = Math.min(Math.max(0, Math.floor(Number(count) || 0)), n);
+    if (!n || want <= 0) return [];
+    const h = draftHash(x, y, z);
+    const start = h % n;
+    const stride = 1 + ((h >>> 16) % (n > 1 ? n - 1 : 1)); // 1..n-1，步长非 0 防原地踏步
+    const out = [];
+    const seen = new Set();
+    for (let pass = 0; pass < 2 && out.length < want; pass++) {
+        for (let i = 0; i < n && out.length < want; i++) {
+            const idx = pass === 0 ? (start + i * stride) % n : i; // 第二遍顺序补扫
+            if (seen.has(idx)) continue;
+            seen.add(idx);
+            out.push(pool[idx]);
+        }
+    }
+    return out;
+}
+
+// 题库条目（eduKeypad.normalizeBank 归一后）→ 关卡卡题级 schema（契约 §2）：
+// kind 在题级下沉（input/choice 与题库同名）、q→stem、a→answer，meta 标注来源为题库。
+// 注意：answer 只进卡数据，任何对话回复都不得引用（AI 不代答红线）。
+export function bankItemToCardQuestion(item, subject) {
+    const kind = item && item.kind === 'choice' ? 'choice' : 'input';
+    const q = {
+        subject,
+        kind,
+        stem: String((item && item.q) || ''),
+        answer: (item && item.a) | 0,
+        meta: { source: 'bank' },
+    };
+    if (kind === 'choice' && Array.isArray(item.options)) q.options = item.options.slice();
+    if (item && item.hint) q.hint = item.hint;
+    if (item && item.unit) q.unit = item.unit;
+    return q;
+}
+// <<< DRAFT-PURE-END
 
 // ---------- 世界类工具实现 ----------
 
@@ -341,6 +403,405 @@ function toolRuntimeErrors() {
     return errs.map((e) => `[${new Date(e.time).toLocaleTimeString()}] ${e.message}${e.source ? ' @ ' + e.source : ''}`).join('\n');
 }
 
+// ---------- 关卡工坊工具（P3 AI 三角色；接口契约 docs/edu-workshop-impl-contract.md §3.1/§6）----------
+
+const DRAFT_SUBJECT_NAMES = { math: '数学', science: '科学', daofa: '道法', yuwen: '语文' };
+
+// levelWorkshop.js 由并行批次（A1）提供：动态 import + 可选链，模块未就绪时给明确文案而不是抛错
+async function loadLevelWorkshop() {
+    try {
+        const lw = await import('../levelWorkshop.js');
+        if (lw && typeof lw.buildLevelCard === 'function') return lw;
+    } catch { /* 模块尚未落地/加载失败 */ }
+    return null;
+}
+
+// 警告文案 → 面向孩子的改进建议（关键词映射；未命中原样透出，让 LLM 复述）
+function adviseWarning(w) {
+    const t = String(w);
+    if (/双通过|verified/.test(t)) return `${t} → 建议：手持出题笔右键这把锁，连续答对 2 次完成校验`;
+    if (/可达|reach/.test(t)) return `${t} → 建议：检查门与通道走向，保证从起点旗能一路走到每把锁和终点旗`;
+    if (/选项/.test(t)) return `${t} → 建议：选项不能互相重复，正确答案也不能与干扰项相同（出题笔面板里改）`;
+    if (/9999|范围|答案/.test(t)) return `${t} → 建议：数字题答案需在 0..9999（四位输入上限）`;
+    if (/门/.test(t)) return `${t} → 建议：把答题机贴着门放（答对直接开门），或接红石粉远程开锁——答对了要有可见效果`;
+    if (/旗|起点|终点/.test(t)) return `${t} → 建议：从物品栏拿关卡旗补上（起点旗=出生点、终点旗=通关）`;
+    return `${t} → 建议：按提示修好后，可以再叫我检查一次`;
+}
+
+// 可读检查报告。红线：只列 学科/题型/题干预览/位置，绝不输出 answer 字段（答案只活在卡数据里）
+function formatLevelReport(card, v, lw, sourceLabel) {
+    const lines = [];
+    const qs = Array.isArray(card.questions) ? card.questions : [];
+    const flags = card.flags || {};
+    const cps = Array.isArray(flags.checkpoints) ? flags.checkpoints : [];
+    const r = card.region;
+    lines.push(`📋 关卡检查（${sourceLabel}）：「${card.name || '未命名'}」 作者：${card.author || '—'}`);
+    if (r) lines.push(`区域：${r.w}×${r.h}×${r.d}（上限 96×64×96）`);
+    lines.push(`锁（${qs.length} 把）：`);
+    qs.forEach((q, i) => {
+        const kindText = q.kind === 'input' ? '数字输入' : '选择题';
+        lines.push(` ${i + 1}. (${q.x},${q.y},${q.z}) ${DRAFT_SUBJECT_NAMES[q.subject] || q.subject}·${kindText}「${truncateStr(String(q.stem || ''), 30)}」${q.unit ? `［${q.unit}］` : ''}`);
+    });
+    if (!qs.length) lines.push(' （还没有锁：放答题机、用出题笔出题，孩子才有门可开）');
+    lines.push(`旗组：起点 ${flags.start ? '✓' : '✗ 缺'} · 检查点 ×${cps.length} · 终点 ${flags.goal ? '✓' : '✗ 缺'}`);
+    // 考核锁状态（rules.lockAIHelp=false ⇒ 考核锁：闯关者向 AI 要提示时被拒绝）
+    lines.push(card.rules && card.rules.lockAIHelp === false
+        ? '考核锁：已开启——挑战这关时 AI 不提供任何提示'
+        : '考核锁：未开启——挑战时可以向 AI 要梯度提示');
+    try {
+        const reach = lw.reachabilityBFS && lw.reachabilityBFS(card);
+        if (reach) lines.push(`可达性：${reach.reachable ? '起点 → 全部锁与终点旗 联通 ✓' : '存在走不到的锁或终点旗 ✗（见警告）'}`);
+    } catch { /* BFS 异常不阻塞报告 */ }
+    const errors = (v && Array.isArray(v.errors)) ? v.errors : [];
+    const warnings = (v && Array.isArray(v.warnings)) ? v.warnings : [];
+    if (errors.length) {
+        lines.push(`❌ 错误（${errors.length} 条，必须修复才能导出）：`);
+        errors.forEach((e, i) => lines.push(` ${i + 1}. ${e}`));
+    }
+    if (warnings.length) {
+        lines.push(`⚠️ 警告（${warnings.length} 条）：`);
+        warnings.forEach((w) => lines.push(` - ${adviseWarning(w)}`));
+    }
+    lines.push(errors.length
+        ? `结论：先修复上面 ${errors.length} 个错误，再试玩/导出。`
+        : (warnings.length ? '结论：没有硬错误，可以试玩；按警告打磨后即可导出分享。' : '结论：检查全部通过，可以放心试玩与导出。'));
+    return lines.join('\n');
+}
+
+// check_level（出题协作者）：当前世界锚点区域（或指定 id 的已存卡）→ 体检报告
+async function toolCheckLevel({ cardId } = {}) {
+    const lw = await loadLevelWorkshop();
+    if (!lw) return '关卡工坊模块（js/levelWorkshop.js）尚未就绪，请刷新页面后重试。';
+
+    // 指定 id：检查 IndexedDB/会话里已保存的关卡卡
+    if (cardId) {
+        const card = await lw.getLevelCard(String(cardId)).catch(() => null);
+        if (!card) {
+            let names = '';
+            try {
+                const list = (typeof lw.listLevelCards === 'function') ? await lw.listLevelCards() : [];
+                names = list.map((c) => `${c.name}(${c.id})`).slice(0, 10).join('、');
+            } catch { /* 列表不可用则忽略 */ }
+            return `错误：找不到关卡卡 ${cardId}${names ? `。本机现有：${names}` : '（本机还没有已保存的关卡卡）'}`;
+        }
+        return formatLevelReport(card, lw.validateLevelCard(card), lw, '已存卡');
+    }
+
+    // 默认：把当前世界的锚点区域打包成草稿卡体检（draft=true：锁未双通过降为警告）
+    const region = typeof lw.computeAutoRegion === 'function' ? lw.computeAutoRegion() : null;
+    if (!region) {
+        return '当前附近没有找到任何关卡锚点。想让我检查关卡，请先摆好：起点旗/终点旗（物品栏「关卡旗」）和至少一把锁（答题机），再用出题笔给锁出题，然后叫我检查。';
+    }
+    const card = await lw.buildLevelCard({ name: '当前区域检查', author: 'AI', draft: true });
+    if (!card || card.error) {
+        const why = (card && card.error) || '无法从当前区域生成关卡卡';
+        return `错误：${why}。若提示超出上限（96×64×96），把旗子和锁摆紧凑些再试。`;
+    }
+    return formatLevelReport(card, lw.validateLevelCard(card), lw, '当前世界');
+}
+
+// 题池：fetch 清单 + 学科文件 → sanitizeManifest/normalizeBank 归一 →（可选）unit 精确过滤
+async function loadDraftPool(subject, unit) {
+    let manifest = null;
+    try {
+        const resp = await fetch('assets/edu/banks.json');
+        if (resp.ok) manifest = sanitizeManifest(await resp.json());
+    } catch { /* 走下方报错 */ }
+    if (!manifest) return { error: '题库清单 assets/edu/banks.json 缺失或损坏，无法抽题' };
+    const entry = manifest.find((e) => e.subject === subject);
+    if (!entry) return { error: `题库清单里没有学科 ${subject}（现有：${manifest.map((e) => e.subject).join('/')}）` };
+    let data = null;
+    try {
+        const resp = await fetch('assets/edu/' + entry.file);
+        if (resp.ok) data = await resp.json();
+    } catch { /* 走下方报错 */ }
+    const norm = normalizeBank(data);
+    if (!norm || norm.subject !== subject) return { error: `题库文件 assets/edu/${entry.file} 缺失、损坏或格式不合，无法抽题` };
+    let items = [];
+    for (const b of norm.banks) items.push(...b.items);
+    if (unit) {
+        const u = String(unit).trim();
+        const hit = items.filter((it) => String((it && it.unit) || '').trim() === u);
+        if (!hit.length) {
+            const units = [...new Set(items.map((it) => String((it && it.unit) || '').trim()).filter(Boolean))];
+            return { error: `学科「${entry.name}」里没有单元「${u}」的题（该学科共 ${items.length} 题可抽）。可用单元如：${units.slice(0, 5).join('、')}${units.length > 5 ? '…' : ''}` };
+        }
+        items = hit;
+    }
+    if (!items.length) return { error: `学科「${entry.name}」题池为空，无法抽题` };
+    return { items, entry };
+}
+
+// 选址探测：dims.w×dims.d 地块逐 4 格采样地表，高差 ≤2 且无水面才算平地
+function probeFlat(site, w, d) {
+    let minY = Infinity, maxY = -Infinity;
+    for (let dx = 0; dx < w; dx += 4) {
+        for (let dz = 0; dz < d; dz += 4) {
+            const gy = groundY(site.x0 + dx, site.z0 + dz);
+            if (gy < 1) return null;
+            if (getBlock(site.x0 + dx, gy + 1, site.z0 + dz) === BlockTypes.WATER) return null; // 湖面不算平地
+            minY = Math.min(minY, gy);
+            maxY = Math.max(maxY, gy);
+        }
+    }
+    return maxY - minY <= 2 ? { refY: maxY } : null;
+}
+
+function clampSite(x, z, w, d) {
+    return {
+        x0: Math.max(0, Math.min(Math.round(x), WORLD_WIDTH - w)),
+        z0: Math.max(0, Math.min(Math.round(z), WORLD_DEPTH - d)),
+    };
+}
+
+// 选址：沿玩家朝向 ~20 格起步，正前/更远/左右横移/身后逐个候选；全不平整则退回架空平台
+function findDraftSite(w, d) {
+    const p = state.player;
+    const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    const cands = [
+        [p.x + fx * 20, p.z + fz * 20],
+        [p.x + fx * 28, p.z + fz * 28],
+        [p.x + fx * 20 - fz * 12, p.z + fz * 20 + fx * 12],
+        [p.x + fx * 20 + fz * 12, p.z + fz * 20 - fx * 12],
+        [p.x - fx * 24, p.z - fz * 24],
+    ];
+    for (const [cx, cz] of cands) {
+        const site = clampSite(cx, cz, w, d);
+        const flat = probeFlat(site, w, d);
+        if (flat) return { site, refY: flat.refY, floating: false };
+    }
+    // 兜底：玩家头顶架空平台（平台面=施工基准面，任何地形都能出图）
+    const gy = groundY(Math.round(p.x), Math.round(p.z));
+    const refY = Math.max(2, Math.min(Math.max(gy, Math.round(p.y)) + 8, WORLD_HEIGHT - 10));
+    return { site: clampSite(p.x + fx * 20, p.z + fz * 20, w, d), refY, floating: true };
+}
+
+// 三模板 buildOps。返回 { ops, keypads, layoutText }：keypads=各锁答题机世界坐标（按解题顺序）。
+// 方块只用既有建材（石头/圆石/木板/火把）+ 旗组 + 答题机 + 门；答题机嵌在门旁墙柱底
+// （实心方块防绕行，6 邻贴门=答对常供能直接开门，M1 语义），不布红石粉，保持草稿最简。
+function buildDraftStructure(style, n, site, refY, floating, dims) {
+    const ops = [];
+    const seen = new Set(); // 同格去重（共享墙/先门后墙的重复写入只保留第一笔）
+    const keypads = [];
+    const COB = BlockTypes.COBBLESTONE, PLANK = BlockTypes.PLANKS, STONE = BlockTypes.STONE, TORCH = BlockTypes.TORCH;
+
+    const put = (x, y, z, t) => {
+        x = Math.round(x); y = Math.round(y); z = Math.round(z);
+        if (x < 0 || x >= WORLD_WIDTH || y < 1 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH) return;
+        const k = `${x},${y},${z}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        ops.push([x, y, z, t]);
+    };
+    // 把 (x,z) 列垫到基准面：自然地形补坑到 refY；架空模式只造支撑柱（板面另行铺设）
+    const level = (x, z) => {
+        const gy = groundY(x, z);
+        if (gy < 0) return;
+        const top = floating ? refY - 1 : refY;
+        for (let y = gy + 1; y <= top; y++) put(x, y, z, COB);
+    };
+    if (floating) { // 头顶架空平台：木板面（配合 level() 的支撑柱，任何地形都能出图）
+        for (let x = site.x0; x < site.x0 + dims.w; x++) {
+            for (let z = site.z0; z < site.z0 + dims.d; z++) put(x, refY, z, PLANK);
+        }
+    }
+    const flag = (x, z, kind) => { level(x, z); put(x, refY + 1, z, flagId(kind)); };
+    const torch = (x, z) => { level(x, z); put(x, refY + 1, z, TORCH); };
+    // 锁门组：跨 [a,b] 的一道 3 高墙（passage='x'=沿 X 通行、墙跨 Z 轴 a..b），门洞在 (gx,gz)，
+    // 门旁（-1 侧，出 span 退 +1 侧）嵌答题机，柱顶火把示位。先于房间墙调用时靠去重集自动让位。
+    const gate = (gx, gz, passage, a, b) => {
+        const facing = passage === 'x' ? 1 : 2; // 门板朝通行来向（东/南）
+        // 答题机格：门旁 -1 侧优先（出 span 或已被先前结构占用则换 +1 侧）
+        const cands = [];
+        for (const s of [-1, 1]) {
+            const cx = passage === 'x' ? gx : gx + s;
+            const cz = passage === 'x' ? gz + s : gz;
+            const inSpan = passage === 'x' ? (cz >= a && cz <= b) : (cx >= a && cx <= b);
+            if (inSpan) cands.push(passage === 'x' ? { x: gx, z: cz } : { x: cx, z: gz });
+        }
+        const kc = cands.find((c) => !seen.has(`${c.x},${refY + 1},${c.z}`)) || cands[0];
+        const kx = kc.x, kz = kc.z;
+        for (let w = a; w <= b; w++) {
+            const x = passage === 'x' ? gx : w;
+            const z = passage === 'x' ? w : gz;
+            if ((x === gx && z === gz) || (x === kx && z === kz)) continue; // 门洞与答题机格另行处理
+            level(x, z);
+            put(x, refY + 1, z, COB); put(x, refY + 2, z, COB); put(x, refY + 3, z, COB);
+        }
+        level(gx, gz);
+        put(gx, refY + 1, gz, doorId(0, 0, facing)); // 下半门（关）
+        put(gx, refY + 2, gz, doorId(1, 0, facing)); // 上半门
+        put(gx, refY + 3, gz, COB); // 楣
+        level(kx, kz);
+        put(kx, refY + 1, kz, keypadId(0)); // 答题机嵌墙底：贴门=答对直接开门，实心=防绕行
+        put(kx, refY + 2, kz, COB); put(kx, refY + 3, kz, COB);
+        put(kx, refY + 4, kz, TORCH);
+        keypads.push({ x: kx, y: refY + 1, z: kz });
+    };
+
+    if (style === '跑酷') {
+        const x0 = site.x0, zc = site.z0 + 5;
+        const fA = zc - 3, fB = zc + 3; // 栅栏墙横跨关卡区域全宽（=锚点包围盒+2），防绕行
+        flag(x0 + 1, zc, 0); // 起点旗
+        for (let i = 0; i < 3; i++) { // 3 段跳台：2×2 石台、空隙 2 格（台面仅高 1，跳得上）
+            const px = x0 + 3 + i * 4;
+            for (let ax = 0; ax < 2; ax++) {
+                for (let az = 0; az < 2; az++) {
+                    level(px + ax, zc + az);
+                    put(px + ax, refY + 1, zc + az, STONE);
+                }
+            }
+        }
+        const g0 = x0 + 15;
+        for (let i = 0; i < n; i++) {
+            const gx = g0 + i * 4;
+            gate(gx, zc, 'x', fA, fB);
+            if (i < n - 1) flag(gx + 2, zc, 1); // 锁间检查点旗
+        }
+        flag(g0 + n * 4 + 1, zc, 2); // 终点旗
+        return { ops, keypads, layoutText: `起点旗→3 段跳台（间隔 2 格）→${n} 道答题机锁门（栅栏全宽防绕行）→终点旗${n > 1 ? '，锁间设检查点旗' : ''}` };
+    }
+
+    if (style === '地牢') {
+        const x0 = site.x0 + 2, z0 = site.z0 + 2;
+        const roomOrigin = (k) => { // 蛇形排房：每行最多 3 间（7×7、间距 6=共用单墙），行内方向交替
+            const row = Math.floor(k / 3);
+            const col = row % 2 === 0 ? k % 3 : 2 - (k % 3);
+            return { x: x0 + col * 6, z: z0 + row * 6 };
+        };
+        const rooms = [];
+        for (let k = 0; k < n; k++) rooms.push(roomOrigin(k));
+        flag(rooms[0].x - 2, rooms[0].z + 3, 0); // 起点旗（入口门外；卡校验要求起点存在）
+        // 先放门锁（占用门洞/答题机格），再砌房墙——去重集保证墙给门让位
+        for (let k = 0; k < n; k++) {
+            if (k === 0) {
+                gate(rooms[0].x, rooms[0].z + 3, 'x', rooms[0].z + 1, rooms[0].z + 5); // 西墙入口
+            } else if (rooms[k].z === rooms[k - 1].z) {
+                gate(Math.max(rooms[k].x, rooms[k - 1].x), rooms[k].z + 3, 'x', rooms[k].z + 1, rooms[k].z + 5); // 同排共用墙列
+            } else {
+                gate(rooms[k].x + 3, Math.max(rooms[k].z, rooms[k - 1].z), 'z', rooms[k].x + 1, rooms[k].x + 5); // 换排共用墙行
+            }
+        }
+        for (const r of rooms) { // 7×7 外墙 3 高 + 封顶（室内黑暗，靠火把照明）
+            for (let i = 0; i < 7; i++) {
+                for (const [wx, wz] of [[r.x + i, r.z], [r.x + i, r.z + 6], [r.x, r.z + i], [r.x + 6, r.z + i]]) {
+                    level(wx, wz);
+                    put(wx, refY + 1, wz, COB); put(wx, refY + 2, wz, COB); put(wx, refY + 3, wz, COB);
+                    put(wx, refY + 4, wz, PLANK);
+                }
+            }
+            torch(r.x + 1, r.z + 1); // 室内角火把
+        }
+        if (n >= 4) flag(rooms[2].x + 5, rooms[2].z + 1, 1); // 远角检查点：顺带把区域拉到东墙（W18 锚点包围盒）
+        const last = rooms[n - 1];
+        flag(last.x + 5, last.z + 5, 2); // 宝物位=终点旗（远角，顺带把区域拉满最后一间）
+        torch(last.x + 4, last.z + 5);
+        return { ops, keypads, layoutText: `${n} 间 7×7 圆石密室蛇形串联（入口+逐室锁门），尽头宝物位=终点旗+火把` };
+    }
+
+    // 寻宝：L 形 2 宽走廊（先 +X 再 +Z）。显式分区几何，避免两腿侧墙在转角互侵：
+    //   第一腿走廊 x∈[x0+1,x0+10]×z∈{zc,zc+1}（入口开在 x0 列）；转角区 x∈{x0+11,x0+12}×z∈{zc..zc+1}；
+    //   第二腿走廊 x∈{x0+11,x0+12}×z∈[zc+2,zc+12]。墙（2 高，站走廊地面跳不上）：
+    //   上 z=zc-1（x0..x0+13）/ 右 x=x0+13（zc..zc+13）/ 下 z=zc+13（x0+10..x0+13）/
+    //   第二腿左 x=x0+10（zc+2..zc+13）/ 第一腿下 z=zc+2（x0..x0+10）。
+    const x0 = site.x0 + 2, zc = site.z0 + 4;
+    const L1 = 10, TLEN = 23; // 第一腿路径长 / 全程路径长（格）
+    const pathPos = (t) => {
+        if (t <= L1 - 1) return { x: x0 + 1 + t, z: zc, passage: 'x' };
+        if (t <= L1 + 1) return { x: x0 + 1 + t, z: zc, passage: 'x' }; // 转角上排（x0+11..12）
+        return { x: x0 + 12, z: zc + (t - L1 - 1), passage: 'z' };     // 转角下排起沿 Z 下行
+    };
+    flag(x0 + 1, zc, 0); // 起点旗（卡校验要求起点存在）
+    for (let x = x0; x <= x0 + 13; x++) { level(x, zc - 1); put(x, refY + 1, zc - 1, COB); put(x, refY + 2, zc - 1, COB); } // 上墙
+    for (let x = x0; x <= x0 + 10; x++) { level(x, zc + 2); put(x, refY + 1, zc + 2, COB); put(x, refY + 2, zc + 2, COB); } // 第一腿下墙
+    for (let z = zc + 2; z <= zc + 13; z++) { level(x0 + 10, z); put(x0 + 10, refY + 1, z, COB); put(x0 + 10, refY + 2, z, COB); } // 第二腿左墙
+    for (let z = zc; z <= zc + 13; z++) { level(x0 + 13, z); put(x0 + 13, refY + 1, z, COB); put(x0 + 13, refY + 2, z, COB); } // 右墙
+    for (let x = x0 + 10; x <= x0 + 13; x++) { level(x, zc + 13); put(x, refY + 1, zc + 13, COB); put(x, refY + 2, zc + 13, COB); } // 底帽
+    let prevT = 0;
+    for (let i = 0; i < n; i++) { // N 道锁门沿路径均匀分布，锁间检查点旗
+        let t = Math.round(((i + 1) * TLEN) / (n + 1));
+        if (t >= L1 && t <= L1 + 2) t = L1 + 3; // 避开转角（那里 2 宽封不严）：门位移到第二腿第一横排
+        const p = pathPos(t);
+        gate(p.x, p.z, p.passage, p.passage === 'x' ? p.z : p.x - 1, p.passage === 'x' ? p.z + 1 : p.x);
+        if (i < n - 1) {
+            const mid = pathPos(Math.round((prevT + t) / 2));
+            flag(mid.x, mid.z, 1);
+        }
+        prevT = t;
+    }
+    const goal = pathPos(TLEN);
+    flag(goal.x, goal.z, 2); // 尽头终点旗
+    torch(goal.x - 1, goal.z);
+    torch(x0 + 10, zc + 1); // 转角火把
+    return { ops, keypads, layoutText: `L 形 2 宽走廊（石墙 2 高），${n} 道答题机锁门各守一段${n > 1 ? '，锁间检查点旗' : ''}，尽头终点旗+火把` };
+}
+
+// gen_level_draft（单元主题关卡草稿）：抽题 → 选址 → 三模板建造 → 草稿卡落库
+async function toolGenLevelDraft(args = {}) {
+    const subject = String(args.subject || '').trim();
+    if (!DRAFT_SUBJECT_NAMES[subject]) return `错误：subject 需为 ${Object.keys(DRAFT_SUBJECT_NAMES).join('/')} 之一`;
+    const style = ['跑酷', '地牢', '寻宝'].includes(args.style) ? args.style : '跑酷';
+    const wantCount = Math.max(1, Math.min(5, Math.floor(Number(args.count)) || 3));
+    const unit = typeof args.unit === 'string' ? args.unit.trim() : '';
+
+    const lw = await loadLevelWorkshop();
+    if (!lw) return '关卡工坊模块（js/levelWorkshop.js）尚未就绪，请刷新页面后重试。';
+
+    // a) 题池：清单 + 学科文件 → 归一 →（可选）单元精确过滤；count 不足按实际数量降级
+    const pool = await loadDraftPool(subject, unit);
+    if (pool.error) return `错误：${pool.error}`;
+    const n = Math.min(wantCount, pool.items.length);
+
+    // b) 选址（按模板占地探测平整度；全不平整退回头顶架空平台）
+    const dims = style === '跑酷'
+        ? { w: 20 + n * 4, d: 10 }
+        : style === '地牢'
+            ? { w: 24, d: Math.min(24, 9 + Math.ceil(n / 3) * 6) }
+            : { w: 18, d: 20 };
+    const { site, refY, floating } = findDraftSite(dims.w, dims.d);
+
+    // c) 三模板 buildOps → 渐进施工（等放完才继续）
+    const { ops, keypads, layoutText } = buildDraftStructure(style, n, site, refY, floating, dims);
+    notifyBuildStart(`关卡草稿·${style}`);
+    const built = await enqueueBuildOps(`gen_level_draft·${style}`, ops);
+    if (!built.applied) return '错误：世界建造失败（一格都没放上）——请换个空旷位置再试，或先让我 clear_area 清场。';
+
+    // d) 抽题（同格同题确定性）→ 草稿卡（questionProvider 直接给锁题、verifiedPasses=2）→ 落库
+    const picked = pickDraftQuestions(pool.items, site.x0, refY, site.z0, n);
+    const qmap = new Map();
+    picked.forEach((item, i) => {
+        const kp = keypads[i];
+        if (!kp) return;
+        const meta = { question: bankItemToCardQuestion(item, subject), verifiedPasses: 2 };
+        qmap.set(`${kp.x},${kp.y},${kp.z}`, meta); // 世界坐标键（默认 lockMetaProvider 语义）
+        qmap.set(`${kp.x - 80},${kp.y - 4},${kp.z - 80}`, meta); // 局部坐标键兜底（EMBED_OFFSET 80/4/80）
+    });
+    const provider = (x, y, z) => qmap.get(`${x},${y},${z}`) || null;
+    const name = (typeof args.name === 'string' && args.name.trim()) || `${DRAFT_SUBJECT_NAMES[subject]}·${style}关卡`;
+    const card = await lw.buildLevelCard({
+        name,
+        author: 'AI 草稿',
+        draft: true, // meta.draft=true：导出校验的双通过要求降级为警告，孩子仍可继续改
+        lockMetaProvider: provider, // 契约 §3.1 参数名
+        questionProvider: provider, // 任务口径参数名——两个都给，兼容并行实现的任一签名
+    });
+    if (!card || card.error) {
+        return `错误：结构已建好（${built.applied} 格），但生成关卡卡失败：${(card && card.error) || '未知原因'}。可手动调整现场后再叫我「检查关卡」。`;
+    }
+    const saved = await lw.saveLevelCard(card).catch(() => null);
+    if (!saved || !saved.ok) return '错误：关卡卡保存失败（本机存储不可用）。结构已建好，可用关卡列表的「试玩当前世界」直接游玩。';
+
+    // e) 回执：绝不列出题目答案明文（答案只在卡数据里，孩子玩时才见）
+    return [
+        `✅ 关卡草稿已生成：「${name}」`,
+        `模板：${style}（${layoutText}）`,
+        `锁：${keypads.length} 把 · ${DRAFT_SUBJECT_NAMES[subject]}${unit ? `·${unit}` : ''} 题库抽题（同格同题，已代双通过）`,
+        `关卡卡 id：${saved.id}${saved.sessionOnly ? '（⚠️ 本机存储不可用，仅本次会话有效，刷新即失）' : ''}`,
+        ...(n < wantCount ? [`注意：题池只有 ${pool.items.length} 题，锁数从 ${wantCount} 降为 ${n}。`] : []),
+        '下一步：到首屏「🗺 关卡」进入试玩；手持出题笔右键答题机可换题修改；也可以叫我「检查关卡」做体检。',
+    ].join('\n');
+}
+
 // ---------- 工具注册表 ----------
 
 export function getToolSchemas() {
@@ -380,6 +841,21 @@ export function getToolSchemas() {
             properties: { speed: { type: 'string', description: '档位名（延时/慢速/中速/快速/极速/瞬间）或每秒格数' } },
             required: ['speed'],
         }),
+        fn('check_level', '检查关卡搭建（只读，不改方块）：自动识别当前世界的旗子/答题机/门区域，生成体检报告——锁的学科/题型/题干预览、旗组、错误与警告逐条、可达性、考核锁状态与改进建议。孩子说「帮我检查我的关卡/锁」时用。也可传 cardId 检查已保存的关卡卡。', {
+            type: 'object',
+            properties: { cardId: { type: 'string', description: '可选：已保存关卡卡的 id；不给则检查当前世界区域' } },
+        }),
+        fn('gen_level_draft', '生成单元主题关卡草稿（AI 出草稿，作者位在孩子）：从题库抽题装锁 → 在玩家附近自动选址，按模板渐进施工（旗子+答题机锁门+火把）→ 保存为可编辑草稿卡。回复只报卡名/锁数/模板，绝不列出题目答案。建造会等放完才返回。', {
+            type: 'object',
+            properties: {
+                subject: { type: 'string', enum: ['math', 'science', 'daofa', 'yuwen'], description: '题库学科' },
+                unit: { type: 'string', description: '可选：按单元精确过滤（如「三上·古诗」）；不给则用该学科全部题' },
+                count: { type: 'integer', description: '锁数量（=题数），1..5，默认 3；题池不足自动降级' },
+                style: { type: 'string', enum: ['跑酷', '地牢', '寻宝'], description: '关卡模板，默认 跑酷' },
+                name: { type: 'string', description: '可选：关卡卡名称，默认「学科·模板关卡」' },
+            },
+            required: ['subject'],
+        }),
         fn('list_game_files', '列出项目全部源码文件（路径+大小）。', { type: 'object', properties: {} }),
         fn('read_game_file', '读取项目文件内容。修改前必须先读取最新内容。', {
             type: 'object',
@@ -408,6 +884,8 @@ export async function executeTool(name, args) {
             case 'read_blocks': result = toolReadBlocks(args); break;
             case 'run_build_script': result = await toolRunBuildScript(args); break;
             case 'set_build_speed': result = toolSetBuildSpeed(args); break;
+            case 'check_level': result = await toolCheckLevel(args); break;
+            case 'gen_level_draft': result = await toolGenLevelDraft(args); break;
             case 'list_game_files': result = await toolListFiles(); break;
             case 'read_game_file': result = await toolReadFile(args); break;
             case 'write_game_file': result = await toolWriteFile(args); break;

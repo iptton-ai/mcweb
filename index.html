@@ -505,7 +505,7 @@
         #inv-search:focus {
             border-color: #7ec850;
         }
-        /* F1 隐藏 HUD：把主要界面元素一起藏掉（截图/录屏用） */
+        /* F1 隐藏 HUD：把主要界面元素一起藏掉（截图/录屏用）；#level-hud = 关卡工坊闯关条 */
         body.hud-hidden #hotbar,
         body.hud-hidden #health-bar,
         body.hud-hidden #hunger-bar,
@@ -513,7 +513,8 @@
         body.hud-hidden #xp-badge,
         body.hud-hidden #mode-badge,
         body.hud-hidden #crosshair,
-        body.hud-hidden #debug-info {
+        body.hud-hidden #debug-info,
+        body.hud-hidden #level-hud {
             display: none !important;
         }
 
@@ -861,6 +862,179 @@
         .mode-btn.survival:hover {
             border-color: #ff6b5a;
         }
+
+        /* ==================== 关卡工坊（2026-09-15 P0，DOM 由 B1 建、B4 接线） ==================== */
+        /* 闯关 HUD：顶部居中小条（计时/死亡/锁进度），B4 在关卡运行时加 .visible 显示 */
+        #level-hud {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            background: rgba(15, 15, 28, 0.85);
+            border: 2px solid #4a4a6a;
+            border-radius: 10px;
+            padding: 5px 16px;
+            font-size: 14px;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+        }
+        #level-hud.visible {
+            display: flex;
+        }
+        #level-hud #level-hud-time {
+            color: #ffe97a;
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+        }
+
+        /* 关卡浮层共用面板骨架（暗色圆角，照 E 面板/设置浮层风格） */
+        .lvl-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.55);
+            cursor: default;
+        }
+        .lvl-overlay.open {
+            display: flex;
+        }
+        .lvl-panel {
+            display: flex;
+            flex-direction: column;
+            width: min(92vw, 560px);
+            max-height: 84vh;
+            background: rgba(20, 20, 35, 0.97);
+            border: 4px solid #4a4a6a;
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+        }
+        .lvl-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .lvl-head h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 19px;
+            letter-spacing: 1px;
+            flex: 1;
+        }
+        /* 浮层关闭钮（与设置浮层 .gs-close 同风格：透明底、悬停亮起） */
+        .lvl-close {
+            background: transparent;
+            border: none;
+            color: #c0c0d8;
+            font-size: 16px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            flex: 0 0 auto;
+        }
+        .lvl-close:hover {
+            background: #2d2d4a;
+            color: #fff;
+        }
+        .lvl-sub {
+            color: #9a9ab8;
+            font-size: 12px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .lvl-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 12px;
+            flex: 0 0 auto;
+        }
+        .lvl-actions .save-btn {
+            padding: 9px 18px;
+            font-size: 13.5px;
+        }
+
+        /* 首屏关卡列表浮层：z-index 高于 #start-screen（100），低于设置浮层（118） */
+        #level-list {
+            z-index: 110;
+        }
+        #level-list-rows {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 60px;
+        }
+        #level-list-rows::-webkit-scrollbar {
+            width: 8px;
+        }
+        #level-list-rows::-webkit-scrollbar-thumb {
+            background: #3d3d5c;
+            border-radius: 4px;
+        }
+        /* 列表空态提示（B4 无卡时填充） */
+        .lvl-empty {
+            color: #77779a;
+            font-size: 13px;
+            text-align: center;
+            padding: 24px 8px;
+        }
+
+        /* 结算浮层：居中面板，不遮死游戏画面（z-index 高于 HUD/背包/说明条，低于死亡界面） */
+        #result-panel {
+            z-index: 60;
+        }
+        #result-panel .lvl-panel {
+            width: min(92vw, 480px);
+        }
+        #result-subtitle {
+            color: #9a9ab8;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        #result-stars {
+            color: #ffd84a;
+            font-size: 34px;
+            text-align: center;
+            letter-spacing: 6px;
+            text-shadow: 0 2px 12px rgba(255, 216, 74, 0.45);
+            margin-bottom: 8px;
+        }
+        .result-stats {
+            display: flex;
+            justify-content: center;
+            gap: 22px;
+            color: #fff;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        .result-stats span {
+            font-family: 'Consolas', monospace;
+        }
+        /* 锁明细表容器（B4 填充：每锁 位置/尝试次数/对错） */
+        #result-locks {
+            flex: 0 1 auto;
+            overflow-y: auto;
+            background: rgba(30, 30, 50, 0.55);
+            border: 1px solid #2d2d44;
+            border-radius: 8px;
+            padding: 8px 10px;
+            min-height: 40px;
+            max-height: 30vh;
+        }
     </style>
 </head>
 <body>
@@ -890,6 +1064,7 @@
         <div id="menu-actions">
             <button class="save-btn" id="btn-save">💾 保存进度</button>
             <button class="save-btn" id="btn-settings">⚙️ 设置（音频 / 存档）</button>
+            <button class="save-btn" id="btn-levels">🗺 关卡</button>
         </div>
         <div class="controls-info">
             <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃（创造双击 = 飞行）&nbsp;|&nbsp; <kbd>Shift</kbd> 潜行 / 水中下沉 &nbsp;|&nbsp; <kbd>Ctrl</kbd> 疾跑<br>
@@ -929,6 +1104,68 @@
     <div id="xp-badge"></div>
     <div id="mode-badge"></div>
     <div id="damage-flash"></div>
+
+    <!-- 闯关 HUD（关卡工坊）：顶部居中小条，B4 在关卡运行时显示并填充 -->
+    <div id="level-hud"><span id="level-hud-time">00:00</span> · 💀 <span id="level-hud-deaths">0</span> · 🔒 <span id="level-hud-locks">0/0</span></div>
+
+    <!-- 关卡列表浮层（首屏/暂停入口进入）：列表 B4 渲染，导入走隐藏 file input -->
+    <div id="level-list" class="lvl-overlay">
+        <div class="lvl-panel">
+            <div class="lvl-head">
+                <h3>🗺 关卡</h3>
+                <button class="lvl-close" id="level-list-close" title="关闭（Esc）">✕</button>
+            </div>
+            <div class="lvl-sub">闯关模式：试玩当前世界摆好的关卡区域，或导入 .json 关卡卡。<br>作者流程：摆放 起点/检查点/终点旗 与 答题机（持 ✏️ 出题笔右键出题），再到这里试玩。</div>
+            <div id="level-list-rows"></div>
+            <div class="lvl-actions">
+                <button class="save-btn" id="btn-level-try">▶ 试玩当前世界</button>
+                <button class="save-btn" id="btn-level-import">📥 导入关卡卡</button>
+                <input type="file" id="level-file-input" accept=".json,application/json" hidden>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结算浮层（关卡工坊）：通关/超时失败共用，全部字段 B4 填充 -->
+    <div id="result-panel" class="lvl-overlay">
+        <div class="lvl-panel">
+            <div class="lvl-head">
+                <h3 id="result-title">关卡名</h3>
+            </div>
+            <div id="result-subtitle">作者：-</div>
+            <div id="result-stars">★★☆</div>
+            <div class="result-stats">
+                <span>⏱ <span id="result-time">00:00</span></span>
+                <span>💀 <span id="result-deaths">0</span></span>
+            </div>
+            <div id="result-locks"></div>
+            <div class="lvl-actions">
+                <button class="save-btn" id="btn-result-retry">🔄 重试</button>
+                <button class="save-btn" id="btn-result-exit">🚪 退出</button>
+                <button class="save-btn" id="btn-result-poster">📸 生成海报</button>
+                <button class="save-btn" id="btn-result-video">🎥 拍宣传片</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出关卡卡（K 键，游戏内打开）：作者流程最后一步——出题双通过后导出分享 -->
+    <div id="export-panel" class="lvl-overlay hidden">
+        <div class="lvl-panel">
+            <div class="lvl-head">
+                <h3>📤 导出关卡卡</h3>
+                <button class="lvl-close" id="export-panel-close" title="关闭（Esc）">✕</button>
+            </div>
+            <div id="export-status" class="lvl-muted">导出前请确认：每把答题机都已用 ✏️ 出题笔出题并连过两次。</div>
+            <div class="lvl-actions export-form">
+                <label>关卡名 <input id="export-name" type="text" maxlength="24" placeholder="我的关卡" autocomplete="off"></label>
+                <label>作者昵称 <input id="export-author" type="text" maxlength="16" placeholder="我" autocomplete="off"></label>
+            </div>
+            <div class="lvl-actions">
+                <button class="save-btn" id="btn-export-download">📤 导出并下载</button>
+                <button class="save-btn" id="btn-export-save">💾 存进本机关卡列表</button>
+            </div>
+            <div class="lvl-muted" id="export-hint">导出的 .level.json 文件可以发给朋友（微信群导入即玩）；存进列表的卡在首屏「🗺 关卡」里。</div>
+        </div>
+    </div>
 
     <!-- 死亡界面 -->
     <div id="death-screen">

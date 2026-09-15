@@ -1,7 +1,7 @@
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, PLATFORM_BASE, PULLEY_ROPE_MAX, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isPulleyId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, pulleyPowered, pulleyUp, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, PLATFORM_BASE, PULLEY_ROPE_MAX, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, flagKind, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isFlagId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isPulleyId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, pulleyPowered, pulleyUp, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -109,6 +109,9 @@ export function getPropMesh(blockType) {
         mesh = buildPlateMesh(blockType);
     } else if (isLeverId(blockType)) {
         mesh = buildLeverMesh(blockType);
+    } else if (isFlagId(blockType)) {
+        // 旗（关卡工坊 P0）：杆+旗面道具网格，三个 kind 各自入缓存（见 buildFlagMesh 注释）
+        mesh = buildFlagMesh(blockType);
     } else if (isPistonId(blockType)) {
         mesh = buildPistonBaseMesh(blockType);
     } else if (isObserverId(blockType)) {
@@ -268,6 +271,39 @@ function buildLeverMesh(blockType) {
     const root = new THREE.Group();
     root.add(mounted);
     return root;
+}
+
+// 旗（关卡工坊 P0）：细木杆 + 挂在杆上部的旗面薄板。三个 kind 变体（起点/检查点/终点）
+// 差别只在旗面 tile（85/86/87），杆统一铺木板 tile；静态无逐格依赖，各自入 propMeshCache
+// （照压力板模式）。几何与 outline 并集包围盒（config.js 选取形状段）对齐：
+//   杆 2/16 见方 × 高 1（x/z 0.4375..0.5625 ⊆ outline 0.42..0.58）；
+//   旗面宽 0.6 × 高 0.4 × 厚 1/16，x 0.2..0.8 / y 0.45..0.85 / z 0.46875..0.53125。
+function buildFlagMesh(blockType) {
+    const FLAG_TILES = ['flag_start', 'flag_checkpoint', 'flag_goal'];
+    const group = new THREE.Group();
+    const pole = new THREE.Mesh(
+        makeTexturedBoxGeo(0.125, 1.0, 0.125, {
+            py: 'planks', ny: 'planks',
+            px: 'planks', nx: 'planks', pz: 'planks', nz: 'planks',
+        }),
+        pistonAtlasMat,
+    );
+    pole.position.y = 0.5; // 原点在格底面中心，杆占满整格高
+    group.add(pole);
+    const cloth = new THREE.Mesh(
+        makeTexturedBoxGeo(0.6, 0.4, 1 / 16, {
+            py: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+            ny: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+            px: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+            nx: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+            pz: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+            nz: FLAG_TILES[flagKind(blockType)] || 'flag_start',
+        }),
+        pistonAtlasMat,
+    );
+    cloth.position.y = 0.65; // 旗面挂杆上部（y 0.45..0.85）
+    group.add(cloth);
+    return group;
 }
 
 // ==================== 活塞组道具网格 ====================
@@ -906,12 +942,12 @@ export function updateChunkMeshes() {
     }
 }
 
-// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组）。
-// 电梯平台（L2）除外——它是普通实心立方体（BlockInfo 无 customMesh），走普通面渲染零 propMesh
+// 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组/旗组）。
+// 电梯平台（L2）与星辉门（关卡工坊，customMesh:false 满格普通面渲染）除外——走普通面渲染零 propMesh
 function isPropBlock(bt) {
     return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
         isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||
-        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) ||
+        isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) || isFlagId(bt) ||
         (isKineticId(bt) && bt !== PLATFORM_BASE);
 }
 

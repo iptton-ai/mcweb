@@ -67,6 +67,7 @@ import {
     isPistonId,
     isRTorchId,
     isRedstoneId,
+    isStarlightId,
     lampId,
     lampLit,
     leverFacing,
@@ -79,6 +80,7 @@ import {
     rtorchFacing,
     rtorchId,
     rtorchLit,
+    starlightOpen,
 } from './config.js';
 import { isCreative, state } from './state.js';
 import { getBlock, getBlockIndex, setBlockSafe } from './world.js';
@@ -362,13 +364,14 @@ export function updateRedstoneNetwork() {
                     // 前置 id>=CLUTCH_BASE 短路：全图扫描对每个非零方块都要过这条 else-if 链，
                     // 世界绝大多数方块 ID<202，一次比较即跳出（G3 P01 压线超门 0.3ms 的成因）。
                     // L2 滑轮并入本分支内部细分（202+ 的方块才多一次 isPulleyId）——**不延长链**：
-                    // 链尾每多一条 else-if 会让 1M 格的分支形态变化（P01 实测 +1.2ms，组1 二分定位）
+                    // 链尾每多一条 else-if 会让 1M 格的分支形态变化（P01 实测 +1.2ms，组1 二分定位）。
+                    // 星辉门（关卡工坊，232..）同样并入本分支的 keypads 细分（契约 §1）
                     if (isClutchId(id)) {
                         clutches.push({ x, y, z, id });
                     } else if (isPulleyId(id)) {
                         pulleys.push({ x, y, z, id });
-                    } else if (isKeypadId(id)) {
-                        keypads.push({ x, y, z, id });
+                    } else if (isKeypadId(id) || isStarlightId(id)) {
+                        keypads.push({ x, y, z, id }); // 锁具统一表：答题机 + 星辉门（activeSources 按开/解状态细分）
                     }
                 }
             }
@@ -395,7 +398,9 @@ export function updateRedstoneNetwork() {
     for (const pl of plates) if (platePressed(pl.id) === 1) activeSources.push(pl);
     for (const tc of torches) if (rtorchLit(tc.id) === 1) activeSources.push(tc);
     for (const ob of observers) if (observerPowered(ob.id) === 1) activeSources.push(ob); // 观察者脉冲
-    for (const kp of keypads) if (keypadSolved(kp.id) === 1) activeSources.push(kp); // 答题机已解锁=常供能（Edu M1）
+    // 锁具常供能源：答题机已解锁 / 星辉门已开启（关卡工坊契约 §1——
+    // 开启态 = 可通行 + 常供能，贴门直接开、接红石粉远程解锁别的门）
+    for (const kp of keypads) if (keypadSolved(kp.id) === 1 || starlightOpen(kp.id) === 1) activeSources.push(kp);
     const activeSourceKeys = new Set(activeSources.map((s) => keyOf(s.x, s.y, s.z)));
 
     // ---- 红石粉强度 BFS：源 15 级直接送进邻粉，粉与粉每格 -1 ----

@@ -8,6 +8,8 @@
 //   inventory 背包（E 开关）
 //   settings  设置浮层（首屏/暂停菜单的 ⚙️ 进入：音频与存档；关闭回到进入前的状态）
 //   dead      死亡界面
+//   result    关卡结算浮层（关卡工坊批次 W：踩终点/超时后由 levelRun 进入，只读面板；
+//             Esc 在 input.js 里接 exitLevelRun({toTitle:true})；不参与指针锁）
 // 另有一个独立于游戏状态的布尔：AI 助手面板可见（T 开关，侧栏浮层，不阻塞游戏——
 // 面板打开时游戏键照常，只有鼠标归面板，指针锁因此让位）。
 //
@@ -42,7 +44,7 @@ export function getUIState() {
 
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板
 function wantLockNow() {
-    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen;
+    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen && !state.levelExportOpen;
 }
 
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）
@@ -52,7 +54,7 @@ export function isPlaying() {
 
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
-    return uiState === 'playing' && !state.recordingControlsOpen;
+    return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen;
 }
 
 export function isAssistantVisible() {
@@ -72,7 +74,10 @@ export function onUIStateChange(cb) {
 // ==================== 状态切换（唯一入口） ====================
 export function setState(next) {
     if (next === 'playing' && state.player.dead) next = 'dead'; // 死亡时不可能回到 playing
-    if (next !== 'playing') state.recordingControlsOpen = false;
+    if (next !== 'playing') {
+        state.recordingControlsOpen = false;
+        state.levelExportOpen = false;
+    }
     if (next !== uiState) {
         const prev = uiState;
         uiState = next;
@@ -129,6 +134,21 @@ export function closeSettingsState() {
     if (uiState === 'settings') setState(settingsReturn);
 }
 
+// 结算浮层（关卡工坊批次 W）：finishRun 的结算数据填充 #result-panel（B4 接线）。
+// result 态不参与指针锁（wantLockNow 只认 playing，天然满足）；重试/退出按钮由 B4 接管。
+// openResultState 由 levelRun.finalizeFinish 调用（缺省退路是 setState('result')，两者等价）。
+export function openResultState(result) {
+    state.levelResult = result || null;
+    setState('result');
+}
+
+// 关闭结算浮层：关卡已结束，回 playing 后玩家留在已通关的关卡世界自由活动；
+// state.levelResult 清空（面板填充源失效），重试/退出走 B4 的按钮（exitLevelRun / enterLevel）。
+export function closeResultState() {
+    state.levelResult = null;
+    setState('playing');
+}
+
 // Q 键（Esc 替代，见 input.js）：释放指针并弹暂停菜单，效果与用户按 Esc 一致。
 // 指针锁定时按 Esc 会被浏览器/宿主截获（ZCode 内嵌浏览器里还会导致应用退出），
 // 页面收不到也拦不住，只能提供一个不碰 Esc 的替代入口。
@@ -145,6 +165,11 @@ function emit(prev, next) {
     }
 }
 
+// 同态事件：只触发订阅副作用（input 侧 clearKeys），状态不变——开非暂停浮层时防按键粘滞
+export function clearStuckKeys() {
+    emit(uiState, uiState);
+}
+
 // ==================== 浮层同步 ====================
 function syncOverlays() {
     const menuVisible = uiState === 'title' || uiState === 'pause';
@@ -157,6 +182,9 @@ function syncOverlays() {
     // 设置浮层（DOM 由 settingsUI.js 注入，本模块只管显隐）
     const gs = document.getElementById('game-settings');
     if (gs) gs.classList.toggle('hidden', uiState !== 'settings');
+    // 结算浮层（DOM 由 index.html 提供，B1；填充由 B4 的 updateResultPanel 每帧驱动）
+    const rp = document.getElementById('result-panel');
+    if (rp) rp.classList.toggle('hidden', uiState !== 'result');
     // 准星只在「正在操作」时显示，让玩家一眼看出当前能否操作
     const cross = document.getElementById('crosshair');
     if (cross) cross.style.display = isPlaying() ? '' : 'none';
@@ -165,6 +193,7 @@ function syncOverlays() {
 // ==================== 指针锁管理（全游戏仅此处调用） ====================
 export function requestLock() {
     state.recordingControlsOpen = false;
+    state.levelExportOpen = false;
     if (mouseLocked || lockPending) return;
     lockPending = true;
     wantLock = true;
@@ -210,7 +239,7 @@ function onPointerLockChange() {
     lockPending = false;
     if (mouseLocked) {
         // 锁定请求异步返回期间可能已按 Tab 打开面板；迟到的成功不能抢回鼠标。
-        if (state.recordingControlsOpen || uiState !== 'playing') {
+        if (state.recordingControlsOpen || state.levelExportOpen || uiState !== 'playing') {
             exitLock();
             syncOverlays();
             return;
@@ -218,7 +247,7 @@ function onPointerLockChange() {
         wantLock = false;
         stopRetry();
         hideLockHint();
-    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen) {
+    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen && !state.levelExportOpen) {
         // 用户按 Esc（锁定状态下浏览器截获 Esc，页面收不到 keydown）或系统夺走指针 → 暂停菜单
         // （面板开着时指针本就不该被锁定，此时解锁不弹菜单）
         setState('pause');

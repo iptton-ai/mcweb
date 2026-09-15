@@ -15,6 +15,7 @@ import { isCreative, state } from './state.js';
 import { scene } from './engine.js';
 import { getBlock } from './world.js';
 import { breakBlockAt, raycastBlocks, tryAttackEnemy } from './interaction.js';
+import { isLevelRunActive } from './levelRun.js'; // 闯关模式：挖掘短路（攻击保留）
 import { getCrackTextures } from './textures.js';
 import { playHitSound } from './audio.js';
 import { swingViewmodel } from './viewmodel.js';
@@ -131,6 +132,11 @@ function resetMining() {
 export function miningPress() {
     swingViewmodel();
     if (tryAttackEnemy()) return; // 准星上是怪物：这一击是攻击，不是挖掘
+    // 闯关模式（W11）：禁挖不禁打——上面的攻击已放行，挖掘从这里短路
+    if (isLevelRunActive()) {
+        showTooltip('🚫 闯关中不能挖掘方块');
+        return;
+    }
     if (mining.delay > 0) return;
     const hit = raycastBlocks();
     if (!hit) return; // 打空气：只挥手
@@ -162,6 +168,12 @@ export function updateMining(dt, holding) {
     // 冷却中也不隔着怪挖它身后的方块——原版对怪挥刀就是攻击意图）
     if (tryAttackEnemy()) {
         resetMining();
+        return;
+    }
+    // 闯关模式（W11）：禁挖不禁打——攻击已放行，这里掐掉挖掘蓄力与进度累积
+    // （不逐帧刷提示，提示只在 miningPress 按下瞬间给一次）
+    if (isLevelRunActive()) {
+        if (mining.x !== null) resetMining();
         return;
     }
     if (mining.delay > 0) return; // 间隔/限速中：不累积进度

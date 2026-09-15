@@ -16,6 +16,9 @@ const MAX_HEIGHT = 1080;
 export function initRecording(options) { notify = options.notify; }
 export function isRecording() { return current !== null; }
 export function isCamOwnedRecording() { return current?.owner === 'cam'; }
+// 关卡工坊（批次 W）的 level 档：宣传片会话（列表行 🎥 / 结算面板 #btn-result-video 开录）。
+// 只供 levelRun.exitLevelRun 收尾守卫——只停关卡自己的录像，绝不误停 user/cam 会话。
+export function isLevelOwnedRecording() { return current?.owner === 'level'; }
 export function getRecordingStatus() {
     return { recording: !!current, owner: current?.owner || null,
         elapsedSec: current ? Math.floor((Date.now() - current.startedAt) / 1000) : 0,
@@ -193,11 +196,16 @@ export function toggleBuildRecording(source = 'user') {
         const candidates = formats.filter(m => MediaRecorder.isTypeSupported(m));
         candidates.push('');
         const status = getBuildStatus();
-        const label = (status.active ? status.label : '游戏录像') || '游戏录像';
+        // level 档成片文件名固定「关卡宣传片」，不借用施工任务名
+        const label = source === 'level' ? '关卡宣传片'
+            : (status.active ? status.label : '游戏录像') || '游戏录像';
         const name = label.replace(/[\\/:*?"<>|\s]+/g, '-').slice(0, 32) + '-'
             + new Date().toISOString().replace(/[:.]/g, '-');
         session = { surface, ctx, name, candidates, next: 0, attempt: null, stopped: false, finished: false,
-            owner: source === 'cam' ? 'cam' : 'user', startedAt: Date.now() };
+            // owner 三档：'cam'=施工跟拍自动录制 / 'level'=关卡宣传片（通关或退出自动保存）/
+            // 'user'=用户手动录像（只能用户停）。停录侧的守卫是 isCamOwnedRecording /
+            // isLevelOwnedRecording——谁开的谁收尾，语义红线：本函数之外的停录逻辑一行未动。
+            owner: source === 'cam' ? 'cam' : source === 'level' ? 'level' : 'user', startedAt: Date.now() };
         current = session;
         renderer.render(scene, camera);
         renderViewmodel(renderer);

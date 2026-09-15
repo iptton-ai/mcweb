@@ -14,7 +14,8 @@ import { closeSettingsState, getUIState, openSettingsState } from './uiModal.js'
 import { BGM_PACKS, getBgmStyle, getBgmVolume, setBgmStyle, setBgmVolume } from './bgm.js';
 import { getSfxVolume, setSfxVolume } from './audio.js';
 import { exportSlotJson, importSlotJson, listSaves, savedAtText } from './saveGame.js';
-import { EDU_STORE_KEY, loadEduProgress, ensureHanziBank, hanziInfo } from './eduRewards.js'; // 学习报告页（Edu M2）
+import { EDU_STORE_KEY, loadEduProgress, ensureHanziBank, hanziInfo,
+         getProgress, setProgress, getWeeklyReport, ensureUnitBanks, unitSequence } from './eduRewards.js'; // 学习报告页（Edu M2 + P2 交接卡重构）
 import { eduSubjects } from './eduKeypad.js'; // 答题机学科元信息（多学科引擎）
 import { camera } from './engine.js';
 
@@ -96,6 +97,22 @@ const STYLE = `
 .gs-hz b{font-size:18px;color:#fff;line-height:1.2;font-weight:normal;}
 .gs-hz i{font-size:10px;color:#8fb573;font-style:normal;margin-top:3px;max-width:38px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 学习页（P2 交接卡重构）：进度下拉 / 交接卡条目 / 回流简表 */
+.gs-select{background:rgba(40,40,66,.9);color:#fff;border:2px solid #5a5a7a;border-radius:8px;
+  padding:6px 10px;font-size:13px;font-family:inherit;max-width:360px;}
+.gs-select:focus{outline:none;border-color:#7ec850;}
+.gs-wq-group{color:#8fb573;font-size:12.5px;margin:10px 0 2px;}
+.gs-wq{border-bottom:1px dashed #3d3d5c;padding:7px 0;}
+.gs-wq:last-child{border-bottom:none;}
+.gs-wq-stem{color:#fff;font-size:13.5px;line-height:1.5;}
+.gs-wq-meta{color:#77779a;font-size:11px;margin:3px 0 4px;}
+.gs-wq summary{cursor:pointer;color:#8fb573;font-size:11.5px;user-select:none;width:fit-content;}
+.gs-wq-answer{color:#ffd84a;font-size:12.5px;margin-top:5px;}
+.gs-wq-hint{color:#9ab;font-size:11.5px;margin-top:3px;line-height:1.5;}
+.gs-hand-empty{color:#77779a;font-size:12px;line-height:1.6;margin:6px 0 0;}
+.gs-weekly{width:100%;border-collapse:collapse;font-size:12px;color:#c0c0d8;}
+.gs-weekly th,.gs-weekly td{border-bottom:1px solid #2d2d44;padding:5px 6px;text-align:left;}
+.gs-weekly th{color:#8fb573;font-weight:normal;}
 `;
 
 // ---------- 模块状态 ----------
@@ -185,8 +202,31 @@ export function initSettingsUI(injected) {
         </div>
         <div class="gs-body hidden" data-page="edu">
           <div class="gs-card">
-            <h4>📈 学习进度（家长报告）</h4>
-            <p class="card-desc">孩子在游戏里的学习足迹：答题机（数学 / 科学 / 道法 / 语文）、英语商人（单词）、识字矿石（生字）。数据保存在本机浏览器。</p>
+            <h4>📚 当前学习进度</h4>
+            <p class="card-desc">选到孩子最近学到的单元（用三年级上册数学的单元序列作为全局进度，plan §4.3）。星辉门只会出这个进度之后的知识点——答对算「提前解锁」；星辉门答错的题会自动进下面的交接卡。</p>
+            <div class="vol-row"><label>学到</label><select id="gs-edu-progress" class="gs-select"></select><span class="gs-hint" id="gs-edu-progress-hint"></span></div>
+          </div>
+          <div class="gs-card" id="gs-edu-handcard">
+            <h4>🧳 本周带走（交接卡）</h4>
+            <p class="card-desc">游戏里遇到但没解开的题，按学科分组：题干 + 课本单元 + 日期；答案与提示默认折叠，讲评时再展开。打印出来贴在书桌上，这周练完。</p>
+            <div class="gs-save-row">
+              <button class="gs-btn" id="gs-btn-edu-print">🖨 打印交接卡</button>
+              <span class="gs-hint">只打印「本周带走」这一块，答案收起时不印</span>
+            </div>
+            <div id="gs-edu-wrongbook"></div>
+          </div>
+          <div class="gs-card">
+            <h4>📅 下周预告</h4>
+            <p class="card-desc" id="gs-edu-next"></p>
+          </div>
+          <div class="gs-card">
+            <h4>📈 回流趋势（近 4 周）</h4>
+            <p class="card-desc">「主动开玩」= 进入关卡；「回流开门」= 星辉门错题入本后回来把门打开。全为本机聚合，不上传任何数据。</p>
+            <div id="gs-edu-weekly"></div>
+          </div>
+          <div class="gs-card">
+            <h4>📊 累计足迹</h4>
+            <p class="card-desc">答题机（数学 / 科学 / 道法 / 语文）、英语商人（单词）、识字矿石（生字）。数据保存在本机浏览器。</p>
             <div id="gs-edu-stats"></div>
           </div>
           <div class="gs-card">
@@ -196,7 +236,7 @@ export function initSettingsUI(injected) {
           </div>
           <div class="gs-card">
             <h4>🧹 重置学习进度</h4>
-            <p class="card-desc">清空全部学习记录（答题/单词/生字/里程碑），需点两次确认。世界与存档不受影响。</p>
+            <p class="card-desc">清空全部学习记录（答题/单词/生字/里程碑/错题本/埋点），需点两次确认。世界与存档不受影响。</p>
             <div class="gs-save-row">
               <button class="gs-btn" id="gs-btn-edu-reset">🧹 清空学习记录</button>
               <span class="gs-note" id="gs-edu-reset-note"></span>
@@ -239,6 +279,21 @@ export function initSettingsUI(injected) {
             try { localStorage.removeItem(EDU_STORE_KEY); } catch (e) {}
             note.textContent = '✅ 已清空';
             renderEduReport();
+        });
+    }
+    // 学习页（P2 交接卡重构）：进度下拉（选中即写进度）与打印交接卡
+    const progressSel = modal.querySelector('#gs-edu-progress');
+    if (progressSel) {
+        progressSel.addEventListener('change', () => {
+            setProgress(Number(progressSel.value));
+            renderEduReport(); // 整页重渲：进度提示 / 下周预告随之刷新
+        });
+    }
+    const printBtn = modal.querySelector('#gs-btn-edu-print');
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            ensureEduPrintStyle(); // 打印样式从 JS 注入（不改 index.html——那是 B1 的文件）
+            window.print();
         });
     }
     // 音量滑块：input 即时生效并写入 localStorage（拖动后滑块保持焦点，Esc 由下方捕获兜底）
@@ -352,10 +407,210 @@ function switchTab(tab) {
     if (tab === 'edu') renderEduReport(); // 学习页每次切入实时刷新
 }
 
-// ---------- 学习报告页（Edu M2 家长报告） ----------
+// ---------- 学习页（Edu M2 家长报告 + P2「拉力与回流」交接卡重构，2026-09-15） ----------
+// 页面结构（plan §4.4「带走清单与下周预告」）：
+//   当前学习进度（下拉，unitSequence('math') 三上单元序列作全局进度）
+//   → 🧳 本周带走交接卡（wrongBook 按学科分组，答案/提示 <details> 折叠）+ 🖨 打印
+//   → 📅 下周预告（进度之后的单元文案）→ 📈 回流趋势（近 4 周简表）
+//   → 📊 累计足迹（既有计数，原样保留）→ 🔤 识字图鉴 → 🧹 重置
 let eduResetArmed = false;
 
 function renderEduReport() {
+    if (!els.modal) return;
+    renderEduProgress();
+    renderWrongBook();
+    renderNextPreview();
+    renderWeekly();
+    renderEduStats();
+    renderHanziCollection(loadEduProgress().hanzi || []);
+    // 识字表注音异步加载（题库文件懒 fetch）：打开页面时 best-effort——
+    // 首次渲染用当前已有注音，加载完成且仍停在学习页时补渲染一次
+    ensureHanziBank().then(() => {
+        const page = els.modal && els.modal.querySelector('[data-page="edu"]');
+        if (page && !page.classList.contains('hidden')) {
+            renderHanziCollection(loadEduProgress().hanzi || []);
+        }
+    });
+    // 单元序列同理：首次打开时题库可能还没拉完（静默降级不报错），加载完且仍在本页时补渲染
+    ensureUnitBanks().then(() => {
+        const page = els.modal && els.modal.querySelector('[data-page="edu"]');
+        if (page && !page.classList.contains('hidden')) {
+            renderEduProgress();
+            renderNextPreview();
+        }
+    });
+    eduResetArmed = false;
+    const note = els.modal.querySelector('#gs-edu-reset-note');
+    if (note) note.textContent = '';
+}
+
+// 当前学习进度选择器：三上数学单元序列（plan §4.3 决策点：单元级粒度足够）
+function renderEduProgress() {
+    const sel = els.modal.querySelector('#gs-edu-progress');
+    if (!sel) return;
+    const hint = els.modal.querySelector('#gs-edu-progress-hint');
+    const seq = unitSequence('math');
+    const cur = getProgress().unit;
+    sel.innerHTML = '';
+    if (!seq.length) {
+        // 题库未加载完成（或文件全挂）→ 占位选项，加载完的补渲染会再填
+        sel.disabled = true;
+        const opt = document.createElement('option');
+        opt.textContent = '题库加载中…';
+        sel.appendChild(opt);
+        if (hint) hint.textContent = '';
+        return;
+    }
+    sel.disabled = false;
+    seq.forEach((u, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i + 1);
+        opt.textContent = `第 ${i + 1} 单元 · ${u.unit}`;
+        sel.appendChild(opt);
+    });
+    sel.value = String(Math.min(cur, seq.length)); // 进度脏数据拉回序列范围内
+    if (hint) {
+        hint.textContent = cur < seq.length
+            ? `星辉门会出第 ${cur + 1} 单元起的题`
+            : '已覆盖全部单元';
+    }
+}
+
+// 「本周带走」交接卡：wrongBook 按学科分组，每条 = 题干 + 单元 + 日期（+ 来源）；
+// 答案/提示放 <details> 折叠（家长可控展开，打印时展开才带上答案）
+function renderWrongBook() {
+    const box = els.modal.querySelector('#gs-edu-wrongbook');
+    if (!box) return;
+    const book = loadEduProgress().wrongBook;
+    const entries = Array.isArray(book) ? book : [];
+    box.innerHTML = '';
+    if (!entries.length) {
+        const empty = document.createElement('p');
+        empty.className = 'gs-hand-empty';
+        empty.textContent = '这周还没有带走的题。在星辉门或关卡里答错的题会自动记到这里——打印出来，周末练完再回来开门。';
+        box.appendChild(empty);
+        return;
+    }
+    const metaMap = {};
+    for (const m of eduSubjects()) metaMap[m.subject] = m;
+    // 按学科分组（保持登记顺序；组序按该组最早一条错题出现的位置）
+    const groups = new Map();
+    for (const e of entries) {
+        const key = e && e.subject ? e.subject : 'other';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(e);
+    }
+    for (const [subject, list] of groups) {
+        const meta = metaMap[subject] || { emoji: '📚', name: subject === 'other' ? '综合' : subject };
+        const head = document.createElement('div');
+        head.className = 'gs-wq-group';
+        head.textContent = `${meta.emoji} ${meta.name}（${list.length} 题）`;
+        box.appendChild(head);
+        for (const e of list) box.appendChild(wrongBookRow(e));
+    }
+}
+
+// 单条错题行：题干 + 元信息（日期·单元·来源）+ 折叠的答案/提示
+function wrongBookRow(e) {
+    const row = document.createElement('div');
+    row.className = 'gs-wq';
+    const stem = document.createElement('div');
+    stem.className = 'gs-wq-stem';
+    stem.textContent = (e && e.stem) || '（题干缺失）';
+    row.appendChild(stem);
+    const meta = document.createElement('div');
+    meta.className = 'gs-wq-meta';
+    const d = new Date(e && typeof e.t === 'number' ? e.t : Date.now());
+    const pad = (n) => String(n).padStart(2, '0');
+    const bits = [
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+        e && e.unit ? e.unit : '',
+        e && e.source ? e.source : '',
+    ].filter(Boolean);
+    meta.textContent = bits.join(' · ');
+    row.appendChild(meta);
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = '答案与提示';
+    details.appendChild(summary);
+    // choice 存的是正确下标 → 配 options 翻成文本；input 直接是数值
+    const ans = document.createElement('div');
+    ans.className = 'gs-wq-answer';
+    const opts = e && Array.isArray(e.options) ? e.options : null;
+    if (opts && Number.isInteger(e.answer) && e.answer >= 0 && e.answer < opts.length) {
+        ans.textContent = `答案：${opts[e.answer]}（第 ${e.answer + 1} 项）`;
+    } else if (e && Number.isFinite(e.answer)) {
+        ans.textContent = `答案：${e.answer}`;
+    } else {
+        ans.textContent = '答案：未记录';
+    }
+    details.appendChild(ans);
+    if (e && e.hint) {
+        const hint = document.createElement('div');
+        hint.className = 'gs-wq-hint';
+        hint.textContent = `提示：${e.hint}`;
+        details.appendChild(hint);
+    }
+    row.appendChild(details);
+    return row;
+}
+
+// 「下周预告」：当前进度之后的单元 → 期待感文案（不搞假倒计时，预告=诚实告知）
+function renderNextPreview() {
+    const el = els.modal.querySelector('#gs-edu-next');
+    if (!el) return;
+    const seq = unitSequence('math').map((u) => u.unit);
+    if (!seq.length) {
+        el.textContent = '单元序列加载中…';
+        return;
+    }
+    const next = seq.slice(getProgress().unit); // 进度之后的单元
+    if (!next.length) {
+        el.textContent = '当前进度已经覆盖全部单元——所有星辉门的知识点都在你手里了，去露一手吧！';
+        return;
+    }
+    const head = next.slice(0, 3).join('、');
+    el.textContent = `接下来会遇到：${head}${next.length > 3 ? ` 等 ${next.length} 个单元` : ''}。` +
+        '星辉门里这些知识点答对就算「提前解锁」——先在学校学到手，再来游戏里证明自己。';
+}
+
+// 回流趋势：近 4 周（含本周）主动开玩 / 回流开门简表 + 累计求助·提前解锁
+function renderWeekly() {
+    const box = els.modal.querySelector('#gs-edu-weekly');
+    if (!box) return;
+    const rep = getWeeklyReport();
+    const labels = ['本周', '上周', '2 周前', '3 周前']; // weeks 旧→新，倒序取
+    box.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'gs-weekly';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>周</th><th>主动开玩</th><th>回流开门</th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for (let i = rep.weeks.length - 1; i >= 0; i--) {
+        const w = rep.weeks[i];
+        const tr = document.createElement('tr');
+        const name = document.createElement('td');
+        name.textContent = `${labels[i] || w.key}（${w.key}）`;
+        const plays = document.createElement('td');
+        plays.textContent = `${w.plays} 次`;
+        const returns = document.createElement('td');
+        returns.textContent = `${w.returns} 次`;
+        tr.append(name, plays, returns);
+        tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    box.appendChild(table);
+    const foot = document.createElement('p');
+    foot.className = 'gs-hint';
+    foot.style.margin = '8px 0 0';
+    foot.textContent = `近 4 周主动开玩 ${rep.totalPlays} 次 · 回流开门 ${rep.totalReturns} 次 ｜ ` +
+        `累计求助提示 ${rep.helpRequests} 次 · 提前解锁 ${rep.earlyUnlocks} 次`;
+    box.appendChild(foot);
+}
+
+// 累计足迹：既有计数行原样保留（页尾），不动口径
+function renderEduStats() {
     const stats = els.modal.querySelector('#gs-edu-stats');
     if (!stats) return;
     const p = loadEduProgress();
@@ -368,7 +623,7 @@ function renderEduReport() {
         ['🎯 答题正确率', acc === null ? '暂无记录' : `${acc}%（答错 ${wrong} 次）`],
         ['🔥 当前连对', `${p.streak || 0} 次`],
     ];
-    // 分学科答对/答错（多学科引擎新增 p.subjects，契约 §6；无该字段时自动省略本段）
+    // 分学科答对/答错（多学科引擎 p.subjects，契约 §6；无该字段时自动省略本段）
     const metaMap = {};
     for (const m of eduSubjects()) metaMap[m.subject] = m;
     for (const [key, cnt] of Object.entries(p.subjects || {})) {
@@ -384,18 +639,32 @@ function renderEduReport() {
     );
     stats.innerHTML = rows.map(([k, v]) =>
         `<div class="vol-row"><label>${k}</label><span style="color:#c0c0d8;">${v}</span></div>`).join('');
-    renderHanziCollection(hanzi);
-    // 识字表注音异步加载（题库文件懒 fetch）：打开页面时 best-effort——
-    // 首次渲染用当前已有注音，加载完成且仍停在学习页时补渲染一次
-    ensureHanziBank().then(() => {
-        const page = els.modal && els.modal.querySelector('[data-page="edu"]');
-        if (page && !page.classList.contains('hidden')) {
-            renderHanziCollection(loadEduProgress().hanzi || []);
-        }
-    });
-    eduResetArmed = false;
-    const note = els.modal.querySelector('#gs-edu-reset-note');
-    if (note) note.textContent = '';
+}
+
+// ---------- 打印样式（从 JS 注入 <style>，不改 index.html——那是 B1 的文件） ----------
+// 只打印「本周带走」交接卡区域：visibility 方案——祖先 display:none（浮层关闭）时整块
+// 自然不参与打印；浮层开着时只保留 #gs-edu-handcard 子树可见并拎到页首全宽。
+// 答案 <details> 不强制处理：家长展开就带上答案，收起就只印题干（可控）。
+function ensureEduPrintStyle() {
+    if (document.getElementById('gs-edu-print-style')) return;
+    const style = document.createElement('style');
+    style.id = 'gs-edu-print-style';
+    style.textContent = `
+@media print {
+    body * { visibility: hidden !important; }
+    #gs-edu-handcard, #gs-edu-handcard * { visibility: visible !important; }
+    #gs-edu-handcard {
+        position: absolute; left: 0; top: 0; width: 100%;
+        background: #fff !important; border: none !important; box-shadow: none !important;
+        padding: 0 !important;
+    }
+    #gs-edu-handcard * { color: #000 !important; background: transparent !important; text-shadow: none !important; }
+    #gs-edu-handcard h4 { font-size: 16pt; margin: 0 0 6px; }
+    #gs-edu-handcard .gs-save-row { display: none !important; }
+    #gs-edu-handcard .gs-wq { border-bottom: 1px solid #bbb; break-inside: avoid; }
+    #gs-edu-handcard .gs-wq-group { font-weight: bold; margin-top: 8px; }
+}`;
+    document.head.appendChild(style);
 }
 
 // 识字图鉴渲染：每字一张小卡，下方注音（hanziInfo 查询自题库新格式），

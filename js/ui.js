@@ -11,10 +11,13 @@ import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { addXp, updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 import { camModeText, getBuildFilmingStatus, setCamMode } from './cameraRig.js';
-import { getUIState, mouseLocked, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
-import { downloadRecording, getRecordingStatus, initRecording, toggleBuildRecording } from './recording.js';
-export { isRecording, isCamOwnedRecording, toggleBuildRecording } from './recording.js';
+import { clearStuckKeys, getUIState, mouseLocked, onUIStateChange, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
+import { downloadRecording, getRecordingStatus, initRecording, isRecording, toggleBuildRecording } from './recording.js';
+export { isCamOwnedRecording, isLevelOwnedRecording, isRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
+// 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
+import { buildLevelCard, deleteLevelCard, exportLevelCardJson, getLevelCard, importLevelCardFromJson, listLevelCards, saveLevelCard, validateLevelCard } from './levelWorkshop.js';
+import { enterLevel, exitLevelRun, getBestScores, getHudState } from './levelRun.js';
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -573,7 +576,7 @@ export function updateBuildWidget() {
     buildEls.recBtn.classList.toggle('rec-on', rec.recording);
     const time = `${String(Math.floor(rec.elapsedSec / 60)).padStart(2, '0')}:${String(rec.elapsedSec % 60).padStart(2, '0')}`;
     buildEls.status.textContent = rec.recording
-        ? `● ${time} · ${rec.owner === 'cam' ? '施工自动录制' : '游戏录制'}${filming.finishing && rec.owner === 'cam' ? ' · 成品展示后保存' : ''}`
+        ? `● ${time} · ${rec.owner === 'cam' ? '施工自动录制' : rec.owner === 'level' ? '关卡宣传片' : '游戏录制'}${filming.finishing && rec.owner === 'cam' ? ' · 成品展示后保存' : ''}`
         : rec.saving ? '正在生成录像…' : rec.error || (filming.active ? '施工进行中 · 可随时开始录制' : '随时录下当前游戏画面');
     for (const [id, mode] of [['camera-player', 'player'], ['camera-auto', 'build'], ['camera-manual', 'free']]) {
         document.getElementById(id).setAttribute('aria-pressed', String(state.camMode === mode));
@@ -583,4 +586,663 @@ export function updateBuildWidget() {
         : state.camMode === 'build'
             ? (filming.bounds ? '已对准施工全景。切到手动调镜可调整位置，录像保持连续。' : '等待 AI 开工后自动对准施工范围。')
             : '录制当前视角与游戏声音，不含界面。AI 开工自动取景，完工展示 4 秒后保存。';
+}
+
+// ==================== 关卡工坊 UI（批次 W · B4） ====================
+// 契约：docs/edu-workshop-impl-contract.md §5。DOM 外壳（#level-list / #level-hud / #result-panel
+// 及按钮 id）由 B1 落地 index.html，本模块只接线——契约 id 优先引用，缺失时兜底自建（集成期防御，
+// B1 落地后即走 B1 的外壳与样式）。导出（main.js / B2 以可选链调用，名字一字不能差）：
+//   initLevelListUI()   绑导入/试玩/关闭按钮与文件选择（一次性，main.js init 时调）
+//   openLevelList() / closeLevelList()   #level-list 显隐（#btn-levels 由 B2 接到 openLevelList）
+//   renderLevelList()   关卡卡列表渲染（listLevelCards + 最佳成绩 + ▶/🎥/✕）
+//   updateLevelHud()    每帧：闯关 HUD（main.js gameLoop 调，值变化才写 DOM）
+//   updateResultPanel() 结算面板填充（main.js gameLoop 调 + onUIStateChange 兜底）
+
+const LEVEL_UI_STYLE = `
+/* ---- 显隐机制对齐兜底：B2 的 uiModal.syncOverlays 用 hidden class 驱动 #result-panel，
+   B1 的 .lvl-overlay 骨架默认 display:none、靠 .open 显示——两套机制在此对齐：
+   带 hidden 一律隐藏，不带 hidden 一律显示（初始 hidden 由 initLevelListUI 同步补上，无闪现）。
+   B1/B2 后续任一方统一机制后本段冗余无害。 ---- */
+.lvl-overlay.hidden { display: none !important; }
+.lvl-overlay:not(.hidden) { display: flex; }
+/* ---- 关卡列表行（列表行由 renderLevelList 动态渲染，B1 只给了容器与 .lvl-empty 空态） ---- */
+.level-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+ background:rgba(48,53,65,.6);border:1px solid #44475a;}
+.level-row .level-main{flex:1;min-width:0;}
+.level-row .level-name{font-weight:650;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.level-row .level-meta{color:#9a9ab8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.level-row .level-badge{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;
+ font-size:11px;background:#5d4a1f;color:#ffd77a;letter-spacing:0;}
+.level-row .level-btns{display:flex;gap:6px;flex:none;}
+.level-row .level-btns button{border:1px solid #565a67;border-radius:8px;background:#303541;
+ color:#edf0f7;cursor:pointer;font:inherit;padding:6px 9px;white-space:nowrap;}
+.level-row .level-btns button:hover{border-color:#acd58c;background:#404958;}
+.level-row .level-btns button.level-del-armed{background:#7f2933;border-color:#c95460;color:#fff;font-weight:650;}
+/* ---- 结算面板锁明细表（#result-locks 容器由 B1 提供，表体 B4 填充） ---- */
+#result-locks .result-lock-table{width:100%;border-collapse:collapse;font-size:13px;color:#e8e8f4;}
+#result-locks .result-lock-table th,#result-locks .result-lock-table td{border-bottom:1px solid #2d2d44;padding:4px 6px;text-align:left;}
+#result-locks .result-lock-table th{color:#9a9ab8;font-weight:500;}
+#result-locks .result-lock-empty{color:#9a9ab8;font-size:12px;text-align:center;}
+`;
+
+let levelStylesInjected = false;
+
+// 样式只注入一次（openLevelList / updateLevelHud 等入口都兜底调，防 main.js 未接 init 的阶段裸奔）
+function ensureLevelStyles() {
+    if (levelStylesInjected) return;
+    levelStylesInjected = true;
+    const style = document.createElement('style');
+    style.textContent = LEVEL_UI_STYLE;
+    document.head.appendChild(style);
+}
+
+function q(id) { return document.getElementById(id); }
+
+// 秒 → mm:ss（HUD / 结算 / 列表最佳成绩共用）
+function fmtSec(sec) {
+    const s = Math.max(0, Math.floor(Number(sec) || 0));
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// ISO 时间 → 'YYYY-MM-DD HH:mm'（列表创建时间）
+function fmtDate(iso) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return '';
+    const d = new Date(t);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// 卡名/作者等文本进 innerHTML 前转义
+function escapeHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ---- #level-list 外壳与子元素的兜底保障（B1 的 index.html 已落地骨架；这里 id 优先引用，
+//      缺失时按 B1 的 .lvl-panel 结构补建——集成期防御，命中 B1 骨架时全部 no-op）----
+let levelListFallback = null;
+
+function ensureLevelListDom() {
+    let panel = q('level-list');
+    if (!panel) {
+        if (!levelListFallback) {
+            // 兜底外壳：结构照 B1 的 .lvl-panel 骨架（B1 落地后不会走到）
+            levelListFallback = document.createElement('div');
+            levelListFallback.id = 'level-list';
+            levelListFallback.className = 'lvl-overlay hidden';
+            levelListFallback.innerHTML = `<div class="lvl-panel">
+              <div class="lvl-head"><h3>🗺 关卡</h3>
+                <button class="lvl-close" id="level-list-close" title="关闭">✕</button></div>
+              <div class="lvl-sub">闯关模式：试玩当前世界摆好的关卡区域，或导入 .json 关卡卡。</div>
+              <div id="level-list-rows"></div>
+              <div class="lvl-actions">
+                <button class="save-btn" id="btn-level-try">▶ 试玩当前世界</button>
+                <button class="save-btn" id="btn-level-import">📥 导入关卡卡</button>
+                <input type="file" id="level-file-input" accept=".json,application/json" hidden></div></div>`;
+            document.body.appendChild(levelListFallback);
+        }
+        panel = levelListFallback;
+    }
+    // 关闭钮：B1 的 id 是 level-list-close（候选其余为历史/兜底变体），缺失才补建
+    if (!panel.querySelector('#level-list-close,#btn-level-close,#level-close')) {
+        const close = document.createElement('button');
+        close.id = 'level-list-close';
+        close.className = 'lvl-close';
+        close.setAttribute('aria-label', '关闭关卡列表');
+        close.textContent = '✕';
+        (panel.querySelector('.lvl-head') || panel).appendChild(close);
+    }
+    // 行容器兜底
+    let rows = q('level-list-rows');
+    if (!rows) {
+        rows = document.createElement('div');
+        rows.id = 'level-list-rows';
+        panel.appendChild(rows);
+    }
+    return rows;
+}
+
+// ---- #result-panel 的四个按钮兜底保障（B1 骨架的按钮 id 已冻结且已落地；缺失时补建）----
+function ensureResultDom() {
+    let panel = q('result-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'result-panel';
+        panel.className = 'lvl-overlay hidden';
+        document.body.appendChild(panel);
+    }
+    const missing = ['btn-result-retry', 'btn-result-exit', 'btn-result-poster', 'btn-result-video']
+        .filter((id) => !q(id));
+    if (!missing.length) return panel; // B1 骨架齐全：no-op
+    const actions = panel.querySelector('.lvl-actions') || (() => {
+        const a = document.createElement('div');
+        a.className = 'lvl-actions';
+        panel.appendChild(a);
+        return a;
+    })();
+    for (const [id, label] of [
+        ['btn-result-retry', '🔄 重试'],
+        ['btn-result-exit', '🚪 退出'],
+        ['btn-result-poster', '📸 生成海报'],
+        ['btn-result-video', '🎥 拍宣传片'],
+    ]) {
+        if (!q(id)) {
+            const b = document.createElement('button');
+            b.id = id;
+            b.className = 'save-btn';
+            b.textContent = label;
+            actions.appendChild(b);
+        }
+    }
+    return panel;
+}
+
+// ==================== 关卡列表 ====================
+
+let levelListBound = false; // initLevelListUI 只绑一次
+let renderSeq = 0;          // 列表渲染竞态令牌：await 期间的旧响应不得覆盖新列表
+
+export function initLevelListUI() {
+    ensureLevelStyles();
+    ensureLevelListDom();
+    const rp = ensureResultDom();
+    // 初始隐藏：注入的 `.lvl-overlay:not(.hidden)` 对齐规则生效后，骨架默认 display:none 不再兜底，
+    // 必须在同一个同步任务里补上 hidden（无闪现）；此后 #level-list 归本模块、#result-panel 归
+    // uiModal.syncOverlays（B2）统一 toggle hidden。
+    const ll = q('level-list');
+    if (ll && !ll.classList.contains('hidden') && !ll.classList.contains('open')) ll.classList.add('hidden');
+    if (rp && !rp.classList.contains('hidden') && !rp.classList.contains('open')) rp.classList.add('hidden');
+    if (levelListBound) return;
+    levelListBound = true;
+
+    // ---- 导入：#btn-level-import → 隐藏 file input；选完文件 → importLevelCardFromJson ----
+    const importBtn = q('btn-level-import');
+    const fileInput = q('level-file-input');
+    if (importBtn && fileInput) {
+        importBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            const text = await file.text();
+            // 卡名提前解出来给 toast 用（import 内部也会 parse，这里失败不阻塞校验流程）
+            let name = '';
+            try { name = String(JSON.parse(text)?.name || ''); } catch { /* 让 import 报错文案出场 */ }
+            const r = await importLevelCardFromJson(text);
+            if (r.error) {
+                showTooltip(`❌ ${r.error}`);
+            } else {
+                const where = r.sessionOnly ? '仅本次会话' : '本机';
+                const warn = r.warnings && r.warnings.length ? ` · ⚠️ ${r.warnings.length} 条警告` : '';
+                showTooltip(`✅ 已导入 ${name || '关卡卡'}（存储：${where}）${warn}`);
+                renderLevelList();
+            }
+            fileInput.value = ''; // 允许连续导入同一文件
+        });
+    }
+
+    // ---- 试玩当前世界（G2 R4）：自动检测区域出卡（不落盘）→ 直接进关 ----
+    const tryBtn = q('btn-level-try');
+    if (tryBtn) {
+        tryBtn.addEventListener('click', async () => {
+            tryBtn.disabled = true;
+            try {
+                // buildLevelCard 是 async（A1）：全图扫描区域 + 逐锁取题
+                const card = await buildLevelCard({ name: '我的试玩关', author: '我' });
+                if (!card || card.error) {
+                    showTooltip(`❌ ${card?.error || '生成试玩关卡失败'}`);
+                    return;
+                }
+                const run = await enterLevel(card); // 不 saveLevelCard：试玩卡只存在内存
+                if (!run) {
+                    showTooltip('❌ 试玩失败：关卡嵌入世界出错');
+                    return;
+                }
+                closeLevelList(); // enterLevel 内部已 setState('playing')，这里只收起列表
+            } finally {
+                tryBtn.disabled = false;
+            }
+        });
+    }
+
+    // ---- 关闭钮：契约未冻结 id，候选查找优先，兜底钮在 ensureLevelListDom 里补建 ----
+    const closeBtn = q('btn-level-close') || q('level-list-close') || q('level-close');
+    if (closeBtn) closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeLevelList();
+    });
+
+    // ---- 点空白（overlay 本体）关闭：照设置浮层「点空白关闭」惯例；面板内容点击不关 ----
+    const listPanel = q('level-list');
+    if (listPanel) {
+        listPanel.addEventListener('click', (e) => {
+            if (e.target === listPanel) closeLevelList();
+        });
+    }
+
+    // ---- uiModal 状态联动：进入 result 态渲染一次结算面板（main.js 每帧调用之外的兜底）；
+    //      离开首屏（进世界）自动收起关卡列表 ----
+    onUIStateChange((_prev, next) => {
+        if (next === 'result') updateResultPanel();
+        if (next !== 'title') {
+            const panel = q('level-list');
+            if (panel && !panel.classList.contains('hidden')) closeLevelList();
+        }
+    });
+}
+
+export function openLevelList() {
+    initLevelListUI(); // 幂等（levelListBound 防重复绑）：兜底 main.js 只接 openLevelList 没接 init 的顺序
+    const panel = q('level-list');
+    if (!panel) return;
+    panel.classList.remove('hidden'); // 显隐照首屏浮层惯例（hidden class，同 #start-screen）
+    renderLevelList();
+}
+
+export function closeLevelList() {
+    const panel = q('level-list');
+    if (panel) panel.classList.add('hidden');
+}
+
+// 列表行：卡名/作者/锁数/创建时间/最佳成绩（★与用时）+ ▶ 进入 / 🎥 拍宣传片 / ✕ 删除（二次确认）
+async function buildLevelRow(summary) {
+    const card = await getLevelCard(summary.id); // 摘要不含锁数，逐卡取完整卡（列表量小，可接受）
+    const row = document.createElement('div');
+    row.className = 'level-row';
+    const main = document.createElement('div');
+    main.className = 'level-main';
+
+    if (!card) {
+        // 数据损坏 / IndexedDB 记录缺 card：只保留删除出口（契约 §8「卡已不在本机」同类降级）
+        main.innerHTML = `<div class="level-name">❓ ${escapeHtml(summary.name || '未知关卡')}</div>
+          <div class="level-meta">卡数据缺失或损坏，仅可删除</div>`;
+        row.appendChild(main);
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        bindDeleteButton(del, summary);
+        const btns = document.createElement('div');
+        btns.className = 'level-btns';
+        btns.appendChild(del);
+        row.appendChild(btns);
+        return row;
+    }
+
+    const locks = (card.questions || []).length;
+    const cps = (card.flags && card.flags.checkpoints || []).length;
+    const limit = card.rules && card.rules.timeLimit;
+    const best = getBestScores(summary.cardHash); // {stars,timeSec,deaths,plays} | null
+    const bestText = best && best.stars > 0
+        ? `${'★'.repeat(best.stars)}${'☆'.repeat(3 - best.stars)} ${fmtSec(best.timeSec)}`
+        : '尚未通关';
+    const sessionBadge = summary.sessionOnly ? '<span class="level-badge">仅本次会话</span>' : '';
+    const metaBits = [
+        `作者：${escapeHtml(card.author || '匿名')}`,
+        `🔒 ${locks} 锁`,
+        cps ? `🚩 ${cps} 检查点` : '',
+        limit ? `⏱ 限时 ${fmtSec(limit)}` : '',
+        card.created ? fmtDate(card.created) : '',
+        `最佳：${bestText}`,
+        best && best.plays ? `第 ${best.plays + 1} 次挑战` : '',
+    ].filter(Boolean);
+    main.innerHTML = `<div class="level-name">${escapeHtml(card.name || '未命名关卡')}${sessionBadge}</div>
+      <div class="level-meta">${metaBits.join(' · ')}</div>`;
+    if (summary.sessionOnly) {
+        // 会话卡说明：IndexedDB 不可用（隐私模式等）时的降级存储，刷新即失
+        main.title = '此卡只保存在本次会话中（浏览器 IndexedDB 不可用），刷新页面后将丢失';
+    }
+    row.appendChild(main);
+
+    const btns = document.createElement('div');
+    btns.className = 'level-btns';
+
+    // ▶ 进入：进关成功才收列表（enterLevel 内部负责存档/嵌世界/置出生点）
+    const play = document.createElement('button');
+    play.textContent = '▶ 进入';
+    play.addEventListener('click', async () => {
+        play.disabled = true;
+        const run = await enterLevel(card);
+        play.disabled = false;
+        if (!run) {
+            showTooltip('❌ 进入关卡失败：卡片可能已损坏');
+            return;
+        }
+        closeLevelList();
+    });
+    btns.appendChild(play);
+
+    // 🎥 拍宣传片（P1）：进关后立即开 level 档录像；通关/退出由 levelRun 侧守卫自动停
+    const film = document.createElement('button');
+    film.textContent = '🎥 拍宣传片';
+    film.addEventListener('click', async () => {
+        film.disabled = true;
+        const run = await enterLevel(card);
+        film.disabled = false;
+        if (!run) {
+            showTooltip('❌ 进入关卡失败：卡片可能已损坏');
+            return;
+        }
+        closeLevelList();
+        if (!isRecording()) {
+            toggleBuildRecording('level');
+            showTooltip('🎥 宣传片录制中——通关或退出自动保存');
+        }
+    });
+    btns.appendChild(film);
+
+    // ✕ 删除（二次确认，照仓库「点两次」惯例：第一次变「确认删除？」，3 秒不点自动退回）
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    bindDeleteButton(del, summary);
+    btns.appendChild(del);
+
+    row.appendChild(btns);
+    return row;
+}
+
+// 删除按钮的二次确认接线（列表行与损坏卡行共用）
+function bindDeleteButton(delBtn, summary) {
+    let armed = false;
+    let disarmTimer = null;
+    delBtn.addEventListener('click', async () => {
+        if (!armed) {
+            armed = true;
+            delBtn.textContent = '确认删除？';
+            delBtn.classList.add('level-del-armed');
+            disarmTimer = setTimeout(() => {
+                armed = false;
+                delBtn.textContent = '✕';
+                delBtn.classList.remove('level-del-armed');
+            }, 3000);
+            return;
+        }
+        clearTimeout(disarmTimer);
+        const removed = await deleteLevelCard(summary.id);
+        if (removed) showTooltip(`🗑 已删除「${summary.name || '关卡卡'}」`);
+        renderLevelList(); // 删除后整体重渲染
+    });
+}
+
+export async function renderLevelList() {
+    ensureLevelStyles();
+    const rows = ensureLevelListDom();
+    if (!rows) return;
+    const seq = ++renderSeq;
+    let cards = [];
+    try { cards = await listLevelCards(); } catch { cards = []; }
+    if (seq !== renderSeq) return; // await 期间有更新的渲染请求，丢弃本次
+    rows.innerHTML = '';
+    if (!cards.length) {
+        const empty = document.createElement('div');
+        empty.className = 'lvl-empty'; // B1 的空态样式
+        empty.textContent = '还没有关卡卡——去世界里放旗子和答题机，或让 🤖 帮你生成草稿';
+        rows.appendChild(empty);
+        return;
+    }
+    for (const summary of cards) {
+        const row = await buildLevelRow(summary);
+        if (seq !== renderSeq) return; // 过期响应不再追加
+        rows.appendChild(row);
+    }
+}
+
+// ==================== 闯关 HUD ====================
+// B1 骨架：#level-hud 静态含 #level-hud-time / #level-hud-deaths / #level-hud-locks 三个 span，
+// 显隐走 .visible class（F1 隐藏由 B1 的 body.hud-hidden 规则承担）。每帧被 main.js 调：
+// 值（秒/死亡/锁）没变就只动 class、不写 DOM。
+
+let lastHudKey = '';
+
+export function updateLevelHud() {
+    const hud = q('level-hud');
+    if (!hud) return;
+    const s = getHudState(); // levelRun 非激活 → null
+    if (!s) {
+        hud.classList.remove('visible');
+        lastHudKey = '';
+        return;
+    }
+    hud.classList.add('visible');
+    const key = `${Math.floor(s.time)}|${s.deaths}|${s.solved}|${s.total}`;
+    if (key === lastHudKey) return;
+    lastHudKey = key;
+    const t = q('level-hud-time');
+    const d = q('level-hud-deaths');
+    const l = q('level-hud-locks');
+    if (t && d && l) { // 正常路径：只改三个 span 的文本
+        t.textContent = fmtSec(s.time);
+        d.textContent = String(s.deaths);
+        l.textContent = `${s.solved}/${s.total}`;
+    } else { // 骨架缺失的兜底：整体重建（保持同样的三个 id 供 CSS 命中）
+        hud.innerHTML = `<span id="level-hud-time">${fmtSec(s.time)}</span>` +
+            ` · 💀 <span id="level-hud-deaths">${s.deaths}</span>` +
+            ` · 🔒 <span id="level-hud-locks">${s.solved}/${s.total}</span>`;
+    }
+}
+
+// ==================== 结算面板 ====================
+// B1 骨架（index.html 静态）：#result-title / #result-subtitle / #result-stars /
+// #result-time / #result-deaths / #result-locks（明细容器）+ 四个按钮。
+// 显隐由 B2 的 uiModal.syncOverlays 驱动（result 态 toggle hidden，openResultState 写
+// state.levelResult）；本函数只做内容填充，值对象不变不重写。
+
+let lastResultRef = null; // 同一结算对象只渲染一次（main.js 每帧调用 + onUIStateChange 兜底共用）
+let resultBound = false;  // 四个结算按钮只绑一次
+
+export function updateResultPanel() {
+    const panel = q('result-panel');
+    const result = state.levelResult;
+    if (!panel) return;
+    if (!result) {
+        lastResultRef = null;
+        return;
+    }
+    // 渲染时机：uiModal result 态，或面板已被显示（B2 任一先行调用方不空转）
+    if (getUIState() !== 'result' && panel.classList.contains('hidden')) return;
+    if (lastResultRef === result) return; // 同一对象且已渲染，跳过
+    lastResultRef = result;
+
+    ensureResultDom();
+    bindResultButtons();
+
+    const title = `${result.timeout ? '⏰ 超时 · ' : ''}${result.name || '未命名关卡'}`;
+    const stars = Math.max(0, Math.min(3, result.stars | 0));
+    const starText = result.timeout ? '☆☆☆' : '★'.repeat(stars) + '☆'.repeat(3 - stars);
+    const subtitle = `作者：${result.author || '匿名'}${result.isNewBest ? ' · 🏆 新纪录' : ''}`;
+
+    const t = q('result-title');
+    if (t) { // 正常路径：逐 id 填 B1 骨架
+        t.textContent = title;
+        const sub = q('result-subtitle');
+        if (sub) sub.textContent = subtitle;
+        const st = q('result-stars');
+        if (st) st.textContent = starText;
+        const tm = q('result-time');
+        if (tm) tm.textContent = fmtSec(result.timeSec);
+        const dt = q('result-deaths');
+        if (dt) dt.textContent = String(result.deaths | 0);
+        renderLockTable(q('result-locks'), result.locks);
+    } else { // 骨架缺失的兜底：自建内容区
+        let body = panel.querySelector('#result-body');
+        if (!body) {
+            body = document.createElement('div');
+            body.id = 'result-body';
+            body.className = 'lvl-panel';
+            panel.appendChild(body);
+        }
+        body.innerHTML = `<div class="lvl-head"><h3 id="result-title">${escapeHtml(title)}</h3></div>` +
+            `<div id="result-subtitle">${escapeHtml(subtitle)}</div>` +
+            `<div id="result-stars">${starText}</div>` +
+            `<div class="result-stats"><span>⏱ <span id="result-time">${fmtSec(result.timeSec)}</span></span>` +
+            `<span>💀 <span id="result-deaths">${result.deaths | 0}</span></span></div>` +
+            `<div id="result-locks"></div>`;
+        renderLockTable(body.querySelector('#result-locks'), result.locks);
+    }
+}
+
+// 锁明细表（#result-locks 容器内）：每锁 序号 / 局部位置 / 尝试次数 / ✅❌
+function renderLockTable(container, locks) {
+    if (!container) return;
+    if (!locks || !locks.length) {
+        container.innerHTML = '<div class="result-lock-empty">本关没有锁（纯跑酷）</div>';
+        return;
+    }
+    const rows = locks.map((l, i) =>
+        `<tr><td>#${i + 1}</td><td>${escapeHtml(l.pos)}</td><td>${l.tries | 0} 次</td>` +
+        `<td>${l.solved ? '✅' : '❌'}</td></tr>`).join('');
+    container.innerHTML = `<table class="result-lock-table">` +
+        `<thead><tr><th>锁</th><th>位置</th><th>尝试</th><th>结果</th></tr></thead>` +
+        `<tbody>${rows}</tbody></table>`;
+}
+
+// 结算面板按钮（绑一次；state.levelResult 在点击时现读，避免闭包旧值）
+function bindResultButtons() {
+    if (resultBound) return;
+    const retry = q('btn-result-retry');
+    const exit = q('btn-result-exit');
+    const poster = q('btn-result-poster');
+    const video = q('btn-result-video');
+    if (!retry || !exit) return; // 按钮一个都不在时放弃（ensureResultDom 已兜底，理论不可达）
+    resultBound = true;
+
+    // 🔄 重试：优先用运行时里的卡对象（试玩卡不在 IndexedDB，cardId 查库会落空），
+    // levelRun 已置 null 时退 cardId；enterLevel 内部 setState('playing') 自动关结算面板
+    retry.addEventListener('click', async () => {
+        const target = state.levelRun?.card || state.levelResult?.cardId;
+        if (!target) {
+            showTooltip('❌ 关卡数据已不在本机，无法重试');
+            return;
+        }
+        const run = await enterLevel(target);
+        showTooltip(run ? '🔄 重试开始！计时已清零' : '❌ 重试失败：关卡数据已不在本机');
+    });
+
+    // 🚪 退出：回首屏（exitLevelRun 内部收 level 录像 → 恢复原世界 → setState('title') 关面板）
+    exit.addEventListener('click', () => {
+        exitLevelRun({ toTitle: true });
+    });
+
+    // 📸 海报（P1，B6 落地 levelPoster.js）：动态 import + 可选链，模块缺失时温和提示
+    poster.addEventListener('click', async () => {
+        try {
+            const mod = await import('./levelPoster.js');
+            if (mod?.generateResultPoster) mod.generateResultPoster(state.levelResult);
+            else showTooltip('海报功能即将上线');
+        } catch {
+            showTooltip('海报功能即将上线');
+        }
+    });
+
+    // 🎥 拍宣传片（已通关场景）：level 档录像；已在录（列表页开过）不重复开也不再停
+    video.addEventListener('click', () => {
+        if (isRecording()) {
+            showTooltip('🎥 已在录制中');
+            return;
+        }
+        if (toggleBuildRecording('level')) {
+            showTooltip('🎥 宣传片录制中——通关或退出自动保存');
+        }
+    });
+}
+
+// ==================== 导出关卡卡面板（K 键，集成收口补齐） ====================
+// 作者流程最后一步（plan §2.1「按 K 导出」）：出题笔双通过后，K 释放鼠标填名字/昵称，
+// 导出 .level.json 文件（班级群分享）或存进本机关卡列表。考核锁意图来自
+// eduKeypad.getExamIntent()（B3），rules.lockAIHelp 在这里落卡。
+
+export function isLevelListOpen() {
+    const el = document.getElementById('level-list');
+    return !!el && !el.classList.contains('hidden');
+}
+
+export function openExportPanel() {
+    let panel = document.getElementById('export-panel');
+    if (!panel) {
+        // DOM 兜底自建（index.html 缺失时仍可用，正常路径走骨架）
+        panel = document.createElement('div');
+        panel.id = 'export-panel';
+        panel.className = 'lvl-overlay hidden';
+        panel.innerHTML = '<div class="lvl-panel"><div class="lvl-head"><h3>📤 导出关卡卡</h3></div><div id="export-status"></div><div class="lvl-actions"><button class="save-btn" id="btn-export-download">📤 导出并下载</button><button class="save-btn" id="btn-export-save">💾 存进本机关卡列表</button></div></div>';
+        document.body.appendChild(panel);
+    }
+    const name = document.getElementById('export-name');
+    const author = document.getElementById('export-author');
+    if (name && !name.value) name.value = '';
+    if (author && !author.value) {
+        try { author.value = localStorage.getItem('mcweb.level.author') || '我'; } catch { author.value = '我'; }
+    }
+    const status = document.getElementById('export-status');
+    if (status) {
+        try {
+            import('./eduKeypad.js').then(ek => {
+                const exam = ek?.getExamIntent?.();
+                status.textContent = exam
+                    ? '🔒 考核锁已开：这张卡在别人玩时 AI 助手会拒答提示。'
+                    : '导出前请确认：每把答题机都已用 ✏️ 出题笔出题并连过两次。';
+            }).catch(() => { });
+        } catch { }
+    }
+    panel.classList.remove('hidden');
+    state.levelExportOpen = true;
+    // 绑一次按钮（幂等标记）
+    if (!panel.dataset.bound) {
+        panel.dataset.bound = '1';
+        document.getElementById('btn-export-download')?.addEventListener('click', () => doLevelExport(true));
+        document.getElementById('btn-export-save')?.addEventListener('click', () => doLevelExport(false));
+        document.getElementById('export-panel-close')?.addEventListener('click', closeExportPanel);
+    }
+    clearStuckKeys(); // 清空移动键，避免开面板瞬间角色继续走
+}
+
+export function closeExportPanel() {
+    const panel = document.getElementById('export-panel');
+    if (panel) panel.classList.add('hidden');
+    state.levelExportOpen = false;
+    clearStuckKeys();
+}
+
+async function doLevelExport(andDownload) {
+    const nameEl = document.getElementById('export-name');
+    const authorEl = document.getElementById('export-author');
+    const name = (nameEl?.value || '').trim() || '我的关卡';
+    const author = (authorEl?.value || '').trim() || '我';
+    try { localStorage.setItem('mcweb.level.author', author); } catch { }
+    let examIntent = false;
+    try {
+        const ek = await import('./eduKeypad.js');
+        examIntent = !!ek?.getExamIntent?.();
+    } catch { }
+    const card = await buildLevelCard({
+        name,
+        author,
+        rules: { lockAIHelp: !examIntent }, // 考核锁开 = 别人玩时 AI 拒答提示（P3 生效）
+    });
+    if (!card || card.error) {
+        showTooltip('⚠️ ' + (card?.error || '当前世界没有可导出的关卡（先放旗子和答题机）'));
+        return;
+    }
+    const check = validateLevelCard(card);
+    if (check.errors && check.errors.length) {
+        showTooltip('⚠️ 导出被拦：' + check.errors[0]);
+        return;
+    }
+    const saved = await saveLevelCard(card);
+    if (!saved || !saved.ok) {
+        showTooltip('⚠️ 关卡卡保存失败');
+        return;
+    }
+    if (andDownload) {
+        try {
+            const json = exportLevelCardJson(card);
+            const blob = new Blob([json], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${name}.level.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        } catch { showTooltip('⚠️ 文件下载失败，卡已存进本机列表'); }
+    }
+    closeExportPanel();
+    const warn = check.warnings && check.warnings.length ? `（${check.warnings.length} 条提示，建议先「试玩」）` : '';
+    showTooltip(`✅ 已导出「${name}」${saved.sessionOnly ? '（仅本次会话）' : ''}${warn}`);
+    renderLevelList().catch(() => { });
 }

@@ -11,6 +11,7 @@ import {
     PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID,
     WATERWHEEL_ITEM_ID, SHAFT_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, SAW_ITEM_ID,
     CLUTCH_ITEM_ID, BELT_ITEM_ID, DEPLOYER_ITEM_ID, PULLEY_ITEM_ID, PLATFORM_ITEM_ID,
+    PEN_ID, FLAG_BASE, FLAG_CHECKPOINT, FLAG_GOAL, STARLIGHT_BASE,
 } from './config.js';
 import { atlasCanvas, blockUVs, tileSize } from './textures.js';
 
@@ -64,6 +65,12 @@ const SPECIAL_HINTS = {
     [ItemTypes.IRON_INGOT]: ['熔炉烧制铁矿石获得 · 铁器材料'],
     [ItemTypes.DIAMOND]: ['挖钻石矿石获得（需铁镐+）· 顶级材料'],
     [ItemTypes.GUNPOWDER]: ['苦力怕掉落 · 合成 TNT 的材料'],
+    // 关卡工坊（批次 W）：作者位道具与关卡锚点
+    [PEN_ID]: ['✏️ 出题笔：手持右键答题机 = 打开出题面板（自拟/抽题）', '每把锁要自己连过 2 次才算校验，之后 K 键导出关卡卡'],
+    [FLAG_BASE]: ['🚩 起点旗：关卡出生点（试玩/导入时从这里开始）'],
+    [FLAG_CHECKPOINT]: ['🚩 检查点旗：踩到即存重生点，死亡回到这里（计时不停）'],
+    [FLAG_GOAL]: ['🏁 终点旗：踩到即结算（用时/死亡/答题明细/星级）'],
+    [STARLIGHT_BASE]: ['🌟 星辉门：右键出「还没学」的超纲题，答对开门', '答对还回记录提前解锁；答错进带走清单，可以找 🤖 要提示'],
 };
 
 // 合成关系反查（懒构建）：某物品被哪些配方当材料 / 本身可由哪条配方产出

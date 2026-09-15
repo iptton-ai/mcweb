@@ -1,7 +1,7 @@
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, PEN_ID, STARLIGHT_BASE, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 
 // ==================== 纹理生成 ====================
@@ -214,6 +214,16 @@ export function generateAllTextures() {
         // ---- 教学组（Edu M2）：英语商人 tile 82 正面（条纹雨棚货摊）/ 识字矿石 tile 83（金纹矿石） ----
         { type: MERCHANT_ITEM_ID, top: 84, side: 82, bottom: 84, name: 'merchant' },
         { type: HANZI_ORE_ITEM_ID, top: 83, side: 83, bottom: 83, name: 'hanzi_ore' },
+        // ---- 关卡工坊（2026-09-15 P0）：旗面 tile 85..87（起点绿/检查点蓝黄/终点红白格）、
+        //      星辉门 tile 88..89（锁定紫金暗心 / 开启框内亮星）、出题笔图标 tile 90（紫杆铅笔）。
+        //      旗组与星辉门各变体在 tiles 里各自占一条，blockUVs 由烘焙循环逐 ID 自动生成；
+        //      旗子本体是 3D 道具网格（chunk.js 的旗杆铺 planks / 旗面铺 flag_* tile）
+        { type: FLAG_BASE, top: 85, side: 85, bottom: 85, name: 'flag_start' },
+        { type: FLAG_BASE + 1, top: 86, side: 86, bottom: 86, name: 'flag_checkpoint' },
+        { type: FLAG_BASE + 2, top: 87, side: 87, bottom: 87, name: 'flag_goal' },
+        { type: STARLIGHT_BASE, top: 88, side: 88, bottom: 88, name: 'starlight_locked' },
+        { type: STARLIGHT_BASE + 1, top: 89, side: 89, bottom: 89, name: 'starlight_open' },
+        { type: PEN_ID, top: 90, side: 90, bottom: 90, name: 'pen_item' },
     ];
 
     const drawFunctions = {
@@ -1172,6 +1182,101 @@ export function generateAllTextures() {
             ctx.fillStyle = '#8a8474';
             ctx.fillRect(x, y, s, 1); // 顶沿高光
         },
+        // ---- 关卡工坊（2026-09-15 P0）tile 85..90 ----
+        85: (ctx, x, y, s) => { // 起点旗面：绿底 + 深绿横波纹 + 白色「出发」圆点
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#3d9440'; // 底部渐深
+            ctx.fillRect(x, y + 10, s, s - 10);
+            ctx.fillStyle = '#5fc463'; // 顶沿高光
+            ctx.fillRect(x, y, s, 2);
+            ctx.fillStyle = '#2e7a32';
+            for (let i = 0; i < s; i += 4) ctx.fillRect(x + i, y + 6, 2, 1); // 波纹点
+            ctx.fillStyle = '#f0fff0';
+            ctx.fillRect(x + 6, y + 4, 4, 4); // 白色出发圆点
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(x + 7, y + 5, 2, 2); // 圆心镂空成环
+        },
+        86: (ctx, x, y, s) => { // 检查点旗面：蓝黄横条纹（中途补给意象）
+            const stripes = ['#2196f3', '#ffd84a'];
+            for (let i = 0; i < 8; i++) {
+                ctx.fillStyle = stripes[i % 2];
+                ctx.fillRect(x, y + i * 2, s, 2);
+            }
+            ctx.fillStyle = '#1565c0'; // 上下收边压住条纹
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1);
+            ctx.fillStyle = '#fff59a'; // 高光条
+            ctx.fillRect(x, y + 3, s, 1);
+        },
+        87: (ctx, x, y, s) => { // 终点旗面：红白格纹（赛车终点旗风格）
+            for (let gy = 0; gy < 4; gy++) {
+                for (let gx = 0; gx < 4; gx++) {
+                    ctx.fillStyle = (gx + gy) % 2 ? '#e04a3a' : '#f4f4f4';
+                    ctx.fillRect(x + gx * 4, y + gy * 4, 4, 4);
+                }
+            }
+            ctx.fillStyle = '#b8321f'; // 暗红收边
+            ctx.fillRect(x, y, s, 1);
+            ctx.fillRect(x, y + s - 1, s, 1);
+        },
+        88: (ctx, x, y, s) => { // 星辉门（锁定）：深紫底 + 金色门框 + 中央暗心（答对才点亮）
+            ctx.fillStyle = '#241543';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#8b5cf6'; // 紫底微光
+            ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
+            ctx.fillStyle = '#1a0f30';
+            ctx.fillRect(x + 4, y + 4, s - 8, s - 8); // 暗心
+            ctx.fillStyle = '#c9a227'; // 金门框
+            ctx.fillRect(x, y, s, 2);
+            ctx.fillRect(x, y + s - 2, s, 2);
+            ctx.fillRect(x, y, 2, s);
+            ctx.fillRect(x + s - 2, y, 2, s);
+            ctx.fillStyle = '#ffd84a'; // 框角铆钉
+            ctx.fillRect(x + 1, y + 1, 2, 2);
+            ctx.fillRect(x + s - 3, y + 1, 2, 2);
+            ctx.fillRect(x + 1, y + s - 3, 2, 2);
+            ctx.fillRect(x + s - 3, y + s - 3, 2, 2);
+            ctx.fillStyle = '#6b3fa0'; // 暗心星影（未点亮）
+            ctx.fillRect(x + 6, y + 5, 4, 1);
+            ctx.fillRect(x + 7, y + 4, 2, 6);
+            ctx.fillRect(x + 5, y + 7, 6, 1);
+        },
+        89: (ctx, x, y, s) => { // 星辉门（已开启）：同框但框内亮起金色星点（可通行）
+            ctx.fillStyle = '#241543';
+            ctx.fillRect(x, y, s, s);
+            ctx.fillStyle = '#8b5cf6';
+            ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
+            ctx.fillStyle = '#4a2f86'; // 开启后框内透亮
+            ctx.fillRect(x + 4, y + 4, s - 8, s - 8);
+            ctx.fillStyle = '#c9a227';
+            ctx.fillRect(x, y, s, 2);
+            ctx.fillRect(x, y + s - 2, s, 2);
+            ctx.fillRect(x, y, 2, s);
+            ctx.fillRect(x + s - 2, y, 2, s);
+            ctx.fillStyle = '#ffd84a';
+            ctx.fillRect(x + 1, y + 1, 2, 2);
+            ctx.fillRect(x + s - 3, y + 1, 2, 2);
+            ctx.fillRect(x + 1, y + s - 3, 2, 2);
+            ctx.fillRect(x + s - 3, y + s - 3, 2, 2);
+            ctx.fillStyle = '#fff2b0'; // 中央亮星（十字 + 斜辉）
+            ctx.fillRect(x + 7, y + 4, 2, 8);
+            ctx.fillRect(x + 4, y + 7, 8, 2);
+            ctx.fillStyle = '#fffbe0';
+            ctx.fillRect(x + 7, y + 7, 2, 2); // 星心
+        },
+        90: (ctx, x, y, s) => { // 出题笔图标：斜放铅笔（紫杆 + 金箍 + 深色笔尖）
+            ctx.fillStyle = '#8b5cf6';
+            for (let i = 0; i < 8; i++) ctx.fillRect(x + 3 + i, y + 12 - i, 2, 2); // 紫杆（照木棍斜放）
+            ctx.fillStyle = '#6d3fc0';
+            for (let i = 0; i < 8; i++) ctx.fillRect(x + 5 + i, y + 12 - i, 1, 1); // 杆身暗纹
+            ctx.fillStyle = '#c9a227'; // 金箍
+            ctx.fillRect(x + 10, y + 5, 2, 2);
+            ctx.fillStyle = '#4a2a10'; // 木削
+            ctx.fillRect(x + 11, y + 3, 2, 2);
+            ctx.fillStyle = '#2a2a2a'; // 笔尖
+            ctx.fillRect(x + 12, y + 2, 2, 2);
+        },
     };
 
     for (const tile of tiles) {
@@ -1311,6 +1416,14 @@ const TILE_OVERRIDES = [
     { file: 'assets/textures/keypad_solved.png', tile: 'keypad_solved' },
     { file: 'assets/textures/merchant.png', tile: 'merchant' },
     { file: 'assets/textures/hanzi_ore.png', tile: 'hanzi_ore' },
+    // 关卡工坊（P0）预留：旗面与星辉门的 ComfyUI 贴图可后补——生成 16×16 PNG 放
+    // assets/textures/ 后解开注释即可覆盖程序化兜底（加载器自动重绘图集与派生道具纹理）
+    // { file: 'assets/textures/flag_start.png', tile: 'flag_start' },
+    // { file: 'assets/textures/flag_checkpoint.png', tile: 'flag_checkpoint' },
+    // { file: 'assets/textures/flag_goal.png', tile: 'flag_goal' },
+    // { file: 'assets/textures/starlight_locked.png', tile: 'starlight_locked' },
+    // { file: 'assets/textures/starlight_open.png', tile: 'starlight_open' },
+    // { file: 'assets/textures/pen_item.png', tile: 'pen_item' },
 ];
 
 const tileOverrideListeners = [];

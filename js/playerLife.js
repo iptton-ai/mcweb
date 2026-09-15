@@ -14,6 +14,7 @@ import { killEnemySilent } from './entities.js';
 import { updateHotbar } from './ui.js';
 import { setState } from './uiModal.js';
 import { resetCamMode } from './cameraRig.js';
+import { getRespawnPos, isLevelRunActive, onPlayerDeath } from './levelRun.js'; // 闯关模式：死亡记账与检查点重生（批次 W）
 
 // ==================== 玩家伤害与重生 ====================
 export function damagePlayer(dmg) {
@@ -36,6 +37,7 @@ export function damagePlayer(dmg) {
 export function die() {
     const p = state.player;
     p.dead = true;
+    onPlayerDeath(); // 闯关中：死亡数 +1（计时不停；非闯关时 levelRun 为空，内部直接跳过）
     document.getElementById('death-screen').classList.add('visible');
     setState('dead'); // 状态机负责解锁指针，且死亡时不会误弹暂停菜单
 }
@@ -49,9 +51,18 @@ export function respawn() {
     p.invulnTimer = 2;
     p.fallStartY = null;
     resetCamMode(); // 摄像头可能停在自由/跟拍机位，重生后回到玩家视角看重生点
-    p.x = state.spawn.x;
-    p.y = state.spawn.y;
-    p.z = state.spawn.z;
+    // 闯关中重生点 = 最近激活的检查点旗 | 起点旗（块坐标，落点 +0.5 居中 / +1 落旗顶，
+    // 与 levelRun.tickLevelRun 的掉界传送同款换算）；非闯关照旧用世界出生点
+    const rp = isLevelRunActive() ? getRespawnPos() : null;
+    if (rp) {
+        p.x = rp.x + 0.5;
+        p.y = rp.y + 1;
+        p.z = rp.z + 0.5;
+    } else {
+        p.x = state.spawn.x;
+        p.y = state.spawn.y;
+        p.z = state.spawn.z;
+    }
     p.vx = p.vy = p.vz = 0;
     // 死亡不再清背包（2026-09-05 起工具有合成成本，清空惩罚过重；对齐参考版「在出生点重生」）
     document.getElementById('death-screen').classList.remove('visible');
@@ -88,6 +99,9 @@ export function doEat(itemId) {
 export function updateSurvivalStats(dt) {
     const p = state.player;
     if (p.dead || isCreative()) return;
+    // 闯关模式：冻结饥饿/氧气消耗与溺水（关卡里没有食物来源，饿死/淹死不属于关卡挑战）。
+    // 摔落伤害不在此函数——结算在 playerPhysics.js 的 fallStartY 落地判定，照常生效（W02/W11）
+    if (isLevelRunActive()) return;
     // 「在移动」判定：实际产生水平位移且在地面（游泳消耗减半，原地划水不算）
     const moving = Math.hypot(p.vx, p.vz) > 0.6 && (p.onGround || p.inWater);
 

@@ -1,6 +1,6 @@
 // ==================== tnt.js ====================
 
-import { BlockTypes, CHUNK_SIZE, WORLD_DEPTH, WORLD_WIDTH } from './config.js';
+import { BlockTypes, CHUNK_SIZE, WORLD_DEPTH, WORLD_WIDTH, isDoorId, isFlagId, isKeypadId, isStarlightId } from './config.js';
 import { state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
@@ -12,6 +12,7 @@ import { showTooltip } from './ui.js';
 import { fixPistonAround } from './piston.js';
 import { updateRedstoneNetwork } from './redstone.js';
 import { updateKineticNetwork } from './kinetic.js';
+import { isLevelRunActive } from './levelRun.js';
 
 // ==================== TNT 爆炸 ====================
 export function spawnTntEntity(bx, by, bz) {
@@ -35,10 +36,18 @@ export function updateTnt(dt) {
     }
 }
 
+// 清空点燃中的 TNT 实体（关卡工坊：levelRun.enterLevel 清场用；实体只有数据无网格，清数组即可）
+export function clearTntEntities() {
+    state.tntEntities.length = 0;
+}
+
 export function explode(cx, cy, cz) {
     playExplosionSound();
     const R = 3;
     const chunksToRebuild = new Set();
+    // 闯关模式（W12 爆炸保护）：锁具/旗组/星辉门/门免疫爆炸——谜题结构不许被炸穿；
+    // 普通方块照炸（苦力怕在关卡里本就不刷，这里的 TNT 来自关卡作者自己的布置）
+    const protectLevelBlocks = isLevelRunActive();
     for (let dx = -R; dx <= R; dx++) {
         for (let dy = -R; dy <= R; dy++) {
             for (let dz = -R; dz <= R; dz++) {
@@ -47,6 +56,8 @@ export function explode(cx, cy, cz) {
                 const x = cx + dx, y = cy + dy, z = cz + dz;
                 const bt = getBlock(x, y, z);
                 if (bt === BlockTypes.AIR || bt === BlockTypes.BEDROCK) continue;
+                if (protectLevelBlocks &&
+                    (isKeypadId(bt) || isFlagId(bt) || isStarlightId(bt) || isDoorId(bt))) continue;
                 if (bt === BlockTypes.TORCH) removeTorchLightAt(x, y, z);
                 if (isCustomMesh(bt)) removeDroppedItemAt(x, y, z);
                 setBlockSafe(x, y, z, BlockTypes.AIR);

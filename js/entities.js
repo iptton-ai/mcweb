@@ -17,6 +17,7 @@ import { spawnItemDrop } from './items.js';
 import { addXp, damagePlayer } from './playerLife.js';
 import { showTooltip } from './ui.js';
 import { explode } from './tnt.js';
+import { isLevelRunActive } from './levelRun.js'; // 闯关模式：刷怪 gate（批次 W，无怪关卡）
 
 // ==================== 玩家模型（第三人称显示） ====================
 export let playerMesh = null;
@@ -272,8 +273,10 @@ export function attemptSpawnAt(bx, bz) {
     }
 }
 
-// 每游戏刻（50ms）调用：在 24~128 格环带内随机取列尝试生成敌对生物（生存·夜晚）
+// 每游戏刻（50ms）调用：在 24~128 格环带内随机取列尝试生成敌对生物（生存·夜晚）。
+// 闯关模式（W11 无怪）：直接 return——僵尸/苦力怕会砸谜题节奏
 export function mobSpawnTick() {
+    if (isLevelRunActive()) return;
     if (state.enemies.length >= MAX_ENEMIES) return;
     const p = state.player;
     for (let i = 0; i < SPAWN_ATTEMPTS_PER_TICK; i++) {
@@ -287,8 +290,10 @@ export function mobSpawnTick() {
     }
 }
 
-// 被动生物补充（白天·草地，创造模式也刷——风景与食物来源）：16~48 格环带
+// 被动生物补充（白天·草地，创造模式也刷——风景与食物来源）：16~48 格环带。
+// 闯关模式同样 gate（与 mobSpawnTick 同款守卫，掉卡外刷猪 = 幽灵实体）
 function passiveSpawnTick() {
+    if (isLevelRunActive()) return;
     const passives = state.enemies.filter((e) => !e.hostile);
     if (passives.length >= MAX_PASSIVE_MOBS) return;
     const p = state.player;
@@ -371,6 +376,12 @@ export function killEnemySilent(e) {
     scene.remove(e.mesh);
     const idx = state.enemies.indexOf(e);
     if (idx >= 0) state.enemies.splice(idx, 1);
+}
+
+// 清空全部生物（不掉落、不给经验、无粒子）：levelRun.enterLevel 进关清场用
+// （快照遍历防 killEnemySilent 原地 splice 跳号，照 updateEnemies 的惯例）
+export function clearAllEnemies() {
+    for (const e of [...state.enemies]) killEnemySilent(e);
 }
 
 // ==================== 每帧驱动 ====================

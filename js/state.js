@@ -63,6 +63,10 @@ export const state = {
     assistantOpen: false, // AI 助手会话面板是否打开（由 uiModal.js 状态机维护的镜像字段）
     buildSpeedIdx: BUILD_DEFAULT_SPEED_IDX, // 施工速度档位（BUILD_SPEED_LEVELS 下标，[ ] 键可调）
     buildPaused: false, // 施工暂停（录制时可暂停调整机位）
+    // ---- 关卡工坊（批次 W，2026-09-15，见 js/levelRun.js / docs/edu-workshop-impl-contract.md）----
+    levelRun: null, // 闯关运行时（非 null = 闯关中：存档被冻结、挖/放/模式切换等被守卫拦截）
+    levelResult: null, // 最近一局结算数据（result 态浮层 #result-panel 的填充源，见 uiModal.js）
+    levelExportOpen: false, // K 释放鼠标操作导出关卡卡面板（作者流程最后一步），同拍摄面板的非暂停浮层
 };
 
 export function isCreative() {

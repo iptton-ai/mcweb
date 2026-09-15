@@ -1,7 +1,7 @@
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, HANZI_ORE, isKeypadId, isKineticId, isLampId, isLeverId, isMerchantId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isToolId, kineticItemId, keypadSolved, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
+import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PEN_ID, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, STARLIGHT_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, HANZI_ORE, isKeypadId, isKineticId, isLampId, isLeverId, isMerchantId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isStarlightId, isToolId, kineticItemId, keypadSolved, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock, getBlockIndex } from './world.js';
@@ -22,9 +22,11 @@ import { keys } from './input.js'; // Shift 绕过台/炉交互用（运行时�
 // 注意：ui.js 也 import 本模块的 raycastBlocks，循环依赖均为运行时函数调用，安全
 // （mining.js ↔ 本模块同理：本模块只运行时调用 getHeldTool）
 import { openItemPicker, showTooltip, updateHotbar } from './ui.js';
-import { interactKeypadAt } from './eduKeypad.js'; // 答题机右键答题（Edu M1）
+import { interactKeypadAt, interactKeypadAuthorAt } from './eduKeypad.js'; // 答题机右键答题（Edu M1）；持出题笔右键 = 作者面板（B3）
 import { interactMerchantAt } from './eduMerchant.js'; // 英语商人右键交易（Edu M2）
+import { interactStarlightAt } from './eduStarlight.js'; // 星辉门右键答题（关卡工坊 P2）
 import { ensureHanziBank, collectHanziAt } from './eduRewards.js'; // 识字矿石记字（Edu M2）
+import { isLevelRunActive } from './levelRun.js'; // 闯关模式守卫（W11 绕过通道全闭）
 
 ensureHanziBank(); // 预热识字表（异步，不阻塞；首次挖矿前通常已就绪，未就绪则该次只掉物不记字）
 
@@ -203,6 +205,12 @@ export function tryAttackEnemy() {
 // 破坏一格方块（mining.js 蓄力完成/即挖时调用，hit 来自 raycastBlocks）。
 // 生存掉落规则照搬原版：石头→圆石、草方块→泥土、玻璃/树叶→无掉落（见 config.js BlockInfo.drop）。
 export function breakBlockAt(hit) {
+    // 闯关模式（W11）：关卡世界是作者搭好的谜题，破坏 = 拆锁/拆旗作弊，一律拒绝
+    // （攻击路径在 tryAttackEnemy，不经本函数，不受影响；mining.js 蓄力路径另有短路）
+    if (isLevelRunActive()) {
+        showTooltip('🚫 闯关中不能破坏方块');
+        return;
+    }
     if (hit.block === BlockTypes.BEDROCK) return;
     // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
     if (isRedstoneId(hit.block)) {
@@ -335,8 +343,14 @@ export function placeBlock() {
             return;
         }
     }
-    // 右键门 = 开/关整扇门（原版交互），不放置方块
+    // 右键门 = 开/关整扇门（原版交互），不放置方块。
+    // 闯关模式拒绝手动开关（W11）：门只能由答题机/星辉门答对后的红石信号打开
+    // （红石边沿驱动走 redstone.js applyDoorPower，不经此处，不受影响）
     if (hit && isDoorId(hit.block)) {
+        if (isLevelRunActive()) {
+            showTooltip('🚪 这扇门要用知识打开');
+            return;
+        }
         toggleDoorAt(hit.x, hit.y, hit.z);
         return;
     }
@@ -354,6 +368,12 @@ export function placeBlock() {
         toggleLeverAt(hit.x, hit.y, hit.z);
         return;
     }
+    // 持出题笔右键答题机 = 作者面板（关卡工坊：自拟/抽题/双通过，见 eduKeypad.js B3）。
+    // 放在答题分支之前：出题时按的是笔的身份，不是考生身份
+    if (hit && heldId === PEN_ID && isKeypadId(hit.block)) {
+        interactKeypadAuthorAt(hit.x, hit.y, hit.z);
+        return;
+    }
     // 右键答题机 = 开始答题（Edu M1：答对翻转为常供能信号源，数学密码门）
     if (hit && isKeypadId(hit.block)) {
         interactKeypadAt(hit.x, hit.y, hit.z);
@@ -364,7 +384,18 @@ export function placeBlock() {
         interactMerchantAt(hit.x, hit.y, hit.z);
         return;
     }
+    // 右键星辉门 = 超纲知识点答题（关卡工坊 P2：答对翻转为可通行 + 常供能信号源）
+    if (hit && isStarlightId(hit.block)) {
+        interactStarlightAt(hit.x, hit.y, hit.z);
+        return;
+    }
     if (hit && hit.face) {
+        // 闯关模式（W11）：默认放置一律拒绝——关卡谜题不允许搭桥/垫脚绕过；
+        // 上面的右键交互链（答题机/星辉门/门红石/TNT/拉杆等）不受影响
+        if (isLevelRunActive()) {
+            showTooltip('🚫 闯关中不能放置方块');
+            return;
+        }
         const bx = hit.x + hit.face.dx;
         const by = hit.y + hit.face.dy;
         const bz = hit.z + hit.face.dz;
@@ -518,11 +549,18 @@ export function pickBlockItem(blockId) {
     if (isPistonHeadId(blockId)) return PISTON_ITEM_ID;
     if (isObserverId(blockId)) return OBSERVER_ITEM_ID;
     if (isKineticId(blockId)) return kineticItemId(blockId);
+    // 星辉门：开启变体吸取回锁定代表变体（旗三变体本就映射自身，走默认 return）
+    if (isStarlightId(blockId)) return STARLIGHT_BASE;
     return blockId;
 }
 
 // 创造模式中键吸取：准星方块对应的物品直接选中（物品栏没有的会提示）
 export function pickBlockUnderCrosshair() {
+    // 闯关模式（W11）：恒为生存且不许吸取（吸取会带出锁定变体等关卡方块，破坏谜题一致性）
+    if (isLevelRunActive()) {
+        showTooltip('🚫 闯关中不能吸取方块');
+        return;
+    }
     const hit = raycastBlocks();
     if (!hit) return;
     const itemId = pickBlockItem(hit.block);

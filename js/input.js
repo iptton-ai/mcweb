@@ -12,8 +12,9 @@ import { swingViewmodel } from './viewmodel.js';
 import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
-import { openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
+import { closeExportPanel, closeLevelList, isLevelListOpen, openExportPanel, openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
 import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
+import { exitLevelRun, isLevelRunActive } from './levelRun.js'; // 闯关模式：绕过通道全闭（W11）+ 结算态退出
 
 // ==================== 输入状态 ====================
 export const keys = {};
@@ -65,26 +66,46 @@ export function setupInput() {
 
         // Esc：指针锁定时浏览器截获 Esc（页面收不到 keydown），这里只处理浮层状态下的 Esc
         if (e.code === 'Escape') {
-            if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
+            if (state.levelExportOpen) closeExportPanel(); // 导出面板：关面板回游戏
+            else if (isLevelListOpen()) closeLevelList(); // 首屏关卡列表浮层：关闭（B1 关闭钮 title 承诺的行为）
+            else if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
+            else if (st === 'result') exitLevelRun({ toTitle: true }); // 结算浮层：退出关卡回首屏
             else if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
             return;
         }
         // Q：Esc 的替代键（推荐在 ZCode 内嵌浏览器里用——Esc 会被宿主截获导致应用退出，Q 不会）：
         // 锁定时释放鼠标并弹暂停菜单；暂停/背包里回游戏；设置浮层里关闭浮层
         if (e.code === 'KeyQ') {
-            if (st === 'settings') closeSettingsState();
+            if (state.levelExportOpen) closeExportPanel();
+            else if (isLevelListOpen()) closeLevelList();
+            else if (st === 'settings') closeSettingsState();
+            else if (st === 'result') exitLevelRun({ toTitle: true });
             else if (st === 'pause' || st === 'inventory') setState('playing');
             else if (st === 'playing' && mouseLocked) releasePointerToPause();
             return;
         }
-        // E：打开物品选择网格（openItemPicker 负责构建网格再进入 inventory 态）；
-        // 背包开着时按 E 收起（点选物品也会自动收起，无需再按）
-        if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
-            if (st === 'playing') openItemPicker();
-            else setState('playing');
+        // K：导出关卡卡（作者流程最后一步，plan §2.1「按 K 导出」）——非暂停浮层，
+        // 释放鼠标填名字/作者昵称，导出 .level.json 或存进本机关卡列表
+        if (e.code === 'KeyK' && st === 'playing' && !state.recordingControlsOpen) {
+            if (isLevelRunActive()) showTooltip('📦 闯关中不能导出关卡卡');
+            else if (state.levelExportOpen) closeExportPanel();
+            else openExportPanel();
             return;
         }
-        if (st !== 'playing' || state.recordingControlsOpen) {
+        // E：打开物品选择网格（openItemPicker 负责构建网格再进入 inventory 态）；
+        // 背包开着时按 E 收起（点选物品也会自动收起，无需再按）。
+        // 闯关模式禁开背包（W11）——物品栏能摸到全部方块与工具，等于作弊入口
+        if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
+            if (st === 'playing') {
+                if (isLevelRunActive()) {
+                    showTooltip('🎒 闯关中不能打开物品栏');
+                    return;
+                }
+                openItemPicker();
+            } else setState('playing');
+            return;
+        }
+        if (st !== 'playing' || state.recordingControlsOpen || state.levelExportOpen) {
             // 暂停菜单/背包/助手面板/死亡界面里：只放行 AI 施工控制键
             if (st !== 'title') handleBuildKeys(e);
             return;
@@ -94,10 +115,14 @@ export function setupInput() {
         if (e.code === 'KeyZ') {
             dropHeldItem();
         }
-        // 空格双击（创造）：切换飞行
-        if (e.code === 'Space' && state.camMode === 'player' && isCreative() && !e.repeat) {
+        // 空格双击（创造）：切换飞行。闯关中显式拒绝（W11；虽然闯关恒为生存、
+        // 创造分支本就进不来，这里按守卫矩阵留一道明示的闸并给出提示）
+        if (e.code === 'Space' && state.camMode === 'player' && !e.repeat &&
+            (isCreative() || isLevelRunActive())) {
             const now = performance.now();
-            if (now - lastSpaceAt < 300) {
+            if (isLevelRunActive()) {
+                showTooltip('🕊️ 闯关中不能飞行');
+            } else if (now - lastSpaceAt < 300) {
                 state.player.flying = !state.player.flying;
                 state.player.vy = 0;
                 showTooltip(state.player.flying ? '🕊️ 飞行开启' : '🚶 飞行关闭');
@@ -123,7 +148,9 @@ export function setupInput() {
         }
         if (e.code === 'F6') {
             e.preventDefault();
-            if (!isCreative()) {
+            if (isLevelRunActive()) {
+                showTooltip('⏳ 闯关中不能调整昼夜');
+            } else if (!isCreative()) {
                 showTooltip('☀️ 只有建造模式可以调整昼夜');
             } else {
                 const dayLen = state.dayLength;
@@ -134,7 +161,9 @@ export function setupInput() {
             }
         }
         if (e.code === 'KeyF') {
-            if (isCreative()) {
+            if (isLevelRunActive()) {
+                showTooltip('🕊️ 闯关中不能飞行');
+            } else if (isCreative()) {
                 state.player.flying = !state.player.flying;
                 state.player.vy = 0;
                 showTooltip(state.player.flying ? '🕊️ 飞行开启' : '🚶 飞行关闭');
@@ -143,7 +172,11 @@ export function setupInput() {
             }
         }
         if (e.code === 'KeyM') {
-            toggleGameMode();
+            if (isLevelRunActive()) {
+                showTooltip('⚔️ 闯关中不能切换模式');
+            } else {
+                toggleGameMode();
+            }
         }
         if (e.code === 'F5' || e.code === 'KeyV') {
             e.preventDefault(); // 阻止 F5 刷新页面
@@ -225,7 +258,7 @@ export function setupInput() {
     document.addEventListener('click', () => {
         // playing 但指针未锁定（如冷却期锁定失败）：任意点击重新锁定。
         // 助手面板打开时鼠标归面板，不在此抢锁。
-        if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen && !isPlaying()) requestLock();
+        if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen && !state.levelExportOpen && !isPlaying()) requestLock();
     });
 }
 

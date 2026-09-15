@@ -1336,6 +1336,39 @@ BlockInfo[HANZI_ORE] = {
     drop: ItemTypes.COAL, xp: 3, edu: true,
 };
 
+// ---- 关卡工坊（2026-09-15 P0 批次）BlockInfo 注册 ----
+// 旗组三变体（照答题机样例循环注册）：非实心道具格（customMesh 走 chunk.js 旗杆+旗面网格），
+// 即挖（硬度 0.05）、transparent 使邻面不剔除；drop=自身 ID（作者要能拆走重摆，变体不混淆）
+const FLAG_NAMES = ['起点旗', '检查点旗', '终点旗'];
+for (let kind = 0; kind < FLAG_COUNT; kind++) {
+    BlockInfo[flagId(kind)] = {
+        name: FLAG_NAMES[kind],
+        solid: false, transparent: true, customMesh: true,
+        color: ['#4caf50', '#2196f3', '#e04a3a'][kind],
+        hardness: 0.05,
+        drop: flagId(kind),
+        edu: true,
+    };
+}
+
+// 星辉门两变体：满格立方体走普通面渲染（customMesh:false，同答题机/识字矿石——
+// 半透明发光感全靠贴图，不进道具网格路径）；锁定=实心挡路（锁具本体），
+// 开启=非实心可通行（答对后开门）。drop 固定锁定变体，防开启态 ID 进背包不叠堆
+for (let open = 0; open < STARLIGHT_COUNT; open++) {
+    BlockInfo[starlightId(open)] = {
+        name: open ? '星辉门（已开启）' : '星辉门',
+        solid: open === 0,
+        transparent: true, customMesh: false,
+        color: open ? '#c9a227' : '#8b5cf6',
+        hardness: open ? 0.5 : 1,
+        drop: STARLIGHT_BASE,
+        edu: true,
+    };
+}
+
+// 出题笔（物品非方块非工具，照木棍/苹果样例注册；无 food）：手持右键答题机=作者面板
+BlockInfo[PEN_ID] = { item: true, name: '✏️ 出题笔', color: '#8b5cf6', edu: true };
+
 // ==================== 选取形状（outline）：不满格道具的「被瞄准形状」 ====================
 // 照原版把「占一格」与「被瞄准/框选的形状」解耦：outline 是格内局部 AABB 列表
 // （平铺 [x0,y0,z0,x1,y1,z1, ...]，格子角点坐标系）。interaction.js 的 raycastBlocks
@@ -1407,6 +1440,12 @@ for (let f = 0; f < 6; f++) {
 }
 // 传送带：贴地薄板（4 向同形，带向只影响贴图箭头）
 for (let dir = 0; dir < 4; dir++) BlockInfo[beltId(dir)].outline = [0, 0, 0, 1, 0.12, 1];
+// 旗（关卡工坊 P0）：杆是细柱 [0.42,0,0.42,0.58,1.0,0.58]、旗面挂杆上部可略宽
+// （x 0.2..0.8 / y 0.45..0.85 / z 与杆同薄位）——outline 是单 AABB 装不下「杆+面」两段，
+// 取两者并集包围盒：框比旗杆略宽（旗面区域也能点到），网格实际几何见 chunk.js buildFlagMesh
+for (let kind = 0; kind < FLAG_COUNT; kind++) {
+    BlockInfo[flagId(kind)].outline = [0.2, 0, 0.42, 0.8, 1.0, 0.58];
+}
 
 // 查询助手：outlineOf 取局部 AABB 平铺数组（无 = 整格）；outlineUnion 取全部盒的包围盒（黑框用）
 export function outlineOf(id) {
