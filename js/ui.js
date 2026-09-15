@@ -18,6 +18,7 @@ import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 // 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
 import { buildLevelCard, deleteLevelCard, exportLevelCardJson, getLevelCard, importLevelCardFromJson, listLevelCards, saveLevelCard, validateLevelCard } from './levelWorkshop.js';
 import { enterLevel, exitLevelRun, getBestScores, getHudState } from './levelRun.js';
+import { renderRegionThumbnail } from './levelPoster.js'; // P1 · B6：俯视缩略图（列表行 + 导出随卡入库）
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -608,6 +609,9 @@ const LEVEL_UI_STYLE = `
 /* ---- 关卡列表行（列表行由 renderLevelList 动态渲染，B1 只给了容器与 .lvl-empty 空态） ---- */
 .level-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
  background:rgba(48,53,65,.6);border:1px solid #44475a;}
+/* ---- 列表缩略图（P1 · B6 俯视色块图）：128px 源图按 64px 展示，object-fit 保形 ---- */
+.level-row .level-thumb{width:64px;height:64px;flex:none;border-radius:8px;object-fit:cover;
+ border:1px solid #44475a;background:#20242e;}
 .level-row .level-main{flex:1;min-width:0;}
 .level-row .level-name{font-weight:650;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .level-row .level-meta{color:#9a9ab8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -743,6 +747,37 @@ function ensureResultDom() {
 let levelListBound = false; // initLevelListUI 只绑一次
 let renderSeq = 0;          // 列表渲染竞态令牌：await 期间的旧响应不得覆盖新列表
 
+// 缩略图 dataURL 缓存（cardHash → dataURL，P1 · B6）：renderLevelList 每次重渲染都逐卡
+// 重画的话，region 解码 + 逐列扫描不便宜（上限 96×64×96），缓存避免重复计算；超上限整清
+const thumbCache = new Map();
+
+// 关卡卡 → 俯视缩略图 dataURL（同步，无 await——不新增 renderSeq 竞态面）；失败返回 null
+function levelThumbDataUrl(card, cardHash) {
+    try {
+        const key = cardHash || '';
+        if (key && thumbCache.has(key)) return thumbCache.get(key);
+        const cv = renderRegionThumbnail(card, 128);
+        const url = cv ? cv.toDataURL() : null;
+        if (key && url) {
+            if (thumbCache.size > 60) thumbCache.clear(); // 列表建议 ≤50 张，超限整体换血防泄漏
+            thumbCache.set(key, url);
+        }
+        return url;
+    } catch {
+        return null; // 缩略图失败不阻塞列表渲染（降级为无图行）
+    }
+}
+
+// 列表行首列的缩略图 <img>（无图静默跳过，行布局照旧）
+function appendLevelThumb(row, url) {
+    if (!url) return;
+    const img = document.createElement('img');
+    img.className = 'level-thumb';
+    img.alt = '关卡缩略图';
+    img.src = url;
+    row.appendChild(img);
+}
+
 export function initLevelListUI() {
     ensureLevelStyles();
     ensureLevelListDom();
@@ -871,6 +906,8 @@ async function buildLevelRow(summary) {
     const cps = (card.flags && card.flags.checkpoints || []).length;
     const limit = card.rules && card.rules.timeLimit;
     const best = getBestScores(summary.cardHash); // {stars,timeSec,deaths,plays} | null
+    // 缩略图（P1 · B6）：俯视色块图，同步绘制后行首插入（绘制在 await 之后的同步段，无竞态）
+    const thumbUrl = levelThumbDataUrl(card, summary.cardHash);
     const bestText = best && best.stars > 0
         ? `${'★'.repeat(best.stars)}${'☆'.repeat(3 - best.stars)} ${fmtSec(best.timeSec)}`
         : '尚未通关';
@@ -890,6 +927,7 @@ async function buildLevelRow(summary) {
         // 会话卡说明：IndexedDB 不可用（隐私模式等）时的降级存储，刷新即失
         main.title = '此卡只保存在本次会话中（浏览器 IndexedDB 不可用），刷新页面后将丢失';
     }
+    appendLevelThumb(row, thumbUrl); // 缩略图先行插入（排在 .level-main 之前 = 行首列）
     row.appendChild(main);
 
     const btns = document.createElement('div');
@@ -1225,7 +1263,18 @@ async function doLevelExport(andDownload) {
         showTooltip('⚠️ 导出被拦：' + check.errors[0]);
         return;
     }
-    const saved = await saveLevelCard(card);
+    // 缩略图随卡入库（P1 · B6）：俯视色块图转 Blob 作 saveLevelCard 第二参（列表/海报可靠图源，
+    // 截帧方案只给海报用）。生成失败不传（saveLevelCard 对空参兜底），绝不阻塞导出主流程
+    let thumbBlob = null;
+    try {
+        const tcv = renderRegionThumbnail(card, 128);
+        if (tcv) {
+            thumbBlob = await new Promise((resolve) => {
+                try { tcv.toBlob((b) => resolve(b || null), 'image/png'); } catch { resolve(null); }
+            });
+        }
+    } catch { }
+    const saved = await saveLevelCard(card, thumbBlob);
     if (!saved || !saved.ok) {
         showTooltip('⚠️ 关卡卡保存失败');
         return;
