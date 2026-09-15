@@ -164,6 +164,7 @@ export const ItemTypes = {
     RAW_PORK: 185, // 生猪肉（食物 +3）：猪/牛掉落，熔炉可烧熟
     COOKED_PORK: 186, // 熟猪排（食物 +8）
     GUNPOWDER: 187, // 火药：苦力怕掉落，合成 TNT 的原料
+    LEVEL_PEN: 188, // 出题笔：手持右键答题机=出题（作者面板），非工具无耐久（关卡工坊 P0）
 };
 
 export const ItemIds = new Set(Object.values(ItemTypes));
@@ -718,6 +719,54 @@ export function isMerchantId(id) {
 export const HANZI_ORE = 228;
 export const HANZI_ORE_ITEM_ID = HANZI_ORE; // 创造模式物品栏可摆（教学演示用）
 
+// ---- 关卡工坊（Level Workshop，2026-09-15 P0 批次）：旗组 + 出题笔 + 星辉门 ----
+// 方案 docs/edu-level-workshop-plan.md §8，接口契约 docs/edu-workshop-impl-contract.md。
+// 旗组（关卡锚点，非实心道具格）：起点/检查点/终点三变体。放置无害——只有关卡运行
+// （js/levelRun.js 的 state.levelRun 激活时）踩到才触发出生/存档/结算，普通世界里就是装饰。
+// ID = FLAG_BASE + kind（0=起点 1=检查点 2=终点），贴图 tile 85..87（textures.js 程序化起步），
+// outline 细杆（选取形状段，B1 登记），网格见 chunk.js getPropMesh 旗分支。
+export const FLAG_BASE = 229;
+export const FLAG_COUNT = 3;
+export const FLAG_START = 0;
+export const FLAG_CHECKPOINT = 1;
+export const FLAG_GOAL = 2;
+
+export function flagId(kind) {
+    return FLAG_BASE + (kind | 0);
+}
+
+export function isFlagId(id) {
+    return id >= FLAG_BASE && id < FLAG_BASE + FLAG_COUNT;
+}
+
+export function flagKind(id) {
+    return (id - FLAG_BASE) | 0;
+}
+
+// 出题笔（物品非方块非工具）：手持右键答题机=打开作者面板出题（不持笔=玩家答题，M1 行为不变）。
+// 无耐久不入 toolWear；item:true 由 interaction.js 拦截放置。图标 tile 90 程序化。
+export const PEN_ID = ItemTypes.LEVEL_PEN;
+
+// 星辉门（P2 锁具，「想要但还不会」的预告型密室）：右键展示超纲知识点并出题，
+// 答对=开门（记录提前解锁）并成为常供能红石信号源（并入 redstone.js keypads 分支，
+// 禁延长扫描 else-if 链）；答错=温和文案+入错题本+引导找 AI 助手。逻辑见 js/eduStarlight.js。
+// ID = STARLIGHT_BASE + state（0=锁定·实心可碰撞 / 1=开启·可通行）。贴图 tile 88..89。
+export const STARLIGHT_BASE = 232;
+export const STARLIGHT_COUNT = 2;
+
+export function starlightId(state) {
+    return STARLIGHT_BASE + (state ? 1 : 0);
+}
+
+export function isStarlightId(id) {
+    return id >= STARLIGHT_BASE && id < STARLIGHT_BASE + STARLIGHT_COUNT;
+}
+
+export function starlightOpen(id) {
+    return (id - STARLIGHT_BASE) & 1;
+}
+
+
 // 动力方块的传动轴：轴类方块取编码轴，机械锯/投料器取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
@@ -1047,6 +1096,12 @@ export const HotbarBlocks = [
     ToolTypes.STONE_SWORD, // 石剑
     ToolTypes.SWORD, // 铁剑：攻击 6 伤害（原版铁剑数值）
     ToolTypes.DIAMOND_SWORD, // 钻石剑：攻击 7 伤害
+    // 关卡工坊（P0）：旗组三变体 + 星辉门 + 出题笔——作者位工具，闯关模式里不可放置
+    FLAG_BASE + FLAG_START, // 起点旗
+    FLAG_BASE + FLAG_CHECKPOINT, // 检查点旗
+    FLAG_BASE + FLAG_GOAL, // 终点旗
+    STARLIGHT_BASE, // 星辉门（锁定变体代表）
+    PEN_ID, // 出题笔
 ];
 
 // 红石组变体批量注册（思路同上门）：贴面/贴地元件都是 customMesh 道具（非固体不挡路），
