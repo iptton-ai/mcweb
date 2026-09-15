@@ -38,6 +38,9 @@ import {
     isDoorId,
     isFlagId,
     isKeypadId,
+    keypadSolved,
+    isStarlightId,
+    starlightOpen,
 } from './config.js';
 import { state } from './state.js';
 import { getBlockIndex } from './world.js';
@@ -290,6 +293,10 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
                         flags.checkpoints.push({ x: lx, y: ly, z: lz });
                     }
                 } else if (isKeypadId(id)) {
+                    // G3 P1#4：已解锁变体进卡=「天生开门」假锁（无题+常供能），数据面直接拒
+                    if (keypadSolved(id) === 1) {
+                        return { error: '发现已解锁的答题机：答对过的锁不能进卡——请把它拆掉换新的（或先出题再玩）' };
+                    }
                     let meta = null;
                     try {
                         meta = await provider(wx, wy, wz);
@@ -314,6 +321,12 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
                         ...(q.unit != null ? { unit: q.unit } : {}),
                         meta: { source, verifiedPasses: meta.verifiedPasses | 0 },
                     });
+                } else if (isStarlightId(id)) {
+                    // G3 P1#4：星辉门题目依赖玩家学习进度（超纲判定），无法随卡自包含——
+                    // 暂拒导出并明示；「预告关」锁具随卡导出登记为后续批次债务
+                    return { error: starlightOpen(id) === 1
+                        ? '发现已开启的星辉门：不能进卡（天生开门的假锁）——请拆掉换新的'
+                        : '星辉门暂不随关卡卡导出（题目因人而异、无法自包含）——请改用答题机或把它移出关卡区域' };
                 }
             }
         }
@@ -397,6 +410,19 @@ export function validateLevelCard(card) {
     }
 
     // ---- 题目 schema ----
+    if (Array.isArray(card.questions) && card.questions.length > 200) {
+        errors.push(`锁数量超过上限（${card.questions.length} > 200）——坏卡防御`);
+    }
+    for (const q of (Array.isArray(card.questions) ? card.questions : [])) {
+        if (q && typeof q.stem === 'string' && q.stem.length > 300) {
+            errors.push('题干超过 300 字符——坏卡防御');
+            break;
+        }
+        if (Array.isArray(q?.options) && q.options.some((o) => typeof o === 'string' && o.length > 100)) {
+            errors.push('选项超过 100 字符——坏卡防御');
+            break;
+        }
+    }
     const lockSeen = new Set();
     if (!Array.isArray(card.questions)) {
         errors.push('questions 必须为数组');
@@ -698,6 +724,9 @@ export async function deleteLevelCard(id) {
 
 // 文件导入（B4 接线）：JSON.parse → 校验 → 落库。返回 {ok,id,sessionOnly?,warnings?} | {error,errors?,warnings?}
 export async function importLevelCardFromJson(text) {
+    if (typeof text === 'string' && text.length > 8 * 1024 * 1024) {
+        return { error: '文件过大（>8MB），不是有效的关卡卡' }; // G3 P2#5：坏卡防御，先于 JSON.parse
+    }
     let card;
     try {
         card = JSON.parse(text);

@@ -28,7 +28,7 @@ import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
 import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
-import { tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
+import { exitLevelRun, tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
 // B4 并行编写的关卡 UI 导出（updateLevelHud/updateResultPanel/openLevelList/initLevelListUI）
 // 统一走命名空间可选链：直接命名导入会在它落地前炸掉整个模块图
 import * as uiNS from './ui.js';
@@ -224,6 +224,13 @@ function clearTransientEntities() {
 
 // 放弃当前世界与存档，按所选模式开新世界（slot 省略 = 覆盖当前槽）
 function startNewWorld(mode, tip, slot = state.saveSlot) {
+    if (state.levelRun) {
+        // G3 P1#3：闯关中切世界会让关卡守卫锁死真实世界（游戏内无退关入口），
+        // 先退关（loadGame 恢复进关前世界）回首屏，用户从首屏重试该操作
+        exitLevelRun({ toTitle: true });
+        showTooltip('已退出关卡——请从首屏重试该操作');
+        return;
+    }
     state.saveSlot = slot;
     stopRecording();
     resetBuildFilming(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
@@ -240,6 +247,11 @@ function startNewWorld(mode, tip, slot = state.saveSlot) {
 
 // 首屏切换到指定槽位的世界：当前世界先兜底保存，清瞬时实体后读档进入
 function loadSlot(slot) {
+    if (state.levelRun) {
+        exitLevelRun({ toTitle: true }); // G3 P1#3 同上：先退关回首屏再切
+        showTooltip('已退出关卡——请从首屏重试切换世界');
+        return;
+    }
     if (slot === state.saveSlot) {
         // 启动时已读入该槽世界（或已是当前世界），直接进入
         setState('playing');
@@ -326,6 +338,11 @@ function newWorldTip(mode, slot) {
 // 删除指定槽存档（首屏/设置浮层均已二次确认）。删的是当前槽时把内存世界切走：
 // 否则自动存档会把已删的旧世界写回复活的槽位
 function deleteSlotAndRecover(i) {
+    if (state.levelRun) {
+        exitLevelRun({ toTitle: true }); // G3 P1#3 同上：不在关卡世界里删档/切世界
+        showTooltip('已退出关卡——请从首屏重试删除');
+        return;
+    }
     deleteSave(i);
     showTooltip(`🗑️ 已删除世界 ${i + 1} 的存档`);
     if (i === state.saveSlot) {

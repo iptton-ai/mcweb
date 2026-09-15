@@ -36,7 +36,8 @@ starlightId(state)    // 0=锁定(solid 可碰撞) 1=开启(非 solid 可通行)
 isStarlightId(id) / starlightOpen(id)
 ```
 
-- BlockInfo：旗组 `{solid:false, transparent:true, customMesh:true, hardness:0.05, drop:自身ID}`；星辉门锁定 `{solid:true, transparent:true, customMesh:true, hardness:1, drop:自身ID}` / 开启 `{solid:false, ...}`。
+- BlockInfo：旗组 `{solid:false, transparent:true, customMesh:true, hardness:0.05, drop:自身ID}`；星辉门锁定 `{solid:true, transparent:true, customMesh:false, hardness:1, drop:自身ID}` / 开启 `{solid:false, ...}`。
+  **G3 P2#8 回写**：星辉门实现为满格普通面渲染（不进 prop 路径、不加 isPropBlock，与电梯平台同款，发光靠贴图）——契约初稿 `customMesh:true` 与「满格门形」自相矛盾，以本条为准；另 §2 questions.meta 实现增带 `verifiedPasses`（双通过校验所需，属「只增不改」备案）。
 - outline（config.js 选取形状段）：旗子登记细杆 AABB（约 `[0.42,0,0.42,0.58,1.0,0.58]`，B1 按实际网格微调）；星辉门满格不用登记。
 - 图集 tile 分配（textures.js，tile 85 起空闲）：85 `flag_start` / 86 `flag_checkpoint` / 87 `flag_goal` / 88 `starlight_locked` / 89 `starlight_open` / 90 `pen_item`。程序化起步，TILE_OVERRIDES 预留两项条目注释即可。
 - chunk.js：`isPropBlock` 必须加入旗组与星辉门（否则读档后道具网格消失）；`getPropMesh` 加旗（杆+旗面，杆可复用木板 tile）与星辉门分支。

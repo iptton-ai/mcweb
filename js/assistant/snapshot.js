@@ -31,6 +31,16 @@ function base64ToU8(b64) {
 // 热重载前调用：序列化世界方块 + 玩家/模式/时间（RLE 压缩——2026-09-06 世界扩容后
 // raw base64 约 10.7MB 会超 sessionStorage 配额，热重载将丢世界；压缩后约 1~2MB）
 export function saveSnapshotForReload() {
+    // 闯关守卫（G3 P0#1）：state.blocks 此刻是关卡临时世界，绝不能进快照——否则重载后
+    // restoreSnapshotIfAny 会把关卡世界当「真实世界」覆盖回去，而 levelRun 已随页面复位，
+    // saveGame() 的存档闸失效，30s 自动存档就把关卡世界写进玩家存档槽（不可逆）。
+    // 只落标记不落方块：重载后 boot 的 loadGame(saveSlot) 已恢复进关前落盘的真实世界。
+    if (state.levelRun) {
+        try {
+            sessionStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ v: 3, levelRunWasActive: true, savedAt: Date.now() }));
+        } catch { /* 配额失败也不阻塞重载 */ }
+        return true;
+    }
     try {
         const p = state.player;
         const rle = rleEncode(state.blocks);
@@ -73,6 +83,10 @@ export function restoreSnapshotIfAny() {
         snap = null;
     }
     if (!snap || !snap.blocks) return false;
+    if (snap.levelRunWasActive) {
+        // 闯关中的重载：boot 已 loadGame 恢复真实世界，这里放弃快照恢复即等同退关
+        return false;
+    }
 
     // 覆盖世界数据并重建全部区块网格（快照与当前页面同尺寸，无迁移路径）
     let u8 = base64ToU8(snap.blocks);

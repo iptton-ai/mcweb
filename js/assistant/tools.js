@@ -876,7 +876,12 @@ export function getToolSchemas() {
 export async function executeTool(name, args) {
     try {
         let result;
-        switch (name) {
+        // 闯关模式守卫（G3 P1#2）：世界改造类工具会架桥绕锁/拆锁，一律拒绝（check_level 只读放行；
+// docs.js 的「闯关中建造类工具会被拒绝」承诺由此兑现）
+    if (state.levelRun && ['place_blocks', 'clear_area', 'run_build_script', 'gen_level_draft'].includes(name)) {
+        return { result: '闯关中不能使用世界改造类工具（会破坏关卡机关）——请先退出关卡再建造', isError: true };
+    }
+    switch (name) {
             case 'get_game_context': result = toolGetGameContext(); break;
             case 'scan_terrain': result = toolScanTerrain(args); break;
             case 'place_blocks': result = await toolPlaceBlocks(args); break;

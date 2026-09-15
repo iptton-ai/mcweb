@@ -48,6 +48,7 @@ const MOD_PATHS = {
     levelWorkshop: './levelWorkshop.js', // A1：坐标换算 / 嵌世界 / 卡存取
     uiModal: './uiModal.js',             // setState / openResultState（B2 落地 result 态）
     saveGame: './saveGame.js',           // saveGame / loadGame（B2 加 levelRun 防线）
+    world: './world.js',                 // generateWorld（G3 P2#7：读档失败的干净世界兜底）
     buildQueue: './buildQueue.js',       // clearBuildQueue（幽灵建筑防线）
     chunk: './chunk.js',                 // rebuildChunk
     redstone: './redstone.js',           // initRedstone
@@ -509,7 +510,13 @@ function saveBestStore(data) {
 // 按卡哈希查最佳成绩（关卡列表/结算面板展示用）；无则 null
 export function getBestScores(cardHash) {
     if (!cardHash) return null;
-    return loadBestStore().best[cardHash] || null;
+    const e = loadBestStore().best[cardHash];
+    if (!e) return null;
+    // G3 P2#6：脏数据消毒——坏 stars 会让 ui.js '★'.repeat 抛 RangeError 炸掉整个列表
+    const stars = Math.max(0, Math.min(3, e.stars | 0));
+    const timeSec = typeof e.timeSec === 'number' && e.timeSec >= 0 ? e.timeSec : null;
+    if (stars === e.stars && timeSec === e.timeSec) return e;
+    return { ...e, stars, timeSec };
 }
 
 // ==================== 锁具记账（eduKeypad/星辉门作答均调，B3/A3 接线） ====================
@@ -566,7 +573,16 @@ export function exitLevelRun({ toTitle = false } = {}) {
             if (restore.gameMode) state.gameMode = restore.gameMode;
         }
         const sg = await modPromise('saveGame');
-        try { sg?.loadGame?.(state.saveSlot); } catch { }
+        let restored = false;
+        try { restored = !!sg?.loadGame?.(state.saveSlot); } catch { }
+        if (!restored) {
+            // G3 P2#7：读档失败（存档损坏/配额异常）时绝不能把关卡临时世界留驻内存——
+            // levelRun 已置 null，30s 自动存档会把它写进槽位。freshWorld 兜底回到干净世界。
+            try {
+                const w = await modPromise('world');
+                if (w?.generateWorld) w.generateWorld();
+            } catch { }
+        }
         const um = await modPromise('uiModal');
         try { um?.setState?.(toTitle ? 'title' : 'playing'); } catch { }
     })();
