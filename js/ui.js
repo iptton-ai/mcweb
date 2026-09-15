@@ -16,7 +16,7 @@ import { downloadRecording, getRecordingStatus, initRecording, isRecording, togg
 export { isCamOwnedRecording, isLevelOwnedRecording, isRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 // 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
-import { buildLevelCard, deleteLevelCard, exportLevelCardJson, getLevelCard, importLevelCardFromJson, listLevelCards, saveLevelCard, validateLevelCard } from './levelWorkshop.js';
+import { buildLevelCard, cardHash, deleteLevelCard, exportLevelCardJson, getLevelCard, importLevelCardFromJson, listBuiltinLevelCards, listLevelCards, saveLevelCard, validateLevelCard } from './levelWorkshop.js';
 import { enterLevel, exitLevelRun, getBestScores, getHudState } from './levelRun.js';
 import { renderRegionThumbnail } from './levelPoster.js'; // P1 · B6：俯视缩略图（列表行 + 导出随卡入库）
 
@@ -627,6 +627,8 @@ const LEVEL_UI_STYLE = `
 #result-locks .result-lock-table th,#result-locks .result-lock-table td{border-bottom:1px solid #2d2d44;padding:4px 6px;text-align:left;}
 #result-locks .result-lock-table th{color:#9a9ab8;font-weight:500;}
 #result-locks .result-lock-empty{color:#9a9ab8;font-size:12px;text-align:center;}
+/* ---- 内置关卡与本机关卡之间的分区标签 ---- */
+.lvl-section-label{margin:10px 4px 2px;color:#8f93a8;font-size:12px;text-align:center;}
 `;
 
 let levelStylesInjected = false;
@@ -879,9 +881,10 @@ export function closeLevelList() {
     if (panel) panel.classList.add('hidden');
 }
 
-// 列表行：卡名/作者/锁数/创建时间/最佳成绩（★与用时）+ ▶ 进入 / 🎥 拍宣传片 / ✕ 删除（二次确认）
-async function buildLevelRow(summary) {
-    const card = await getLevelCard(summary.id); // 摘要不含锁数，逐卡取完整卡（列表量小，可接受）
+// 列表行：卡名/作者/锁数/最佳成绩（★与用时）+ ▶ 进入 / 🎥 拍宣传片 / ✕ 删除（二次确认）。
+// cardOverride：内置关卡直接带完整卡（不走 IndexedDB）；isBuiltin：官方卡=无删除钮、不显创建时间。
+async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
+    const card = cardOverride || await getLevelCard(summary.id); // 摘要不含锁数，逐卡取完整卡（列表量小，可接受）
     const row = document.createElement('div');
     row.className = 'level-row';
     const main = document.createElement('div');
@@ -911,19 +914,20 @@ async function buildLevelRow(summary) {
     const bestText = best && best.stars > 0
         ? `${'★'.repeat(best.stars)}${'☆'.repeat(3 - best.stars)} ${fmtSec(best.timeSec)}`
         : '尚未通关';
-    const sessionBadge = summary.sessionOnly ? '<span class="level-badge">仅本次会话</span>' : '';
+    const sessionBadge = isBuiltin ? '<span class="level-badge">🏰 官方关卡</span>'
+        : summary.sessionOnly ? '<span class="level-badge">仅本次会话</span>' : '';
     const metaBits = [
         `作者：${escapeHtml(card.author || '匿名')}`,
         `🔒 ${locks} 锁`,
         cps ? `🚩 ${cps} 检查点` : '',
         limit ? `⏱ 限时 ${fmtSec(limit)}` : '',
-        card.created ? fmtDate(card.created) : '',
+        (!isBuiltin && card.created) ? fmtDate(card.created) : '',
         `最佳：${bestText}`,
         best && best.plays ? `第 ${best.plays + 1} 次挑战` : '',
     ].filter(Boolean);
     main.innerHTML = `<div class="level-name">${escapeHtml(card.name || '未命名关卡')}${sessionBadge}</div>
       <div class="level-meta">${metaBits.join(' · ')}</div>`;
-    if (summary.sessionOnly) {
+    if (summary.sessionOnly && !isBuiltin) {
         // 会话卡说明：IndexedDB 不可用（隐私模式等）时的降级存储，刷新即失
         main.title = '此卡只保存在本次会话中（浏览器 IndexedDB 不可用），刷新页面后将丢失';
     }
@@ -967,11 +971,13 @@ async function buildLevelRow(summary) {
     });
     btns.appendChild(film);
 
-    // ✕ 删除（二次确认，照仓库「点两次」惯例：第一次变「确认删除？」，3 秒不点自动退回）
-    const del = document.createElement('button');
-    del.textContent = '✕';
-    bindDeleteButton(del, summary);
-    btns.appendChild(del);
+    // ✕ 删除（二次确认，照仓库「点两次」惯例）——内置关卡随包发布，不提供删除
+    if (!isBuiltin) {
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        bindDeleteButton(del, summary);
+        btns.appendChild(del);
+    }
 
     row.appendChild(btns);
     return row;
@@ -1000,16 +1006,42 @@ function bindDeleteButton(delBtn, summary) {
     });
 }
 
+// 内置关卡 → 列表行摘要（id 仅作 DOM key 用途；卡对象已在手，不查 IndexedDB）
+function builtinSummary(card) {
+    const hash = cardHash(card);
+    return {
+        id: `builtin:${hash}`,
+        name: card.name || '',
+        author: card.author || '',
+        created: card.created || '',
+        cardHash: hash,
+    };
+}
+
 export async function renderLevelList() {
     ensureLevelStyles();
     const rows = ensureLevelListDom();
     if (!rows) return;
     const seq = ++renderSeq;
     let cards = [];
+    let builtins = [];
     try { cards = await listLevelCards(); } catch { cards = []; }
+    try { builtins = await listBuiltinLevelCards(); } catch { builtins = []; }
     if (seq !== renderSeq) return; // await 期间有更新的渲染请求，丢弃本次
     rows.innerHTML = '';
-    if (!cards.length) {
+    // 内置关卡区（官方随包发布，置于最前；assets/levels 缺失时自然跳过）
+    for (const card of builtins) {
+        const row = await buildLevelRow(builtinSummary(card), card, true);
+        if (seq !== renderSeq) return; // 过期响应不再追加
+        rows.appendChild(row);
+    }
+    if (builtins.length && cards.length) {
+        const label = document.createElement('div');
+        label.className = 'lvl-section-label';
+        label.textContent = '—— 我与本机的关卡 ——';
+        rows.appendChild(label);
+    }
+    if (!cards.length && !builtins.length) {
         const empty = document.createElement('div');
         empty.className = 'lvl-empty'; // B1 的空态样式
         empty.textContent = '还没有关卡卡——去世界里放旗子和答题机，或让 🤖 帮你生成草稿';

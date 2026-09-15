@@ -747,6 +747,38 @@ export function exportLevelCardJson(card) {
     return JSON.stringify(card);
 }
 
+// ==================== 内置关卡（assets/levels/，官方随包发布） ====================
+// 文件由 tools/gen_builtin_levels.mjs 确定性生成：index.json 清单 + 每关一个 .level.json。
+// 成功抓取后模块级缓存（列表每次打开不再重复 fetch）；任何失败（文件缺失/离线/JSON 损坏）
+// 安静降级为空数组，绝不阻塞首屏关卡列表——内置关卡是纯增量内容，不是功能依赖。
+
+let builtinCardsCache = null; // 成功抓取过的完整卡数组（保持清单顺序）
+
+export async function listBuiltinLevelCards() {
+    if (builtinCardsCache) return builtinCardsCache;
+    if (typeof globalThis.fetch !== 'function') return []; // Node 直连测试环境
+    try {
+        const res = await fetch('assets/levels/index.json', { cache: 'no-cache' });
+        if (!res.ok) return [];
+        const manifest = await res.json();
+        const entries = Array.isArray(manifest && manifest.levels) ? manifest.levels : [];
+        const cards = [];
+        for (const entry of entries) {
+            if (!entry || typeof entry.file !== 'string') continue;
+            try {
+                const r = await fetch(`assets/levels/${entry.file}`, { cache: 'no-cache' });
+                if (!r.ok) continue;
+                const card = await r.json();
+                if (card && card.format === LEVEL_CARD_FORMAT) cards.push(card);
+            } catch { /* 单卡缺失/损坏跳过，不拖垮整列表 */ }
+        }
+        if (cards.length) builtinCardsCache = cards; // 全失败不缓存，下次打开列表重试
+        return cards;
+    } catch {
+        return [];
+    }
+}
+
 // ==================== 嵌入（闯关运行世界生成）====================
 // 前置：调用方（levelRun.enterLevel）已把 state.blocks 清零并铺 y=0 基岩层。
 // 本函数只把 region 区按 局部→世界（+LEVEL_EMBED_OFFSET）直写 state.blocks（不走 setBlockSafe，

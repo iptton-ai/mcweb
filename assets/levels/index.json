@@ -1,0 +1,21 @@
+{
+  "note": "内置关卡清单：file 相对 assets/levels/；顺序即首屏列表顺序。重新生成请跑 tools/gen_builtin_levels.mjs",
+  "levels": [
+    {
+      "file": "warmup.level.json",
+      "name": "村口热身赛"
+    },
+    {
+      "file": "castle.level.json",
+      "name": "星辉城堡"
+    },
+    {
+      "file": "dungeon.level.json",
+      "name": "地牢寻宝记"
+    },
+    {
+      "file": "skypark.level.json",
+      "name": "云间跳跳乐"
+    }
+  ]
+}
