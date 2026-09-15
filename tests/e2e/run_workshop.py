@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """关卡工坊批次 W 验收（冻结清单 W01~W19，docs/edu-workshop-impl-contract.md §7，只增不改）。
 
+G3 对抗性验收增补（2026-09-15，追加不改）：W20 助手工具闯关拒绝 / W21 闯关中切槽被拦 /
+W22 闯关中热重载安全（快照不落方块）/ W23 星辉门导出拦截 / W24 已解锁锁导出拦截。
+对应产品修复：snapshot.js P0#1、tools.js P1#2、main.js P1#3、levelWorkshop P1#4、校验/导入/成绩 P2 加固。
+
 断言素材铁律：方块 ID 经 config.js 纯解码函数（isFlagId/flagKind/keypadId/doorOpen 等）+ getBlock；
 状态走 state.levelRun / getBestScores / getAuthoredLock 等公开导出；
 交互走公开入口（breakBlockAt/placeBlock/interactKeypadAt/interactKeypadAuthorAt/pickBlockUnderCrosshair，
@@ -1041,9 +1045,202 @@ return JSON.stringify({authored,listShown,active,tryName,hasLock,uiIn,solved,sta
     return lib.report("W19 试玩入口", res, checks)
 
 
+def w20(e2e):
+    """W20 助手工具闯关拒绝（G3 P1#2）：世界改造类 executeTool 返回 isError；check_level 只读放行。"""
+    res = e2e.run(WPX + r"""
+await scene();
+const card=await buildCard('W20', provAt(44,20,41,inQ(17),2));
+if(!card||card.error) return JSON.stringify({__error__:'buildCard:'+(card&&card.error||'null')});
+const run=await enter(card);
+if(!run) return JSON.stringify({__error__:'enterLevel null'});
+const tools=await import(B+'assistant/tools.js');
+const kw=emb(card,44,20,41);
+const target={x:kw.x+2,y:kw.y+2,z:kw.z};   // 关卡世界内一格空气
+const before=gb(target.x,target.y,target.z);
+// 世界改造类：place_blocks / run_build_script / gen_level_draft → isError:true
+const r1=await tools.executeTool('place_blocks',{ops:[[target.x,target.y,target.z,BT.STONE]]});
+const after=gb(target.x,target.y,target.z);
+const r2=await tools.executeTool('run_build_script',{script:'place(0,0,0,stone)'});
+const r3=await tools.executeTool('gen_level_draft',{subject:'math',count:1});
+// 只读类：check_level 放行（在关卡世界上做体检，返回报告字符串）
+const r4=await tools.executeTool('check_level',{});
+// 关卡世界完好（旗在位）
+const fW=L2W(card.flags.start);
+const flagOK=gb(fW.x,fW.y,fW.z)===cfg.FLAG_BASE+cfg.FLAG_START;
+await endCase();
+return JSON.stringify({
+  r1Err:r1&&r1.isError===true, r1Msg:r1&&String(r1.result).slice(0,40),
+  blockUnchanged:after===before, r2Err:r2&&r2.isError===true, r3Err:r3&&r3.isError===true,
+  r4Pass:!!r4&&r4.isError===false&&typeof r4.result==='string', r4Head:r4&&String(r4.result).slice(0,50),
+  flagOK});
+""")
+    if not isinstance(res, dict) or "r1Err" not in res:
+        return lib.report("W20 助手工具闯关拒绝", res if isinstance(res, dict) else {"__error__": str(res)[:500]}, [])
+    checks = [
+        ("place_blocks 闯关中返回 isError:true（含拒绝文案）", res["r1Err"] is True and "闯关" in (res.get("r1Msg") or ""),
+         str(res.get("r1Msg"))),
+        ("目标格方块不变（守卫生效于副作用之前）", res["blockUnchanged"] is True, str(res["blockUnchanged"])),
+        ("run_build_script 同样被拒", res["r2Err"] is True, str(res["r2Err"])),
+        ("gen_level_draft 同样被拒", res["r3Err"] is True, str(res["r3Err"])),
+        ("check_level 只读放行（isError:false + 报告字符串）", res["r4Pass"] is True,
+         f"pass={res['r4Pass']} head={str(res.get('r4Head'))}"),
+        ("关卡世界完好（起点旗在位）", res["flagOK"] is True, str(res["flagOK"])),
+    ]
+    return lib.report("W20 助手工具闯关拒绝", res, checks)
+
+
+def w21(e2e):
+    """W21 闯关中切槽被拦（G3 P1#3）：设置浮层存档页点槽位行 → main.loadSlot 守卫 →
+    退关回首屏、levelRun 清空、世界恢复玩家坐标，且不写盘。loadSlot 未导出，走真实 DOM 路径。"""
+    res = e2e.run(WPX + r"""
+sb(64,39,64,BT.STONE);          // 固定石台防重力漂移
+teleport(64.5,40,64.5);
+sg.saveGame();
+const bytes1=localStorage.getItem('mcweb.save.v1.slot0');
+const pBefore={x:S.player.x,y:S.player.y,z:S.player.z};
+await scene();
+const card=await buildCard('W21', provAt(44,20,41,inQ(17),2));
+if(!card||card.error) return JSON.stringify({__error__:'buildCard:'+(card&&card.error||'null')});
+teleport(64.5,40,64.5);
+const run=await enter(card);
+if(!run) return JSON.stringify({__error__:'enterLevel null'});
+const bytesInLevel=localStorage.getItem('mcweb.save.v1.slot0');   // enterLevel 自己的合法落盘
+// 真实玩家路径：暂停 → ⚙️ 设置（存档页）→ 点当前槽位行 → main.loadSlot(0) 守卫
+const sgui=await import(B+'settingsUI.js');
+um.setState('pause'); await sleep(200);
+sgui.openGameSettings(); await sleep(300);
+const row=document.querySelector('#gs-slot-list .slot-row');
+const rowFound=!!row;
+if(rowFound) row.click();
+await sleep(1200); await tick(2);
+const pAfter={x:S.player.x,y:S.player.y,z:S.player.z};
+const restored=Math.abs(pAfter.x-pBefore.x)<0.01&&Math.abs(pAfter.y-pBefore.y)<0.05&&Math.abs(pAfter.z-pBefore.z)<0.01;
+const bytesAfter=localStorage.getItem('mcweb.save.v1.slot0');
+return JSON.stringify({rowFound, ui:um.getUIState(), runNull:!S.levelRun, restored,
+  pBefore, pAfter, noWrite:bytesAfter===bytesInLevel, bytes1Len:bytes1?bytes1.length:0});
+""")
+    if not isinstance(res, dict) or "rowFound" not in res:
+        return lib.report("W21 闯关中切槽被拦", res if isinstance(res, dict) else {"__error__": str(res)[:500]}, [])
+    checks = [
+        ("设置浮层存档页渲染出槽位行（真实 DOM 入口）", res["rowFound"] is True, str(res["rowFound"])),
+        ("闯关中切槽 → 退关回首屏（uiState=title）", res["ui"] == "title", str(res["ui"])),
+        ("levelRun 清空", res["runNull"] is True, str(res["runNull"])),
+        ("世界已恢复（玩家坐标=进关前）", res["restored"], f"前={res.get('pBefore')} 后={res.get('pAfter')}"),
+        ("切槽动作未写盘（守卫先于 saveGame 返回）", res["noWrite"] is True, str(res["noWrite"])),
+        ("进关前存档在盘", res["bytes1Len"] > 0, str(res["bytes1Len"])),
+    ]
+    return lib.report("W21 闯关中切槽被拦", res, checks)
+
+
+def w22(e2e):
+    """W22 闯关中热重载安全（G3 P0#1）：saveSnapshotForReload 只落 levelRunWasActive 标记不落方块；
+    restoreSnapshotIfAny 放弃恢复且关卡世界原样；退出后槽字节不变（W10 风格）。"""
+    res = e2e.run(WPX + r"""
+sb(64,39,64,BT.STONE);
+teleport(64.5,40,64.5);
+sg.saveGame();
+sb(60,20,60,BT.STONE);          // 进关前世界标记块
+sg.saveGame();
+const pBefore={x:S.player.x,y:S.player.y,z:S.player.z};
+await scene();
+const card=await buildCard('W22', provAt(44,20,41,inQ(17),2));
+if(!card||card.error) return JSON.stringify({__error__:'buildCard:'+(card&&card.error||'null')});
+teleport(64.5,40,64.5);
+const run=await enter(card);
+if(!run) return JSON.stringify({__error__:'enterLevel null'});
+const markerGone=gb(60,20,60)===BT.AIR;
+const bytesInLevel=localStorage.getItem('mcweb.save.v1.slot0');
+const snap=await import(B+'assistant/snapshot.js');
+const KEY='mcAssistant.snapshot';
+sessionStorage.removeItem(KEY);            // 清掉历史快照，从干净态开始
+const ret=snap.saveSnapshotForReload();
+const raw=sessionStorage.getItem(KEY);
+let parsed=null, parseErr=null;
+try{ parsed=JSON.parse(raw); }catch(e){ parseErr=String(e); }
+const noBlocks=parsed!==null && !('blocks' in parsed);
+const hasFlag=parsed!==null && parsed.levelRunWasActive===true;
+const restored=snap.restoreSnapshotIfAny();   // 必须放弃恢复（并消费掉快照键）
+// 关卡世界未被覆盖：起点旗仍在、进关前标记块仍是空气
+const fW=L2W(card.flags.start);
+const levelIntact=gb(fW.x,fW.y,fW.z)===cfg.FLAG_BASE+cfg.FLAG_START && gb(60,20,60)===BT.AIR;
+const keyConsumed=sessionStorage.getItem(KEY)===null;
+await exitRun(true);
+const markerBack=gb(60,20,60)===BT.STONE;
+const pAfter={x:S.player.x,y:S.player.y,z:S.player.z};
+const posRestored=Math.abs(pAfter.x-pBefore.x)<0.01&&Math.abs(pAfter.y-pBefore.y)<0.05&&Math.abs(pAfter.z-pBefore.z)<0.01;
+const bytesAfter=localStorage.getItem('mcweb.save.v1.slot0');
+return JSON.stringify({ret, noBlocks, hasFlag, parseErr, restored, levelIntact, keyConsumed,
+  markerGone, markerBack, posRestored, noWrite:bytesAfter===bytesInLevel, runNull:!S.levelRun});
+""")
+    if not isinstance(res, dict) or "noBlocks" not in res:
+        return lib.report("W22 闯关中热重载安全", res if isinstance(res, dict) else {"__error__": str(res)[:500]}, [])
+    checks = [
+        ("闯关中 saveSnapshotForReload 不落方块（快照无 blocks 字段）", res["noBlocks"] is True,
+         f"parseErr={res.get('parseErr')}"),
+        ("快照带 levelRunWasActive:true 标记", res["hasFlag"] is True, str(res["hasFlag"])),
+        ("restoreSnapshotIfAny 见标记放弃恢复（返回 false）", res["restored"] is False, str(res["restored"])),
+        ("关卡世界未被覆盖（起点旗在 + 进关前标记块仍消失）", res["levelIntact"] is True, str(res["levelIntact"])),
+        ("快照键已消费（不会污染下次重载）", res["keyConsumed"] is True, str(res["keyConsumed"])),
+        ("退出后世界恢复（标记块回来 + 玩家坐标一致）", res["markerBack"] and res["posRestored"],
+         f"marker={res.get('markerBack')} pos={res.get('posRestored')}"),
+        ("全程未写盘（槽字节不变）", res["noWrite"] is True, str(res["noWrite"])),
+        ("levelRun 清空", res["runNull"] is True, str(res["runNull"])),
+    ]
+    return lib.report("W22 闯关中热重载安全", res, checks)
+
+
+def w23(e2e):
+    """W23 星辉门导出拦截（G3 P1#4）：region 内有星辉门 → buildLevelCard error 含「星辉门」；移除后出卡成功。"""
+    res = e2e.run(WPX + r"""
+await scene();
+sb(46,20,42,cfg.STARLIGHT_BASE);   // 锁定变体（region 内）
+const c1=await buildCard('W23');
+const err1=(c1&&c1.error)||'';
+sb(46,20,42,BT.AIR);               // 移除星辉门
+const c2=await buildCard('W23');
+const v2=c2&&!c2.error?lws.validateLevelCard(c2):null;
+return JSON.stringify({err1, blocked:err1.indexOf('星辉门')>=0,
+  rebuilt:!!c2&&!c2.error, vOk:v2&&v2.ok, c1IsErrorOnly:c1&&typeof c1.error==='string'});
+""")
+    if not isinstance(res, dict) or "blocked" not in res:
+        return lib.report("W23 星辉门导出拦截", res if isinstance(res, dict) else {"__error__": str(res)[:500]}, [])
+    checks = [
+        ("region 内有星辉门 → buildLevelCard 返回 error 且含「星辉门」", res["blocked"] is True,
+         str(res.get("err1"))[:100]),
+        ("拒绝只经 error 文案（不抛异常）", res["c1IsErrorOnly"] is True, str(res["c1IsErrorOnly"])),
+        ("移除后出卡成功", res["rebuilt"] is True, str(res["rebuilt"])),
+        ("重建卡可校验", res["vOk"] is True, str(res["vOk"])),
+    ]
+    return lib.report("W23 星辉门导出拦截", res, checks)
+
+
+def w24(e2e):
+    """W24 已解锁锁导出拦截（G3 P1#4）：keypadId(1) 进 region → error 含「已解锁」；换回锁定变体后正常。"""
+    res = e2e.run(WPX + r"""
+await scene();
+sb(44,20,41,cfg.keypadId(1));      // 场景锁换成已解锁变体
+const c1=await buildCard('W24');
+const err1=(c1&&c1.error)||'';
+sb(44,20,41,cfg.KEYPAD_BASE);      // 换回锁定变体
+const c2=await buildCard('W24');
+const v2=c2&&!c2.error?lws.validateLevelCard(c2):null;
+return JSON.stringify({err1, blocked:err1.indexOf('已解锁')>=0,
+  rebuilt:!!c2&&!c2.error, vOk:v2&&v2.ok});
+""")
+    if not isinstance(res, dict) or "blocked" not in res:
+        return lib.report("W24 已解锁锁导出拦截", res if isinstance(res, dict) else {"__error__": str(res)[:500]}, [])
+    checks = [
+        ("已解锁答题机进 region → error 含「已解锁」", res["blocked"] is True, str(res.get("err1"))[:100]),
+        ("换回锁定变体后出卡成功", res["rebuilt"] is True, str(res["rebuilt"])),
+        ("重建卡可校验", res["vOk"] is True, str(res["vOk"])),
+    ]
+    return lib.report("W24 已解锁锁导出拦截", res, checks)
+
+
 CASES = {"W%02d" % i: fn for i, fn in enumerate(
     [w01, w02, w03, w04, w05, w06, w07, w08, w09, w10,
-     w11, w12, w13, w14, w15, w16, w17, w18, w19], start=1)}
+     w11, w12, w13, w14, w15, w16, w17, w18, w19,
+     w20, w21, w22, w23, w24], start=1)}
 
 if __name__ == "__main__":
     names = sys.argv[1:] or list(CASES)
@@ -1055,7 +1252,7 @@ if __name__ == "__main__":
             results[n] = CASES[n](e2e)
     finally:
         e2e.close()
-    print("\n==== W 套件汇总（run_workshop 冻结清单 W01~W19）====")
+    print("\n==== W 套件汇总（run_workshop 冻结清单 W01~W19 + G3 增补 W20~W24）====")
     n_pass = 0
     for n, ok in results.items():
         n_pass += 1 if ok else 0
