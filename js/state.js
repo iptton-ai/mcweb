@@ -68,6 +68,7 @@ export const state = {
     levelResult: null, // 最近一局结算数据（result 态浮层 #result-panel 的填充源，见 uiModal.js）
     levelExportOpen: false, // K 释放鼠标操作导出关卡卡面板（作者流程最后一步），同拍摄面板的非暂停浮层
     prefabPickerOpen: false, // 🧱 组件库浮层（关卡编辑器/建造模式 B 键）：打开时释放鼠标点选组件
+    authorPanelOpen: false, // ✏️ 出题面板（手持出题笔右键答题机）：打开即释放鼠标填表，Q/Esc 关面板
 };
 
 export function isCreative() {

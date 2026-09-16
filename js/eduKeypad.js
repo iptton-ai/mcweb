@@ -39,7 +39,7 @@ import { state } from './state.js';
 import { getBlock, setBlockSafe } from './world.js';
 import { rebuildChunk } from './chunk.js';
 import { updateRedstoneNetwork } from './redstone.js';
-import { getUIState, isTypingTarget } from './uiModal.js';
+import { clearStuckKeys, getUIState, isTypingTarget, syncPointerPolicy } from './uiModal.js';
 import { playEduCorrectSound, playEduWrongSound, playEduUnlockSound } from './audio.js';
 import { loadEduProgress, saveEduProgress, grantEduReward } from './eduRewards.js';
 // 关卡工坊（批次 W）：闯关题覆盖与锁具记账。两模块只静态依赖 config/state/world/rle，
@@ -705,7 +705,8 @@ window.addEventListener('keydown', (e) => {
 setInterval(() => {
     // 作者面板走远巡检（批次 W）：出题必须站在锁旁，走远/答题机被拆即收（同款空指针防线——
     // closeAuthorPanel 先把 authorSession 置 null，这一分支随后 return，绝不继续读它）。
-    // 编辑态不因浮层收面板：作者要按 Q 释放鼠标点表单，暂停菜单开着时面板必须存活。
+    // 编辑态不因浮层收面板：助手面板打开等暂停态下面板存活，回来接着填
+    //（指针已随面板打开而释放，不需要再借暂停菜单拿鼠标）。
     if (authorSession) {
         if (authorSession.mode === 'verify'
             && (state.assistantOpen || getUIState() !== 'playing')) {
@@ -731,8 +732,9 @@ setInterval(() => {
 // ==================== 出题模式（作者面板，关卡工坊 P0·批次 W·B3） ====================
 // 手持出题笔（config.js PEN_ID）右键答题机进入（interaction.js 右键链接线，B2）；
 // 不持笔右键 = 玩家答题（M1 行为不变，语义：拿起笔=我要出题）。面板照 openQuiz 的卡片风格
-//（#edu-author 前缀、不抢指针锁——锁的管理权仍归 uiModal 状态机），但表单要点击：
-// pointer-events 开启；编辑时按 Q 释放鼠标点选（本作惯例：ZCode 内嵌浏览器用 Q 代替 Esc）。
+//（#edu-author 前缀），但表单要点击：pointer-events 开启。指针策略照导出面板/组件库的
+// 非暂停浮层模式（state.authorPanelOpen + syncPointerPolicy）：面板打开即释放鼠标点表单，
+// 关闭走既有自动回锁；Q/Esc 关面板（锁的管理权仍全归 uiModal 状态机，本模块只置标志）。
 //
 // 双通过校验（G2 P1-2）：保存题目后作者必须以玩家视角连答对 2 次（答错清零重计）才标记
 // verified——levelWorkshop.buildLevelCard 的默认锁题提供者 defaultLockMetaProvider 会动态
@@ -896,6 +898,11 @@ function ensureAuthorPanel() {
 function closeAuthorPanel() {
     authorSession = null;
     if (authorPanel) authorPanel.style.display = 'none';
+    if (state.authorPanelOpen) {
+        state.authorPanelOpen = false;
+        syncPointerPolicy(); // 面板全关 → 走 uiModal 既有自动回锁链路
+        clearStuckKeys();
+    }
 }
 
 // ---------- 面板渲染（edit 表单 / verify 试答 / done 双通过） ----------
@@ -1057,6 +1064,11 @@ function openAuthorPanel(x, y, z) {
     };
     ensureAuthorPanel();
     authorPanel.style.display = 'block';
+    state.authorPanelOpen = true;
+    // 打开即释放鼠标（照导出面板/组件库的非暂停浮层模式）：表单直接可点，
+    // 不再要求作者先按 Q——旧流程按 Q 会弹暂停菜单把面板盖住，体验割裂
+    syncPointerPolicy();
+    clearStuckKeys(); // 清移动键，避免开面板瞬间角色继续走
     renderAuthorPanel();
 }
 
@@ -1396,7 +1408,8 @@ function handleAuthorKeydown(e) {
                 }
                 e.stopImmediatePropagation();
                 e.preventDefault();
-            } else if (e.code === 'Escape') {
+            } else if (e.code === 'Escape' || e.code === 'KeyQ') {
+                // Q 与 Esc 同效关面板（ZCode 内嵌浏览器里 Esc 会被宿主截获，Q 是页面内替代键）
                 closeAuthorPanel();
                 e.stopImmediatePropagation();
             }
@@ -1418,15 +1431,16 @@ function handleAuthorKeydown(e) {
             submitAuthorVerifyInput();
             e.stopImmediatePropagation();
             e.preventDefault();
-        } else if (e.code === 'Escape') {
+        } else if (e.code === 'Escape' || e.code === 'KeyQ') {
             closeAuthorPanel();
             e.stopImmediatePropagation();
         }
         return true;
     }
-    // 编辑/done 态：不抢任何游戏键；仅「游戏中 + 未在输入框打字」时 Esc 关面板
+    // 编辑/done 态：不抢任何游戏键；仅「游戏中 + 未在输入框打字」时 Esc/Q 关面板
+    //（Q 是 Esc 的页面内替代键——ZCode 内嵌浏览器会把 Esc 截给宿主）
     if (getUIState() === 'playing' && !state.assistantOpen
-        && e.code === 'Escape' && !isTypingTarget(e)) {
+        && (e.code === 'Escape' || e.code === 'KeyQ') && !isTypingTarget(e)) {
         closeAuthorPanel();
         e.stopImmediatePropagation();
         e.preventDefault();

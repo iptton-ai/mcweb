@@ -216,6 +216,8 @@ export function setupInput() {
         if (!isPlaying()) {
             // 未锁定（含助手面板打开时）：点击画面接管鼠标开始操作。
             // 面板保持打开；按 Esc 释放鼠标即回到面板操作。
+            // 出题面板打开时鼠标归表单：点画布空白处不抢回指针（面板点 ✖/Q/Esc/走远关闭）
+            if (state.authorPanelOpen) return;
             requestLock();
             return;
         }
@@ -274,8 +276,9 @@ export function setupInput() {
 
     document.addEventListener('click', () => {
         // playing 但指针未锁定（如冷却期锁定失败）：任意点击重新锁定。
-        // 助手面板打开时鼠标归面板，不在此抢锁。
-        if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen && !state.levelExportOpen && !isPlaying()) requestLock();
+        // 助手面板/出题面板打开时鼠标归面板，不在此抢锁。
+        if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen
+            && !state.levelExportOpen && !state.authorPanelOpen && !isPlaying()) requestLock();
     });
 }
 

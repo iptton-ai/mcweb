@@ -45,7 +45,7 @@ export function getUIState() {
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板
 function wantLockNow() {
     return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
-        && !state.levelExportOpen && !state.prefabPickerOpen;
+        && !state.levelExportOpen && !state.prefabPickerOpen && !state.authorPanelOpen;
 }
 
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）
@@ -56,7 +56,7 @@ export function isPlaying() {
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
     return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
-        && !state.prefabPickerOpen;
+        && !state.prefabPickerOpen && !state.authorPanelOpen;
 }
 
 export function isAssistantVisible() {
@@ -247,7 +247,8 @@ function onPointerLockChange() {
     lockPending = false;
     if (mouseLocked) {
         // 锁定请求异步返回期间可能已按 Tab 打开面板；迟到的成功不能抢回鼠标。
-        if (state.recordingControlsOpen || state.levelExportOpen || state.prefabPickerOpen || uiState !== 'playing') {
+        if (state.recordingControlsOpen || state.levelExportOpen || state.prefabPickerOpen
+            || state.authorPanelOpen || uiState !== 'playing') {
             exitLock();
             syncOverlays();
             return;
@@ -256,7 +257,7 @@ function onPointerLockChange() {
         stopRetry();
         hideLockHint();
     } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
-        && !state.levelExportOpen && !state.prefabPickerOpen) {
+        && !state.levelExportOpen && !state.prefabPickerOpen && !state.authorPanelOpen) {
         // 用户按 Esc（锁定状态下浏览器截获 Esc，页面收不到 keydown）或系统夺走指针 → 暂停菜单
         // （面板开着时指针本就不该被锁定，此时解锁不弹菜单）
         setState('pause');
