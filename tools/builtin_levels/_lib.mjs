@@ -186,7 +186,10 @@ const H6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
 // ⚠️ 与运行时 reachabilityBFS（纯 6 邻、无重力）不同，这里必须模拟真实移动——
 // 否则 BFS 会沿墙顶空气层「飞」越高墙、横穿跑酷虚空，产生海量假阳性。移动模型：
 //   站格 = passable 且脚下实心；水格 = 游泳节点（6 向游动，可上浮=水柱电梯）；
-//   陆地边 = 同层走 / 跳 1 格上 / 沿列下落（路径无遮挡），无水平飞跃、无升空。
+//   陆地边 = 同层走 / 跳 1 格上 / 沿列下落（路径无遮挡），无水平飞跃、无升空；
+//   跳跃受真实净空约束（playerPhysics 顶头即 vy 归零）：跳升 1 格要求起跳与落点
+//   头顶 2 格可通行，同层走要求落点头顶 1 格可通行——否则楼梯上到一半被楼板
+//   压住跳不上去（诗文书院真实事故，2026-09-16 修复时补的模型）。
 function decodeView(card) {
     const dec = decodeRegionBlocks(card);
     if (dec.error) throw new Error(`区域快照解码失败：${dec.error}`);
@@ -262,6 +265,11 @@ function floodFrom(card, start, mode, openDoors) {
             if (nx < 0 || nz < 0 || nx >= r.w || nz >= r.d) continue;
             for (const ny of [y, y + 1]) { // 同层走 / 跳 1 格上
                 if (ny >= r.h) continue;
+                // 净空约束（真实跳跃顶头即 vy 归零）：落点头顶 1 格须可通行；
+                // 跳上 1 格时起跳点头顶 2 格也须可通行（只剩 1 格净空时跳跃上升
+                // 不足 1 格——楼梯中段被楼板压住跳不上去的事故即此形态）
+                if (!passable(nx, ny + 1, nz)) continue;
+                if (ny === y + 1 && !passable(x, y + 2, z)) continue;
                 if (node(nx, ny, nz)) {
                     const k = key3(nx, ny, nz);
                     if (!seen.has(k)) { seen.add(k); stack.push([nx, ny, nz]); }
@@ -272,6 +280,7 @@ function floodFrom(card, start, mode, openDoors) {
                 for (const dy of [0, 1]) {
                     const fy = y + dy;
                     if (fy >= r.h) continue;
+                    if (dy === 1 && !passable(x, y + 2, z)) continue; // 升 1 格跑跳：起跳点头顶 2 格净空
                     const ex = x + dist * dx, ez = z + dist * dz;
                     if (ex < 0 || ez < 0 || ex >= r.w || ez >= r.d) continue;
                     let clear = true;
@@ -280,6 +289,7 @@ function floodFrom(card, start, mode, openDoors) {
                         clear = passable(mx, fy, mz) && (fy + 1 >= r.h || passable(mx, fy + 1, mz));
                     }
                     if (!clear) continue;
+                    if (dy === 1 && fy + 1 < r.h && !passable(ex, fy + 1, ez)) continue; // 落点头顶 2 格净空
                     if (node(ex, fy, ez)) {
                         const k = key3(ex, fy, ez);
                         if (!seen.has(k)) { seen.add(k); stack.push([ex, fy, ez]); }
@@ -326,17 +336,17 @@ export function lockedSequenceCheck(card, lockDoorHints) {
     for (let round = 0; round <= card.questions.length; round++) {
         const comp = floodFrom(card, start, 'locked', openDoors);
         if (comp.has(goalKey) && unlocked.size >= card.questions.length) return { ok: problems.length === 0, problems };
-        // 当前可交互、尚未解锁的锁：6 邻任一格可达；或 6 邻有关着的门——「锁贴门」接线时
-        // 锁的唯一开放面就是门位，玩家站在门前侧身按墙上的锁（地牢甬道嵌壁锁即此形态）
+        // 当前可交互、尚未解锁的锁：泛洪能站到答题机 6 邻；或能站到「其关着的门」的
+        // 6 邻——「锁贴门」接线时玩家站在门前侧身按墙上的锁（地牢甬道嵌壁锁即此形态）。
+        // ⚠️ 不能只看「6 邻存在关着的门」：嵌墙锁贴着自己那扇门会被隔空判为可交互
+        //（玩家根本没走到跟前），解锁序模拟失真——2026-09-16 修复。
         const newly = [];
         card.questions.forEach((q, i) => {
-            const { get } = decodeView(card);
-            const atLock = H6.some(([dx, dy, dz]) => {
-                const nx = q.x + dx, ny = q.y + dy, nz = q.z + dz;
-                if (comp.has(key3(nx, ny, nz))) return true;
-                return isDoorId(get(nx, ny, nz)) && doorOpen(get(nx, ny, nz)) === 0;
-            });
-            if (!unlocked.has(i) && atLock) newly.push(i);
+            if (unlocked.has(i)) return;
+            const door = doorOfLock(card, q, hints);
+            const atLock = H6.some(([dx, dy, dz]) => comp.has(key3(q.x + dx, q.y + dy, q.z + dz))) ||
+                (door && H6.some(([dx, dy, dz]) => comp.has(key3(door[0] + dx, door[1] + dy, door[2] + dz))));
+            if (atLock) newly.push(i);
         });
         if (!newly.length) {
             const rest = card.questions.filter((q, i) => !unlocked.has(i)).map((q) => key3(q.x, q.y, q.z));

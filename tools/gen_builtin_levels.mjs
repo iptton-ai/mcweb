@@ -198,12 +198,15 @@ function buildCastle() {
     c.clear(30, gy + 1, 22, 30, gy + 2, 22);
     doorway(c, { x: 30, z: 22, y0: gy + 1, facing: 2 }, { x: 29, y: gy + 1, z: 22 });
     c.set(31, gy + 1, 22, TORCH);
-    // 一层→二层楼梯（z=23 一排逐格 +1，楼板洞开在末两级头顶 2 宽）
+    // 一层→二层楼梯（z=23 一排逐格 +1，楼板洞开在末三级头顶，含起跳级净空——
+    // 只开末两级时站在倒数第二级起跳撞楼板，楼梯中段卡死，2026-09-16 修复）
     const stair1 = [[27, gy + 1], [28, gy + 2], [29, gy + 3], [30, gy + 4], [31, gy + 5], [32, gy + 6]];
     for (const [sx, sy] of stair1) c.set(sx, sy, 23, COBBLESTONE);
-    c.set(31, F1T, 23, AIR); c.set(32, F1T, 23, AIR); // 楼板洞
+    c.set(30, F1T, 23, AIR); c.set(31, F1T, 23, AIR); c.set(32, F1T, 23, AIR); // 楼板洞
     // 二层王座厅：红毯 + 王座 + 终点旗
-    c.fill(29, F1T + 1, 22, 31, F1T + 1, 24, WOOL);
+    //（红毯只铺 x29..30：x31 正下方是楼梯洞，铺过去会把起跳级头顶压到 0.2 格净空，
+    //  楼梯最后一级跳不上去——2026-09-16 修复）
+    c.fill(29, F1T + 1, 22, 30, F1T + 1, 24, WOOL);
     c.set(30, F1T + 1, K.z1 - 1, COBBLESTONE);
     c.set(30, F1T + 2, K.z1 - 1, COBBLESTONE);
     c.set(29, F1T + 1, K.z1 - 1, TORCH);
@@ -212,10 +215,11 @@ function buildCastle() {
     c.set(33, F1T + 3, K.z0 + 1, TORCH);
     flagAt(c, 30, F1T + 1, 23, FLAG_GOAL); // 旗立红毯上
     flagAt(c, 30, gy, 20, FLAG_CHECKPOINT); // 检查点：一层大厅（进主楼后）
-    // 二层→屋顶楼梯（z=19 一排，屋顶洞 2 宽）
+    // 二层→屋顶楼梯（z=19 一排，屋顶洞含起跳级净空 3 宽）
     const stair2 = [[27, F1T + 1], [28, F1T + 2], [29, F1T + 3], [30, F1T + 4]];
     for (const [sx, sy] of stair2) c.set(sx, sy, 19, COBBLESTONE);
-    c.set(29, F2T, 19, AIR); c.set(30, F2T, 19, AIR); // 屋顶洞
+    c.set(28, F2T, 19, AIR); c.set(29, F2T, 19, AIR); c.set(30, F2T, 19, AIR); // 屋顶洞
+    c.set(29, F2T + 1, 19, AIR); // 城齿让位：起跳级头顶净空（城齿棋盘在此格恰为实心）
     c.set(26, F2T + 1, 21, TORCH); // 屋顶火把
 
     // 检查点：一层楼梯厅（进主楼后）

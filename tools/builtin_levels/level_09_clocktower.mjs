@@ -104,11 +104,14 @@ export function buildLevel() {
     doorway(c, { x: 35, z: 23, y0: gy + 1, facing: 2 }, { x: 34, y: gy + 1, z: 23 }); // 锁①
     c.set(36, gy + 1, 24, TORCH);
 
-    // ---- 一层→二层楼梯（z 向逐格 +1，楼板洞开在最后两级头顶） ----
+    // ---- 一层→二层楼梯（z 向逐格 +1，楼板洞开在最后三级头顶） ----
+    //（洞必须盖住倒数第二级起跳点的头顶：跳跃弧线顶头即 vy 归零，只开最后两级时
+    //  站在倒数第二级起跳会撞楼板，楼梯中段卡死——2026-09-16 修复）
     const stair1 = [[36, gy + 1, 22], [36, gy + 2, 21], [36, gy + 3, 20], [36, gy + 4, 19], [36, gy + 5, 18]];
     for (const [sx, sy, sz] of stair1) c.set(sx, sy, sz, COBBLESTONE);
-    c.set(36, F2T, 18, AIR); // 楼板洞（最后两级头顶）
+    c.set(36, F2T, 18, AIR); // 楼板洞（最后三级头顶，含起跳级）
     c.set(36, F2T, 19, AIR);
+    c.set(36, F2T, 20, AIR);
 
     // ---- 二层「年月日厅」：检查点 + 隔墙 + 锁②（闰年/历法推算） ----
     flagAt(c, 33, F2T, 20, FLAG_CHECKPOINT);
@@ -121,11 +124,12 @@ export function buildLevel() {
     doorway(c, { x: 29, z: 12, y0: F2T + 1, facing: 3 }, { x: 29, y: F2T + 1, z: 11 }); // 锁②
     c.set(27, F2T + 1, 13, TORCH);
 
-    // ---- 二层→三层楼梯（x 向逐格 +1，楼板洞开在最后两级头顶） ----
+    // ---- 二层→三层楼梯（x 向逐格 +1，楼板洞开在最后三级头顶，含起跳级净空） ----
     //（放在 z=20：机房占 x23..27, z11..14，楼梯线必须避开它的东墙正上方）
     const stair2 = [[24, F2T + 1, 20], [25, F2T + 2, 20], [26, F2T + 3, 20], [27, F2T + 4, 20]];
     for (const [sx, sy, sz] of stair2) c.set(sx, sy, sz, COBBLESTONE);
-    c.set(26, F3T, 20, AIR); // 楼板洞（最后两级头顶）
+    c.set(25, F3T, 20, AIR); // 楼板洞（最后三级头顶，含起跳级）
+    c.set(26, F3T, 20, AIR);
     c.set(27, F3T, 20, AIR);
 
     // ---- 三层「量感厅」：检查点 + 隔墙 + 锁③（质量单位两步题） ----
@@ -136,11 +140,12 @@ export function buildLevel() {
     doorway(c, { x: 33, z: 20, y0: F3T + 1, facing: 3 }, { x: 33, y: F3T + 1, z: 21 }); // 锁③
     c.set(32, F3T + 1, 22, TORCH);
 
-    // ---- 三层→钟顶楼梯（z 向逐格 +1，屋顶洞开在最后两级头顶） ----
+    // ---- 三层→钟顶楼梯（z 向逐格 +1，屋顶洞开在最后三级头顶，含起跳级净空） ----
     const stair3 = [[36, F3T + 1, 22], [36, F3T + 2, 21], [36, F3T + 3, 20], [36, F3T + 4, 19]];
     for (const [sx, sy, sz] of stair3) c.set(sx, sy, sz, COBBLESTONE);
-    c.set(36, RT, 19, AIR); // 屋顶洞（最后两级头顶）
+    c.set(36, RT, 19, AIR); // 屋顶洞（最后三级头顶，含起跳级）
     c.set(36, RT, 20, AIR);
+    c.set(36, RT, 21, AIR);
 
     // ---- 三层→屋顶隔墙东段的楼梯口照明 ----
     c.set(35, F3T + 1, 24, TORCH);
@@ -170,9 +175,10 @@ export function buildLevel() {
 
     // ---- 钟顶露台（终点）：城齿 + 钟楼亭 + 火把 ----
     crenels(c, 22, 10, 38, 26, RT + 1);
-    // 城齿棋盘让出楼梯口：洞格头顶 + 上屋落点必须留空，否则泛洪卡死在楼梯洞里
+    // 城齿棋盘让出楼梯口：洞格头顶 + 起跳级头顶 + 上屋落点必须留空，否则泛洪/跳跃卡死
     c.set(36, RT + 1, 19, AIR);
     c.set(36, RT + 1, 18, AIR);
+    c.set(36, RT + 1, 20, AIR);
     for (const [px, pz] of [[28, 16], [32, 16], [28, 20], [32, 20]]) {
         c.fill(px, RT + 1, pz, px, RT + 2, pz, LOG); // 钟楼亭四柱
     }
