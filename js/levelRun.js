@@ -133,6 +133,7 @@ export function getRespawnPos() {
 // enterLevel(cardOrId)：卡对象直用；字符串 id 走 levelWorkshop.getLevelCard。
 // 返回运行时对象；失败返回 null（任何模块缺失都不得抛错中断）。
 export async function enterLevel(cardOrId) {
+    if (state.levelEdit) return null; // 编辑会话占住临时世界：闯关进入必须先退出编辑（2026-09-16）
     const prevRun = state.levelRun || null;
     const alreadyActive = !!prevRun; // 关卡中重入 = 重试式重嵌（不落盘、沿用 restore 暂存）
 

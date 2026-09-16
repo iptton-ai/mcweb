@@ -67,6 +67,7 @@ export const state = {
     levelRun: null, // 闯关运行时（非 null = 闯关中：存档被冻结、挖/放/模式切换等被守卫拦截）
     levelResult: null, // 最近一局结算数据（result 态浮层 #result-panel 的填充源，见 uiModal.js）
     levelExportOpen: false, // K 释放鼠标操作导出关卡卡面板（作者流程最后一步），同拍摄面板的非暂停浮层
+    prefabPickerOpen: false, // 🧱 组件库浮层（关卡编辑器/建造模式 B 键）：打开时释放鼠标点选组件
 };
 
 export function isCreative() {

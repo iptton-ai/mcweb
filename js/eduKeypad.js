@@ -785,6 +785,34 @@ export function isLockVerified(x, y, z) {
     return !!e && e.verifiedPasses >= 2;
 }
 
+// ---- 锁题快照/种子（2026-09-16 编辑器批次，levelEditor.js 消费）----
+// authoredLocks 按世界坐标记在内存（不进存档）；编辑器临时世界占住嵌入区坐标，
+// 进编辑器前快照清空、退编辑器原样恢复，防与真实世界的锁互相串扰。
+
+// 全表快照（levelEditor.enterLevelEditor 进场前调）
+export function listAuthoredLocks() {
+    return [...authoredLocks.entries()].map(([key, e]) => ({
+        key, question: e.question, verifiedPasses: e.verifiedPasses,
+    }));
+}
+
+// 整表恢复（传 [] 即清空）；levelEditor 进/退编辑器各调一次
+export function restoreAuthoredLocks(list) {
+    authoredLocks.clear();
+    for (const e of list || []) {
+        if (e && e.key && e.question) {
+            authoredLocks.set(e.key, { question: e.question, verifiedPasses: e.verifiedPasses | 0 });
+        }
+    }
+}
+
+// 单锁种子：把关卡卡里的题按世界坐标种回作者锁表（模板/草稿重嵌入后双通过免重做；
+// 作者用笔改题仍走原保存流程 → verifiedPasses 归零重考，语义不变）
+export function seedAuthoredLock(x, y, z, question, verifiedPasses) {
+    if (!question) return;
+    authoredLocks.set(auKey(x, y, z), { question, verifiedPasses: Math.min(2, verifiedPasses | 0) });
+}
+
 // getExamIntent：考核锁待导出意图（导出方读走、塞进 buildLevelCard 的 rules 覆盖参数，见链路注释）
 export function getExamIntent() {
     return examIntent;

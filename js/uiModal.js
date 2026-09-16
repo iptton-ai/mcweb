@@ -44,7 +44,8 @@ export function getUIState() {
 
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板
 function wantLockNow() {
-    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen && !state.levelExportOpen;
+    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
+        && !state.levelExportOpen && !state.prefabPickerOpen;
 }
 
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）
@@ -54,7 +55,8 @@ export function isPlaying() {
 
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
-    return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen;
+    return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
+        && !state.prefabPickerOpen;
 }
 
 export function isAssistantVisible() {
@@ -115,6 +117,12 @@ function applyPointerPolicy() {
         hideLockHint();
         if (mouseLocked) exitLock();
     }
+}
+
+// 非暂停浮层（导出面板/组件库/编辑器 HUD 输入）开关后调：按当前面板标志重新套用
+// 指针策略——面板打开即释放鼠标，全部关掉即走既有自动回锁链路（编辑器批次 2026-09-16）
+export function syncPointerPolicy() {
+    applyPointerPolicy();
 }
 
 // Esc 在面板打开时也能切换暂停菜单（由 assistant/ui.js 的 Esc 分支调用）
@@ -239,7 +247,7 @@ function onPointerLockChange() {
     lockPending = false;
     if (mouseLocked) {
         // 锁定请求异步返回期间可能已按 Tab 打开面板；迟到的成功不能抢回鼠标。
-        if (state.recordingControlsOpen || state.levelExportOpen || uiState !== 'playing') {
+        if (state.recordingControlsOpen || state.levelExportOpen || state.prefabPickerOpen || uiState !== 'playing') {
             exitLock();
             syncOverlays();
             return;
@@ -247,7 +255,8 @@ function onPointerLockChange() {
         wantLock = false;
         stopRetry();
         hideLockHint();
-    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen && !state.levelExportOpen) {
+    } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
+        && !state.levelExportOpen && !state.prefabPickerOpen) {
         // 用户按 Esc（锁定状态下浏览器截获 Esc，页面收不到 keydown）或系统夺走指针 → 暂停菜单
         // （面板开着时指针本就不该被锁定，此时解锁不弹菜单）
         setState('pause');

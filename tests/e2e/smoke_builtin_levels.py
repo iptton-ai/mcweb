@@ -46,8 +46,11 @@ const rows = [...(rowsDom ? rowsDom.querySelectorAll('.level-row') : [])];
 const rowText = rows.map(r=>r.textContent);
 const builtinRows = rows.filter(r=>r.textContent.includes('官方关卡'));
 const namesOK = ['村口热身赛','星辉城堡','地牢寻宝记','云间跳跳乐'].every(n=>rowText.some(t=>t.includes(n)));
-// 内置行只有 ▶/🎥 两个钮（无删除 ✕）；官方卡数量随批次增长，只要求≥4（老四关在列）
-const builtinNoDelete = builtinRows.length>=4 && builtinRows.every(r=>r.querySelectorAll('button').length===2);
+// 内置行无删除钮 ✕（2026-09-16 起有 ▶/🎥/✏️改副本 三钮，按语义断言而非冻结数量）；
+// 官方卡数量随批次增长，只要求≥4（老四关在列）
+const builtinNoDelete = builtinRows.length>=4 && builtinRows.every(r =>
+  [...r.querySelectorAll('button')].every(b => !b.textContent.includes('✕')) &&
+  r.textContent.includes('改副本'));
 // ---- 2) 点「星辉城堡」行的 ▶ 进入 ----
 const castleRow = rows.find(r=>r.textContent.includes('星辉城堡'));
 const enterBtn = castleRow ? [...castleRow.querySelectorAll('button')].find(b=>b.textContent.includes('进入')) : null;

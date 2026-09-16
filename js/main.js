@@ -29,6 +29,7 @@ import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
 import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
 import { exitLevelRun, tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
+import { exitLevelEditor, tickLevelEditor } from './levelEditor.js'; // 关卡编辑器：临时世界/草稿自动保存（2026-09-16）
 // B4 并行编写的关卡 UI 导出（updateLevelHud/updateResultPanel/openLevelList/initLevelListUI）
 // 统一走命名空间可选链：直接命名导入会在它落地前炸掉整个模块图
 import * as uiNS from './ui.js';
@@ -118,6 +119,9 @@ function gameLoop(timestamp) {
     // 闯关运行时（关卡工坊批次 W）：计时/旗踩踏/掉界/限时结算；非闯关时内部直接跳过
     tickLevelRun(dt);
 
+    // 关卡编辑器（2026-09-16）：正午锁 + 草稿自动保存；非编辑态内部直接跳过
+    tickLevelEditor(dt);
+
     // 动态背景配乐（白天/黑夜/怪物接近/战斗交叉淡入淡出）
     updateBGM();
 
@@ -136,6 +140,7 @@ function gameLoop(timestamp) {
     // 关卡 HUD 与结算面板（B4 导出，命名空间可选链——B4 未合流时静默跳过）
     uiNS.updateLevelHud?.();
     uiNS.updateResultPanel?.();
+    uiNS.updateEditorHud?.(); // 编辑器 HUD（2026-09-16；编辑态才可见）
 
     // 施工进度控件（AI 建造时顶部显示）
     updateBuildWidget();
@@ -231,6 +236,12 @@ function startNewWorld(mode, tip, slot = state.saveSlot) {
         showTooltip('已退出关卡——请从首屏重试该操作');
         return;
     }
+    if (state.levelEdit) {
+        // 编辑中切世界同理：先退出编辑（草稿自动保存 + 恢复原世界）再让用户重试
+        void exitLevelEditor({ saveDraft: true });
+        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试该操作');
+        return;
+    }
     state.saveSlot = slot;
     stopRecording();
     resetBuildFilming(); // 摄像头可能停在自由/跟拍机位，新世界回到玩家视角
@@ -250,6 +261,11 @@ function loadSlot(slot) {
     if (state.levelRun) {
         exitLevelRun({ toTitle: true }); // G3 P1#3 同上：先退关回首屏再切
         showTooltip('已退出关卡——请从首屏重试切换世界');
+        return;
+    }
+    if (state.levelEdit) {
+        void exitLevelEditor({ saveDraft: true }); // 编辑中切世界：先退编辑（草稿已存）
+        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试切换世界');
         return;
     }
     if (slot === state.saveSlot) {
@@ -341,6 +357,11 @@ function deleteSlotAndRecover(i) {
     if (state.levelRun) {
         exitLevelRun({ toTitle: true }); // G3 P1#3 同上：不在关卡世界里删档/切世界
         showTooltip('已退出关卡——请从首屏重试删除');
+        return;
+    }
+    if (state.levelEdit) {
+        void exitLevelEditor({ saveDraft: true }); // 编辑中删档：先退编辑（草稿已存）
+        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试删除');
         return;
     }
     deleteSave(i);

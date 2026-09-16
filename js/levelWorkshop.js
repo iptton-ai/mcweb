@@ -323,10 +323,13 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
                     });
                 } else if (isStarlightId(id)) {
                     // G3 P1#4：星辉门题目依赖玩家学习进度（超纲判定），无法随卡自包含——
-                    // 暂拒导出并明示；「预告关」锁具随卡导出登记为后续批次债务
-                    return { error: starlightOpen(id) === 1
-                        ? '发现已开启的星辉门：不能进卡（天生开门的假锁）——请拆掉换新的'
-                        : '星辉门暂不随关卡卡导出（题目因人而异、无法自包含）——请改用答题机或把它移出关卡区域' };
+                    // 正式导出拒绝并明示；编辑器草稿（draft=true）容忍：星辉门保持原方块
+                    // 进快照，题目由运行时按玩家进度生成，不进 questions（2026-09-16）
+                    if (!draft) {
+                        return { error: starlightOpen(id) === 1
+                            ? '发现已开启的星辉门：不能进卡（天生开门的假锁）——请拆掉换新的'
+                            : '星辉门暂不随关卡卡导出（题目因人而异、无法自包含）——请改用答题机或把它移出关卡区域' };
+                    }
                 }
             }
         }
@@ -623,12 +626,16 @@ export function levelCardId(card) {
 }
 
 // ==================== 卡片存储：IndexedDB + 会话内存兜底 ====================
-// IndexedDB 'mcweb-levels' v1 / store 'cards'（keyPath 'id'），记录 {id, card, thumbnail?, savedAt}。
+// IndexedDB 'mcweb-levels' v2 / store 'cards'（关卡卡）+ 'templates'（模板，2026-09-16
+// 编辑器批次新增；v1 老库打开时 onupgradeneeded 补建）。记录 {id, card, thumbnail?, savedAt}。
 // 不可用（Node 测试/隐私模式）或写入失败（配额等）⇒ 内存 Map 兜底 + sessionOnly:true（W17 降级路径）。
 
 const LEVELS_DB = 'mcweb-levels';
+const LEVELS_DB_VERSION = 2;
 const LEVELS_STORE = 'cards';
+const TPL_STORE = 'templates';
 const sessionCards = new Map(); // id -> {id, card, thumbnail?, savedAt}
+const sessionTpls = new Map();  // 模板同款会话兜底
 
 function idbRequest(req) {
     return new Promise((resolve, reject) => {
@@ -637,18 +644,21 @@ function idbRequest(req) {
     });
 }
 
-async function idbRun(mode, op) {
+async function idbRun(storeName, mode, op) {
     if (!globalThis.indexedDB) throw new Error('IndexedDB 不可用');
-    const req = globalThis.indexedDB.open(LEVELS_DB, 1);
+    const req = globalThis.indexedDB.open(LEVELS_DB, LEVELS_DB_VERSION);
     req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains(LEVELS_STORE)) {
             db.createObjectStore(LEVELS_STORE, { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains(TPL_STORE)) {
+            db.createObjectStore(TPL_STORE, { keyPath: 'id' });
+        }
     };
     const db = await idbRequest(req);
     try {
-        const store = db.transaction(LEVELS_STORE, mode).objectStore(LEVELS_STORE);
+        const store = db.transaction(storeName, mode).objectStore(storeName);
         return await idbRequest(op(store)); // 单请求事务：请求挂起期间事务不会自动提交
     } finally {
         db.close();
@@ -675,7 +685,7 @@ export async function saveLevelCard(card, thumbnailBlob) {
     const rec = { id, card, savedAt: Date.now() };
     if (thumbnailBlob) rec.thumbnail = thumbnailBlob;
     try {
-        await idbRun('readwrite', (store) => store.put(rec));
+        await idbRun(LEVELS_STORE, 'readwrite', (store) => store.put(rec));
         return { ok: true, id };
     } catch {
         sessionCards.set(id, rec);
@@ -687,7 +697,7 @@ export async function saveLevelCard(card, thumbnailBlob) {
 export async function listLevelCards() {
     const out = new Map();
     try {
-        const rows = await idbRun('readonly', (store) => store.getAll());
+        const rows = await idbRun(LEVELS_STORE, 'readonly', (store) => store.getAll());
         for (const rec of rows || []) {
             if (rec && rec.card) out.set(rec.id, summarizeCard(rec, false));
         }
@@ -701,7 +711,7 @@ export async function listLevelCards() {
 // 取卡片（IndexedDB 优先，未命中/不可用回会话）；无 → null
 export async function getLevelCard(id) {
     try {
-        const rec = await idbRun('readonly', (store) => store.get(id));
+        const rec = await idbRun(LEVELS_STORE, 'readonly', (store) => store.get(id));
         if (rec && rec.card) return rec.card;
     } catch { /* 降级查会话 */ }
     const ses = sessionCards.get(id);
@@ -712,13 +722,69 @@ export async function getLevelCard(id) {
 export async function deleteLevelCard(id) {
     let removed = false;
     try {
-        const rec = await idbRun('readonly', (store) => store.get(id));
+        const rec = await idbRun(LEVELS_STORE, 'readonly', (store) => store.get(id));
         if (rec) {
-            await idbRun('readwrite', (store) => store.delete(id));
+            await idbRun(LEVELS_STORE, 'readwrite', (store) => store.delete(id));
             removed = true;
         }
     } catch { /* 降级只清会话 */ }
     if (sessionCards.delete(id)) removed = true;
+    return removed;
+}
+
+// ==================== 模板存储（2026-09-16 编辑器批次） ====================
+// 模板 = 可反复「改副本」起稿的关卡卡（官方卡/我的关卡/草稿都能存）。与关卡卡同一套
+// 校验门槛（存的就是合法卡），store 独立（'templates'）避免混进游玩列表。
+// id = 'tpl-' + cardHash：同内容重复保存 = 覆盖同一条，不制造重复模板。
+
+export async function saveLevelTemplate(card) {
+    if (!card || card.format !== LEVEL_CARD_FORMAT) {
+        return { ok: false, error: '不是有效的关卡卡（format 不符）' };
+    }
+    const id = `tpl-${cardHash(card)}`;
+    const rec = { id, card, savedAt: Date.now() };
+    try {
+        await idbRun(TPL_STORE, 'readwrite', (store) => store.put(rec));
+        return { ok: true, id };
+    } catch {
+        sessionTpls.set(id, rec);
+        return { ok: true, id, sessionOnly: true };
+    }
+}
+
+export async function listLevelTemplates() {
+    const out = new Map();
+    try {
+        const rows = await idbRun(TPL_STORE, 'readonly', (store) => store.getAll());
+        for (const rec of rows || []) {
+            if (rec && rec.card) out.set(rec.id, summarizeCard(rec, false));
+        }
+    } catch { /* 降级：只列会话模板 */ }
+    for (const [id, rec] of sessionTpls) {
+        if (!out.has(id)) out.set(id, summarizeCard(rec, true));
+    }
+    return [...out.values()].sort((a, b) => (a.created < b.created ? 1 : -1));
+}
+
+export async function getLevelTemplate(id) {
+    try {
+        const rec = await idbRun(TPL_STORE, 'readonly', (store) => store.get(id));
+        if (rec && rec.card) return rec.card;
+    } catch { /* 降级查会话 */ }
+    const ses = sessionTpls.get(id);
+    return ses ? ses.card : null;
+}
+
+export async function deleteLevelTemplate(id) {
+    let removed = false;
+    try {
+        const rec = await idbRun(TPL_STORE, 'readonly', (store) => store.get(id));
+        if (rec) {
+            await idbRun(TPL_STORE, 'readwrite', (store) => store.delete(id));
+            removed = true;
+        }
+    } catch { /* 降级只清会话 */ }
+    if (sessionTpls.delete(id)) removed = true;
     return removed;
 }
 

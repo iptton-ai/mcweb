@@ -67,8 +67,9 @@ const rows = [...(rowsDom ? rowsDom.querySelectorAll('.level-row') : [])];
 const rowText = rows.map(r=>r.textContent);
 const targetRow = rows.find(r=>r.textContent.includes(__NAME__));
 const builtinRows = rows.filter(r=>r.textContent.includes('官方关卡'));
-// 内置行只有 ▶/🎥 两个钮（无删除 ✕）
-const builtinNoDelete = builtinRows.length>0 && builtinRows.every(r=>r.querySelectorAll('button').length===2);
+// 内置行无删除钮 ✕（2026-09-16 起另有 ✏️改副本，按语义断言而非冻结数量）
+const builtinNoDelete = builtinRows.length>0 && builtinRows.every(r =>
+  [...r.querySelectorAll('button')].every(b => !b.textContent.includes('✕')));
 // ---- 2) 点该卡行的 ▶ 进入 ----
 const enterBtn = targetRow ? [...targetRow.querySelectorAll('button')].find(b=>b.textContent.includes('进入')) : null;
 if (enterBtn) { enterBtn.click(); await sleep(1500); await tick(4); }

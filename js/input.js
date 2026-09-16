@@ -12,9 +12,10 @@ import { swingViewmodel } from './viewmodel.js';
 import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
-import { closeExportPanel, closeLevelList, isLevelListOpen, openExportPanel, openItemPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
+import { closeExportPanel, closeLevelList, closePrefabPicker, isLevelListOpen, isPrefabPickerOpen, openExportPanel, openItemPicker, openPrefabPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
 import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
 import { exitLevelRun, isLevelRunActive } from './levelRun.js'; // 闯关模式：绕过通道全闭（W11）+ 结算态退出
+import { cancelPlacing, consumePlaceClick, getPlacing } from './levelEditor.js'; // 关卡编辑器：组件放置（2026-09-16）
 
 // ==================== 输入状态 ====================
 export const keys = {};
@@ -66,7 +67,8 @@ export function setupInput() {
 
         // Esc：指针锁定时浏览器截获 Esc（页面收不到 keydown），这里只处理浮层状态下的 Esc
         if (e.code === 'Escape') {
-            if (state.levelExportOpen) closeExportPanel(); // 导出面板：关面板回游戏
+            if (isPrefabPickerOpen()) closePrefabPicker(); // 组件库浮层：关闭并结束放置态
+            else if (state.levelExportOpen) closeExportPanel(); // 导出面板：关面板回游戏
             else if (isLevelListOpen()) closeLevelList(); // 首屏关卡列表浮层：关闭（B1 关闭钮 title 承诺的行为）
             else if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
             else if (st === 'result') exitLevelRun({ toTitle: true }); // 结算浮层：退出关卡回首屏
@@ -76,12 +78,19 @@ export function setupInput() {
         // Q：Esc 的替代键（推荐在 ZCode 内嵌浏览器里用——Esc 会被宿主截获导致应用退出，Q 不会）：
         // 锁定时释放鼠标并弹暂停菜单；暂停/背包里回游戏；设置浮层里关闭浮层
         if (e.code === 'KeyQ') {
-            if (state.levelExportOpen) closeExportPanel();
+            if (isPrefabPickerOpen()) closePrefabPicker();
+            else if (state.levelExportOpen) closeExportPanel();
             else if (isLevelListOpen()) closeLevelList();
             else if (st === 'settings') closeSettingsState();
             else if (st === 'result') exitLevelRun({ toTitle: true });
             else if (st === 'pause' || st === 'inventory') setState('playing');
             else if (st === 'playing' && mouseLocked) releasePointerToPause();
+            return;
+        }
+        // B：组件库（关卡编辑器/建造模式）——点选预设组件后准星瞄准左键盖章
+        if (e.code === 'KeyB' && st === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen) {
+            if (isPrefabPickerOpen()) closePrefabPicker();
+            else openPrefabPicker();
             return;
         }
         // K：导出关卡卡（作者流程最后一步，plan §2.1「按 K 导出」）——非暂停浮层，
@@ -212,6 +221,8 @@ export function setupInput() {
         }
         if (e.button === 0) {
             if (state.camMode === 'player') {
+                // 组件放置态：左键 = 盖章（吞掉这次点击，不进入挖掘/攻击）
+                if (consumePlaceClick()) return;
                 mouseDown.left = true;
                 // 按下瞬间：攻击怪物 / 开始挖掘（生存蓄力、创造与即挖方块直接破坏，见 js/mining.js）
                 miningPress();
@@ -221,6 +232,12 @@ export function setupInput() {
             if (state.camMode === 'player' && isCreative()) pickBlockUnderCrosshair();
         } else if (e.button === 2) {
             if (state.camMode === 'player') {
+                // 组件放置态：右键 = 结束放置（不放方块，防误盖一手持块）
+                if (getPlacing()) {
+                    cancelPlacing();
+                    showTooltip('🧱 已结束放置');
+                    return;
+                }
                 mouseDown.right = true;
                 placeBlock();
                 swingViewmodel(); // 放置也挥一下手（照原版使用动画）

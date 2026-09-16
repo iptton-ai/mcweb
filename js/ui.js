@@ -11,13 +11,16 @@ import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { addXp, updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 import { camModeText, getBuildFilmingStatus, setCamMode } from './cameraRig.js';
-import { clearStuckKeys, getUIState, mouseLocked, onUIStateChange, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
+import { clearStuckKeys, getUIState, mouseLocked, onUIStateChange, requestLock, setRecordingControlsOpen, setState, syncPointerPolicy } from './uiModal.js';
 import { downloadRecording, getRecordingStatus, initRecording, isRecording, toggleBuildRecording } from './recording.js';
 export { isCamOwnedRecording, isLevelOwnedRecording, isRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 // 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
-import { buildLevelCard, cardHash, deleteLevelCard, exportLevelCardJson, getLevelCard, importLevelCardFromJson, listBuiltinLevelCards, listLevelCards, saveLevelCard, validateLevelCard } from './levelWorkshop.js';
-import { enterLevel, exitLevelRun, getBestScores, getHudState } from './levelRun.js';
+import { buildLevelCard, cardHash, deleteLevelCard, deleteLevelTemplate, exportLevelCardJson, getLevelCard, getLevelTemplate, importLevelCardFromJson, listBuiltinLevelCards, listLevelCards, listLevelTemplates, saveLevelCard, saveLevelTemplate, validateLevelCard } from './levelWorkshop.js';
+import { enterLevel, exitLevelRun, getBestScores, getHudState, isLevelRunActive } from './levelRun.js';
+// 关卡编辑器（2026-09-16 界面化建关）：编辑会话 + 预设组件库，见「关卡编辑器 UI」段
+import { PREFABS, getPrefab, listPrefabCats } from './levelPrefabs.js';
+import { cancelPlacing, enterLevelEditor, exitLevelEditor, getEditorInfo, getPlacing, isLevelEditorActive, saveEditorDraft, startPlacing } from './levelEditor.js';
 import { renderRegionThumbnail } from './levelPoster.js'; // P1 · B6：俯视缩略图（列表行 + 导出随卡入库）
 
 // ==================== 游戏模式切换 ====================
@@ -629,6 +632,31 @@ const LEVEL_UI_STYLE = `
 #result-locks .result-lock-empty{color:#9a9ab8;font-size:12px;text-align:center;}
 /* ---- 内置关卡与本机关卡之间的分区标签 ---- */
 .lvl-section-label{margin:10px 4px 2px;color:#8f93a8;font-size:12px;text-align:center;}
+/* ---- 关卡编辑器 HUD（#editor-hud，编辑态常显；指针释放后可点按钮/填名字） ---- */
+#editor-hud{position:fixed;top:12px;left:12px;z-index:60;display:none;align-items:center;gap:8px;
+ padding:8px 10px;border-radius:12px;background:rgba(28,32,42,.88);border:1px solid #5d4a1f;
+ box-shadow:0 4px 16px rgba(0,0,0,.35);font-size:13px;color:#edf0f7;flex-wrap:wrap;max-width:62vw;}
+#editor-hud.visible{display:flex;}
+body.hud-hidden #editor-hud{display:none !important;}
+#editor-hud .ed-title{font-weight:650;color:#ffd77a;white-space:nowrap;}
+#editor-hud input{width:130px;padding:5px 8px;border-radius:8px;border:1px solid #565a67;
+ background:#20242e;color:#edf0f7;font:inherit;}
+#editor-hud button{border:1px solid #565a67;border-radius:8px;background:#303541;color:#edf0f7;
+ cursor:pointer;font:inherit;padding:5px 9px;white-space:nowrap;}
+#editor-hud button:hover{border-color:#acd58c;background:#404958;}
+#editor-hud .ed-tip{color:#9adf9a;font-size:12px;}
+/* ---- 组件库浮层（#prefab-picker，编辑器/建造模式 B 键开关） ---- */
+#prefab-picker{z-index:70;}
+#prefab-grid{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto;padding:2px;}
+.prefab-cat{color:#ffd77a;font-size:12px;margin:4px 2px 0;}
+.prefab-grid-row{display:flex;flex-wrap:wrap;gap:8px;}
+.prefab-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:150px;
+ padding:8px;border-radius:10px;border:1px solid #565a67;background:#303541;color:#edf0f7;
+ cursor:pointer;font:inherit;text-align:left;}
+.prefab-item:hover{border-color:#acd58c;background:#404958;}
+.prefab-item .pf-name{font-weight:650;font-size:13px;}
+.prefab-item .pf-desc{color:#9a9ab8;font-size:11px;line-height:1.35;display:-webkit-box;
+ -webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 `;
 
 let levelStylesInjected = false;
@@ -680,9 +708,10 @@ function ensureLevelListDom() {
             levelListFallback.innerHTML = `<div class="lvl-panel">
               <div class="lvl-head"><h3>🗺 关卡</h3>
                 <button class="lvl-close" id="level-list-close" title="关闭">✕</button></div>
-              <div class="lvl-sub">闯关模式：试玩当前世界摆好的关卡区域，或导入 .json 关卡卡。</div>
+              <div class="lvl-sub">试玩/导入关卡卡，或 ✏️ 新建、改副本用组件库搭自己的关卡。</div>
               <div id="level-list-rows"></div>
               <div class="lvl-actions">
+                <button class="save-btn" id="btn-level-new">✏️ 新建空白关卡</button>
                 <button class="save-btn" id="btn-level-try">▶ 试玩当前世界</button>
                 <button class="save-btn" id="btn-level-import">📥 导入关卡卡</button>
                 <input type="file" id="level-file-input" accept=".json,application/json" hidden></div></div>`;
@@ -705,6 +734,17 @@ function ensureLevelListDom() {
         rows = document.createElement('div');
         rows.id = 'level-list-rows';
         panel.appendChild(rows);
+    }
+    // 「✏️ 新建空白关卡」（编辑器批次 2026-09-16）：B1 骨架没有这个按钮，兜底补建
+    if (!q('btn-level-new')) {
+        const actions = panel.querySelector('.lvl-actions');
+        if (actions) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-level-new';
+            btn.className = 'save-btn';
+            btn.textContent = '✏️ 新建空白关卡';
+            actions.insertBefore(btn, actions.firstChild);
+        }
     }
     return rows;
 }
@@ -842,6 +882,21 @@ export function initLevelListUI() {
         });
     }
 
+    // ---- ✏️ 新建空白关卡（编辑器批次）：进独立编辑世界（草稿自动保存） ----
+    const newBtn = q('btn-level-new');
+    if (newBtn) {
+        newBtn.addEventListener('click', async () => {
+            newBtn.disabled = true;
+            try {
+                const ok = await enterLevelEditor(null, { name: '未命名关卡' });
+                if (ok) closeLevelList();
+                else showTooltip('❌ 进入关卡编辑器失败');
+            } finally {
+                newBtn.disabled = false;
+            }
+        });
+    }
+
     // ---- 关闭钮：契约未冻结 id，候选查找优先，兜底钮在 ensureLevelListDom 里补建 ----
     const closeBtn = q('btn-level-close') || q('level-list-close') || q('level-close');
     if (closeBtn) closeBtn.addEventListener('click', (e) => {
@@ -858,12 +913,14 @@ export function initLevelListUI() {
     }
 
     // ---- uiModal 状态联动：进入 result 态渲染一次结算面板（main.js 每帧调用之外的兜底）；
-    //      离开首屏（进世界）自动收起关卡列表 ----
+    //      离开首屏（进世界）自动收起关卡列表；编辑器 HUD 骨架就位（每帧 update 回写内容）----
+    ensureEditorHudDom();
     onUIStateChange((_prev, next) => {
         if (next === 'result') updateResultPanel();
         if (next !== 'title') {
             const panel = q('level-list');
             if (panel && !panel.classList.contains('hidden')) closeLevelList();
+            if (next !== 'playing' && isPrefabPickerOpen()) closePrefabPicker();
         }
     });
 }
@@ -881,10 +938,30 @@ export function closeLevelList() {
     if (panel) panel.classList.add('hidden');
 }
 
-// 列表行：卡名/作者/锁数/最佳成绩（★与用时）+ ▶ 进入 / 🎥 拍宣传片 / ✕ 删除（二次确认）。
-// cardOverride：内置关卡直接带完整卡（不走 IndexedDB）；isBuiltin：官方卡=无删除钮、不显创建时间。
-async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
-    const card = cardOverride || await getLevelCard(summary.id); // 摘要不含锁数，逐卡取完整卡（列表量小，可接受）
+// 卡对象深拷贝（关卡卡是纯 JSON——改副本/存模板都必须拷贝，绝不动原卡）
+function deepCopyCard(card) {
+    return JSON.parse(JSON.stringify(card));
+}
+
+// 进入编辑器改副本（官方卡/模板/草稿共用）：拷贝进编辑世界，原卡永远不动
+async function editCardCopy(card, templateName) {
+    const copy = deepCopyCard(card);
+    const name = templateName ? `副本·${templateName}` : (copy.name || '未命名关卡');
+    const ok = await enterLevelEditor(copy, { name, templateName: templateName || '' });
+    if (ok) {
+        closeLevelList();
+        showTooltip(templateName ? `✏️ 已按「${templateName}」开稿——原关卡不会动` : '✏️ 继续编辑草稿');
+    } else {
+        showTooltip('❌ 进入关卡编辑器失败');
+    }
+}
+
+// 列表行：卡名/作者/锁数/最佳成绩（★与用时）+ ▶ 进入 / 🎥 拍宣传片 / ✏️ 改副本 /
+// ⭐ 存为模板 / ✕ 删除（二次确认）。cardOverride：内置关卡直接带完整卡（不走 IndexedDB）；
+// isBuiltin：官方卡=无删除钮、不显创建时间；rowKind='template'：模板行（试玩/用作模板/删模板）。
+async function buildLevelRow(summary, cardOverride, isBuiltin = false, rowKind = 'card') {
+    const isTemplate = rowKind === 'template';
+    const card = cardOverride || (isTemplate ? await getLevelTemplate(summary.id) : await getLevelCard(summary.id)); // 摘要不含锁数，逐卡取完整卡（列表量小，可接受）
     const row = document.createElement('div');
     row.className = 'level-row';
     const main = document.createElement('div');
@@ -897,7 +974,7 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
         row.appendChild(main);
         const del = document.createElement('button');
         del.textContent = '✕';
-        bindDeleteButton(del, summary);
+        bindDeleteButton(del, summary, isTemplate);
         const btns = document.createElement('div');
         btns.className = 'level-btns';
         btns.appendChild(del);
@@ -908,14 +985,17 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
     const locks = (card.questions || []).length;
     const cps = (card.flags && card.flags.checkpoints || []).length;
     const limit = card.rules && card.rules.timeLimit;
-    const best = getBestScores(summary.cardHash); // {stars,timeSec,deaths,plays} | null
+    const isDraft = !!(card.meta && card.meta.draft);
+    const best = isTemplate ? null : getBestScores(summary.cardHash); // {stars,timeSec,deaths,plays} | null
     // 缩略图（P1 · B6）：俯视色块图，同步绘制后行首插入（绘制在 await 之后的同步段，无竞态）
     const thumbUrl = levelThumbDataUrl(card, summary.cardHash);
     const bestText = best && best.stars > 0
         ? `${'★'.repeat(best.stars)}${'☆'.repeat(3 - best.stars)} ${fmtSec(best.timeSec)}`
-        : '尚未通关';
+        : (isTemplate ? '模板' : '尚未通关');
     const sessionBadge = isBuiltin ? '<span class="level-badge">🏰 官方关卡</span>'
-        : summary.sessionOnly ? '<span class="level-badge">仅本次会话</span>' : '';
+        : isTemplate ? '<span class="level-badge">⭐ 模板</span>'
+            : isDraft ? '<span class="level-badge">📝 草稿</span>'
+                : summary.sessionOnly ? '<span class="level-badge">仅本次会话</span>' : '';
     const metaBits = [
         `作者：${escapeHtml(card.author || '匿名')}`,
         `🔒 ${locks} 锁`,
@@ -931,15 +1011,26 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
         // 会话卡说明：IndexedDB 不可用（隐私模式等）时的降级存储，刷新即失
         main.title = '此卡只保存在本次会话中（浏览器 IndexedDB 不可用），刷新页面后将丢失';
     }
+    if (isDraft) {
+        main.title = '草稿：编辑器自动保存的半成品——✏️ 继续编辑，▶ 也可以直接试玩';
+    }
     appendLevelThumb(row, thumbUrl); // 缩略图先行插入（排在 .level-main 之前 = 行首列）
     row.appendChild(main);
 
     const btns = document.createElement('div');
     btns.className = 'level-btns';
 
-    // ▶ 进入：进关成功才收列表（enterLevel 内部负责存档/嵌世界/置出生点）
+    // ✏️ 官方卡/模板行「改副本」/ 草稿「继续编辑」：进编辑器，原件不动
+    if (!isTemplate && (isBuiltin || isDraft)) {
+        const edit = document.createElement('button');
+        edit.textContent = isBuiltin ? '✏️ 改副本' : '✏️ 继续编辑';
+        edit.addEventListener('click', () => { void editCardCopy(card, isBuiltin ? (card.name || '') : ''); });
+        btns.appendChild(edit);
+    }
+
+    // ▶ 进入 / 模板行试玩：进关成功才收列表（enterLevel 内部负责存档/嵌世界/置出生点）
     const play = document.createElement('button');
-    play.textContent = '▶ 进入';
+    play.textContent = isTemplate ? '▶ 试玩' : '▶ 进入';
     play.addEventListener('click', async () => {
         play.disabled = true;
         const run = await enterLevel(card);
@@ -953,29 +1044,57 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
     btns.appendChild(play);
 
     // 🎥 拍宣传片（P1）：进关后立即开 level 档录像；通关/退出由 levelRun 侧守卫自动停
-    const film = document.createElement('button');
-    film.textContent = '🎥 拍宣传片';
-    film.addEventListener('click', async () => {
-        film.disabled = true;
-        const run = await enterLevel(card);
-        film.disabled = false;
-        if (!run) {
-            showTooltip('❌ 进入关卡失败：卡片可能已损坏');
-            return;
-        }
-        closeLevelList();
-        if (!isRecording()) {
-            toggleBuildRecording('level');
-            showTooltip('🎥 宣传片录制中——通关或退出自动保存');
-        }
-    });
-    btns.appendChild(film);
+    if (!isTemplate) {
+        const film = document.createElement('button');
+        film.textContent = '🎥 拍宣传片';
+        film.addEventListener('click', async () => {
+            film.disabled = true;
+            const run = await enterLevel(card);
+            film.disabled = false;
+            if (!run) {
+                showTooltip('❌ 进入关卡失败：卡片可能已损坏');
+                return;
+            }
+            closeLevelList();
+            if (!isRecording()) {
+                toggleBuildRecording('level');
+                showTooltip('🎥 宣传片录制中——通关或退出自动保存');
+            }
+        });
+        btns.appendChild(film);
+    }
+
+    // ✏️ 模板行「用作模板」：进编辑器开新稿
+    if (isTemplate) {
+        const use = document.createElement('button');
+        use.textContent = '✏️ 用作模板';
+        use.addEventListener('click', () => { void editCardCopy(card, card.name || ''); });
+        btns.appendChild(use);
+    }
+
+    // ⭐ 存为模板（本机关卡/草稿）：复制进模板库，随时改副本起稿
+    if (!isTemplate && !isBuiltin) {
+        const tpl = document.createElement('button');
+        tpl.textContent = '⭐ 存为模板';
+        tpl.addEventListener('click', async () => {
+            tpl.disabled = true;
+            const r = await saveLevelTemplate(deepCopyCard(card)).catch(() => null);
+            tpl.disabled = false;
+            if (r && r.ok) {
+                showTooltip(`⭐ 已存为模板「${card.name || '未命名关卡'}」${r.sessionOnly ? '（仅本次会话）' : ''}`);
+                renderLevelList();
+            } else {
+                showTooltip('⚠️ 模板保存失败');
+            }
+        });
+        btns.appendChild(tpl);
+    }
 
     // ✕ 删除（二次确认，照仓库「点两次」惯例）——内置关卡随包发布，不提供删除
     if (!isBuiltin) {
         const del = document.createElement('button');
         del.textContent = '✕';
-        bindDeleteButton(del, summary);
+        bindDeleteButton(del, summary, isTemplate);
         btns.appendChild(del);
     }
 
@@ -983,8 +1102,8 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false) {
     return row;
 }
 
-// 删除按钮的二次确认接线（列表行与损坏卡行共用）
-function bindDeleteButton(delBtn, summary) {
+// 删除按钮的二次确认接线（本机关卡行与模板行共用；isTemplate 决定删哪个库）
+function bindDeleteButton(delBtn, summary, isTemplate = false) {
     let armed = false;
     let disarmTimer = null;
     delBtn.addEventListener('click', async () => {
@@ -1000,7 +1119,9 @@ function bindDeleteButton(delBtn, summary) {
             return;
         }
         clearTimeout(disarmTimer);
-        const removed = await deleteLevelCard(summary.id);
+        const removed = isTemplate
+            ? await deleteLevelTemplate(summary.id)
+            : await deleteLevelCard(summary.id);
         if (removed) showTooltip(`🗑 已删除「${summary.name || '关卡卡'}」`);
         renderLevelList(); // 删除后整体重渲染
     });
@@ -1025,8 +1146,10 @@ export async function renderLevelList() {
     const seq = ++renderSeq;
     let cards = [];
     let builtins = [];
+    let templates = [];
     try { cards = await listLevelCards(); } catch { cards = []; }
     try { builtins = await listBuiltinLevelCards(); } catch { builtins = []; }
+    try { templates = await listLevelTemplates(); } catch { templates = []; }
     if (seq !== renderSeq) return; // await 期间有更新的渲染请求，丢弃本次
     rows.innerHTML = '';
     // 内置关卡区（官方随包发布，置于最前；assets/levels 缺失时自然跳过）
@@ -1035,16 +1158,28 @@ export async function renderLevelList() {
         if (seq !== renderSeq) return; // 过期响应不再追加
         rows.appendChild(row);
     }
-    if (builtins.length && cards.length) {
+    // 模板区（编辑器批次 2026-09-16）：官方卡/我的关卡都能存进来当「改副本」的底稿
+    if (templates.length) {
+        const label = document.createElement('div');
+        label.className = 'lvl-section-label';
+        label.textContent = '—— ⭐ 模板（用作模板改副本，不动原件） ——';
+        rows.appendChild(label);
+        for (const summary of templates) {
+            const row = await buildLevelRow(summary, null, false, 'template');
+            if (seq !== renderSeq) return;
+            rows.appendChild(row);
+        }
+    }
+    if ((builtins.length || templates.length) && cards.length) {
         const label = document.createElement('div');
         label.className = 'lvl-section-label';
         label.textContent = '—— 我与本机的关卡 ——';
         rows.appendChild(label);
     }
-    if (!cards.length && !builtins.length) {
+    if (!cards.length && !builtins.length && !templates.length) {
         const empty = document.createElement('div');
         empty.className = 'lvl-empty'; // B1 的空态样式
-        empty.textContent = '还没有关卡卡——去世界里放旗子和答题机，或让 🤖 帮你生成草稿';
+        empty.textContent = '还没有关卡——✏️ 新建空白关卡用组件库搭一个，或让 🤖 帮你生成草稿';
         rows.appendChild(empty);
         return;
     }
@@ -1253,6 +1388,7 @@ export function openExportPanel() {
     }
     panel.classList.remove('hidden');
     state.levelExportOpen = true;
+    syncPointerPolicy(); // 释放鼠标填名字/点按钮（关闭时自动回锁）
     // 绑一次按钮（幂等标记）
     if (!panel.dataset.bound) {
         panel.dataset.bound = '1';
@@ -1267,6 +1403,7 @@ export function closeExportPanel() {
     const panel = document.getElementById('export-panel');
     if (panel) panel.classList.add('hidden');
     state.levelExportOpen = false;
+    syncPointerPolicy(); // 回锁指针继续游戏
     clearStuckKeys();
 }
 
@@ -1326,4 +1463,154 @@ async function doLevelExport(andDownload) {
     const warn = check.warnings && check.warnings.length ? `（${check.warnings.length} 条提示，建议先「试玩」）` : '';
     showTooltip(`✅ 已导出「${name}」${saved.sessionOnly ? '（仅本次会话）' : ''}${warn}`);
     renderLevelList().catch(() => { });
+}
+
+// ==================== 关卡编辑器 HUD + 组件库（2026-09-16 界面化建关） ====================
+// 编辑态常显工具条（#editor-hud）：改名 / 组件库 / 存草稿 / 完成导出 / 退出；组件库
+// 浮层（#prefab-picker）按分类列出 levelPrefabs 的组件，点选即进入放置态（左键盖章）。
+// 按钮在指针释放（Esc/Q/面板打开）时点击——与拍摄面板同一套非暂停浮层交互。
+
+let editorHudEl = null;
+let editorHudBound = false;
+let lastEditorName = ''; // 名字输入框只在变化时回写（防打断输入焦点）
+
+function ensureEditorHudDom() {
+    ensureLevelStyles();
+    if (editorHudEl) return editorHudEl;
+    editorHudEl = document.createElement('div');
+    editorHudEl.id = 'editor-hud';
+    editorHudEl.innerHTML = `
+      <span class="ed-title">✏️ 编辑中</span>
+      <input id="editor-name" placeholder="关卡名" maxlength="40">
+      <button id="btn-editor-prefabs" title="B 键开关">🧱 组件库</button>
+      <button id="btn-editor-draft" title="退出时也会自动存">💾 存草稿</button>
+      <button id="btn-editor-export" title="K 键同款">📤 完成导出</button>
+      <button id="btn-editor-exit" title="草稿自动保存后回首屏">🚪 退出</button>
+      <span class="ed-tip" id="editor-tip"></span>`;
+    document.body.appendChild(editorHudEl);
+    if (!editorHudBound) {
+        editorHudBound = true;
+        editorHudEl.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'editor-name' && state.levelEdit) {
+                state.levelEdit.name = e.target.value.trim() || '未命名关卡';
+            }
+        });
+        editorHudEl.addEventListener('click', (e) => {
+            const id = e.target && e.target.id;
+            if (id === 'btn-editor-prefabs') {
+                if (isPrefabPickerOpen()) closePrefabPicker();
+                else openPrefabPicker();
+            } else if (id === 'btn-editor-draft') {
+                void saveEditorDraft({ silent: false });
+            } else if (id === 'btn-editor-export') {
+                openExportPanel(); // 复用 K 导出面板（名字/昵称/导出下载全流程一致）
+            } else if (id === 'btn-editor-exit') {
+                void exitLevelEditor({ saveDraft: true }); // 退出必存一版草稿
+            }
+        });
+    }
+    return editorHudEl;
+}
+
+// main.js 每帧调：编辑态显隐 + 名字/放置提示回写（值变化才写 DOM）
+let lastEditorTip = '';
+export function updateEditorHud() {
+    const hud = ensureEditorHudDom();
+    const info = getEditorInfo();
+    if (!info) {
+        hud.classList.remove('visible');
+        lastEditorName = '';
+        lastEditorTip = '';
+        return;
+    }
+    hud.classList.add('visible');
+    const nameInput = document.getElementById('editor-name');
+    if (nameInput && document.activeElement !== nameInput && nameInput.value !== info.name) {
+        nameInput.value = info.name;
+    }
+    const tipEl = document.getElementById('editor-tip');
+    const tip = info.placing ? `放置中：${(getPrefab(info.placing) || {}).name || ''}（Esc 取消）` : '';
+    if (tipEl && tip !== lastEditorTip) {
+        lastEditorTip = tip;
+        tipEl.textContent = tip;
+    }
+}
+
+// ---- 组件库浮层 ----
+let pickerEl = null;
+
+function ensurePrefabPickerDom() {
+    ensureLevelStyles();
+    if (pickerEl) return pickerEl;
+    pickerEl = document.createElement('div');
+    pickerEl.id = 'prefab-picker';
+    pickerEl.className = 'lvl-overlay hidden';
+    pickerEl.innerHTML = `<div class="lvl-panel">
+      <div class="lvl-head"><h3>🧱 组件库</h3>
+        <button class="lvl-close" id="prefab-picker-close" title="关闭">✕</button></div>
+      <div class="lvl-sub">点选组件 → 准星瞄准地面左键盖章。答题机放完记得手持 ✏️ 出题笔右键出题（连过两次才能导出）。</div>
+      <div id="prefab-grid"></div></div>`;
+    document.body.appendChild(pickerEl);
+    renderPrefabGrid();
+    pickerEl.addEventListener('click', (e) => {
+        if (e.target === pickerEl) closePrefabPicker();
+    });
+    document.getElementById('prefab-picker-close')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closePrefabPicker();
+    });
+    return pickerEl;
+}
+
+function renderPrefabGrid() {
+    const grid = document.getElementById('prefab-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (const cat of listPrefabCats()) {
+        const catEl = document.createElement('div');
+        catEl.className = 'prefab-cat';
+        catEl.textContent = cat;
+        grid.appendChild(catEl);
+        const rowEl = document.createElement('div');
+        rowEl.className = 'prefab-grid-row';
+        for (const p of PREFABS.filter((x) => x.cat === cat)) {
+            const item = document.createElement('button');
+            item.className = 'prefab-item';
+            item.innerHTML = `<span class="pf-name">${escapeHtml(p.name)}</span>` +
+                `<span class="pf-desc">${escapeHtml(p.desc)}</span>` +
+                `<span class="pf-desc">${p.w}×${p.h}×${p.d}</span>`;
+            item.addEventListener('click', () => {
+                if (startPlacing(p.id)) closePrefabPicker(); // 放置需要指针回画布（自动回锁）
+            });
+            rowEl.appendChild(item);
+        }
+        grid.appendChild(rowEl);
+    }
+}
+
+export function isPrefabPickerOpen() {
+    return !!state.prefabPickerOpen;
+}
+
+// B 键 / 编辑器 HUD 调。可用范围：编辑器会话内，或建造模式的普通世界（给自家世界
+// 摆零件）；闯关态与生存模式不给（生存摸不到这些教学方块）。
+export function openPrefabPicker() {
+    if (isLevelRunActive()) {
+        showTooltip('🔒 闯关中不能用组件库');
+        return;
+    }
+    if (!isLevelEditorActive() && !isCreative()) {
+        showTooltip('🧱 组件库在关卡编辑器或建造模式可用（按 M 切换）');
+        return;
+    }
+    ensurePrefabPickerDom().classList.remove('hidden');
+    state.prefabPickerOpen = true;
+    syncPointerPolicy(); // 释放鼠标点选（关闭时自动回锁）
+}
+
+export function closePrefabPicker() {
+    if (pickerEl) pickerEl.classList.add('hidden');
+    state.prefabPickerOpen = false;
+    cancelPlacing(); // 收起组件库 = 结束放置态（不误触盖 prefab 的左键）
+    syncPointerPolicy(); // 回锁指针继续游戏
 }

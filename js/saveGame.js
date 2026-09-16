@@ -168,11 +168,12 @@ export function savedAtText(ts) {
 
 export function saveGame() {
     if (!state.blocks) return false;
-    // 闯关模式存档防线（关卡工坊 G2 P0-2，W10 唯一机制）：闯关世界是临时嵌卡的沙盒，
-    // 绝不能覆盖玩家原世界的槽位。四条写档通道（30s 自动存档 / pagehide / visibilitychange /
-    // 手动保存）全部经由本函数，入口一处闸住。levelRun.enterLevel 进关前的强制落盘发生在
-    // 挂 state.levelRun 之前（见 levelRun.js 步骤 2/3 的顺序），不受本闸影响。
-    if (state.levelRun) return false;
+    // 闯关/关卡编辑存档防线（关卡工坊 G2 P0-2，W10 唯一机制；2026-09-16 编辑器并入）：
+    // 闯关世界与编辑世界都是临时沙盒，绝不能覆盖玩家原世界的槽位。四条写档通道
+    // （30s 自动存档 / pagehide / visibilitychange / 手动保存）全部经由本函数，入口一处闸住。
+    // levelRun.enterLevel / levelEditor.enterLevelEditor 进场前的强制落盘都发生在挂各自
+    // state 标志之前（见 levelRun.js 步骤 2/3、levelEditor.js 步骤 1），不受本闸影响。
+    if (state.levelRun || state.levelEdit) return false;
     try {
         const p = state.player;
         // RLE 压缩；膨胀（不可压缩数据）时回退原始编码
@@ -369,8 +370,8 @@ function notifyAutosaveResult(ok) {
 
 export function initAutoSave() {
     setInterval(() => {
-        // 闯关中直接跳过（saveGame 入口闸本会拒写）：避免把「闯关拒写」误报成「存档失败」
-        if (state.levelRun) return;
+        // 闯关/编辑中直接跳过（saveGame 入口闸本会拒写）：避免把「拒写」误报成「存档失败」
+        if (state.levelRun || state.levelEdit) return;
         if (state.blocks && !state.player.dead) notifyAutosaveResult(saveGame());
     }, SAVE_AUTOSAVE_SEC * 1000);
 
