@@ -1,0 +1,222 @@
+# ═══════════════════════════════════════════════════════════════════════
+# 项目注记（mcweb 回溯性 Sprint 规划，2026-09-17，bmad-sprint-planning headless）
+# ═══════════════════════════════════════════════════════════════════════
+# ① 回溯性登记：epic-1..7 及其 32 条故事的 done 为「回溯性登记」（产品
+#    2026-09-01 已上线），锚点见 _bmad-output/planning-artifacts/epics.md
+#    各故事的「验收锚点」小节；登记时点未重跑测试（epics.md 假设 A-1：
+#    以 AGENTS.md 记录的各套件用例数与绿灯口径为基线，2026-09-16 止代码）。
+# ② 流转语义与门禁文化对齐：本仓库实际开发按「批次 + 四道门（G0~G3）」
+#    进行（docs/create-lite-org-plan.md），本文件只做跟踪、不改门禁。
+#    状态语义对齐：backlog=已定纲未立项；ready-for-dev=已立项（批次 G1
+#    方案过 G2 对抗评审，且故事文件已创建于本目录）；in-progress=开发中；
+#    review=G3 验收中；done=G3 验收全绿。前瞻故事（Epic 8~11）须先清空
+#    forward_story_gates 中的前置条件才可提升为 ready-for-dev。
+# ③ tblocked 语义：上方脚本词表没有 blocked/tblocked 值；被前置条件
+#    （开放问题/技术债）阻塞的前瞻故事状态值仍为合法的 backlog，
+#    阻塞明细记录在文末顶层自定义键 forward_story_gates 与
+#    human_decision_queue（merge 刷新会保留；--fresh 重建会丢失，须从
+#    git 历史恢复）。编号口径：「PRD OQ-n」= prds/prd-game-2026-09-17/
+#    prd.md §9.1；「脊线 OQ-n」= architecture/.../ARCHITECTURE-SPINE.md
+#    开放问题节；「UX OQ-En」= ux-designs/.../EXPERIENCE.md；「债 n」=
+#    ARCHITECTURE-SPINE.md 技术债表。gate 取值：backlog=无硬前置、
+#    可按流水线立项；tblocked-partial=部分环节被未裁决项阻塞；
+#    tblocked-hard=条件需求，整条待裁决。维护警告：development_status
+#    与两个自定义键之间不要放独立注释行——脚本 merge 重建
+#    development_status 时会把它丢弃（说明文字一律写进本头注记）。
+# ④ 回顾条目：Epic 1~7 的批次复盘以决策日志形式沉淀于
+#    docs/create-lite-org-log.md（覆盖 B1/L1/L2/W 批次）；BMAD 语义的
+#    正式回顾未运行，故全部 retrospective 诚实保留 optional。
+# ⑤ 下一个可执行 Sprint 建议（S1「还债与通路」，详情见
+#    planning-artifacts/implementation-readiness.md）：主线 A=测试缺口
+#    补齐（NFR-3 无遥测扫描脚本、FR-32 草稿生成浏览器全链 E2E、FR-11
+#    商人运行时、FR-28 回流窗口、FR-12/FR-27/FR-35 等 OQ-S1 可自动化
+#    子集，开场先跑全套件回归坐实 done 基线）；主线 B=8-2 校验管线
+#    扩展 G1 预研（无硬前置）；待裁决项全部在 human_decision_queue。
+# ⑥ 人类决策队列（human_decision_queue）：产品级裁决必经人类；本项目
+#    惯例=人类尽量不参与裁决，但发布批准与下列各项例外
+#    （来源：PRD §9.1 / 架构脊线 / epics.md OQ-S*）。
+# ═══════════════════════════════════════════════════════════════════════
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-17-2026 12:00
+last_updated: 09-17-2026 12:00
+project: game
+project_key: mcweb
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: done
+  1-1-双模式体素世界与生存成长线-done-回溯: done
+  1-2-红石组信号网络-done-回溯: done
+  1-3-活塞组-粘液块与实体载运-done-回溯: done
+  1-4-动力产线-物流控制组与滑轮电梯族-done-回溯: done
+  1-5-多槽存档-扩容迁移与发布形态-done-回溯: done
+  1-6-录像与拍摄系统-done-回溯: done
+  epic-1-retrospective: optional
+
+  epic-2: done
+  2-1-多学科答题机与红石锁具联动-done-回溯: done
+  2-2-题库契约与内容质量校验-done-回溯: done
+  2-3-英语商人三模式交易-done-回溯: done
+  2-4-识字矿石与生字图鉴-done-回溯: done
+  2-5-星辉门预告锁与回流记录-done-回溯: done
+  2-6-奖励梯队冻结维护-done-回溯-冻结态: done
+  epic-2-retrospective: optional
+
+  epic-3: done
+  3-1-出题笔作者面板与双通过发布门槛-done-回溯: done
+  3-2-关卡卡格式-区域快照与卡片-io-done-回溯: done
+  3-3-闯关模式全封锁与存档防线-done-回溯: done
+  3-4-闯关运行时-计时-检查点-结算-星级-试玩重试-done-回溯: done
+  3-5-关卡编辑器与草稿流-done-回溯: done
+  3-6-预设组件库与模板库-done-回溯: done
+  epic-3-retrospective: optional
+
+  epic-4: done
+  4-1-官方关卡矩阵与首屏官方区-done-回溯: done
+  4-2-确定性生成器与-64-用例全量校验-done-回溯: done
+  4-3-参数化关卡烟雾验证通道-done-回溯: done
+  epic-4-retrospective: optional
+
+  epic-5: done
+  5-1-学习进度选择器-done-回溯: done
+  5-2-交接卡-带走清单-下周预告-回流趋势-打印-done-回溯: done
+  5-3-端内指标埋点与零采集红线-done-回溯: done
+  epic-5-retrospective: optional
+
+  epic-6: done
+  6-1-自然语言建造与渐进施工-done-回溯: done
+  6-2-源码读写与热重载安全-done-回溯: done
+  6-3-关卡体检-check_level-done-回溯: done
+  6-4-关卡草稿生成-gen_level_draft-done-回溯: done
+  6-5-苏格拉底提示与考核锁拒答-done-回溯: done
+  epic-6-retrospective: optional
+
+  epic-7: done
+  7-1-关卡宣传片一键拍摄与所有权隔离-done-回溯: done
+  7-2-成绩海报生成与降级-done-回溯: done
+  7-3-确定性俯视缩略图-done-回溯: done
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-新锁具-线索-机关-四件套-作者框架交付-backlog-前瞻: backlog
+  8-2-新锁具校验管线与-e2e-冻结清单扩展-backlog-前瞻: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-小学低段模板化创作-backlog-前瞻: backlog
+  9-2-小学高段约束挑战赛-backlog-前瞻: backlog
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-题库多学段-多教材版本扩展-backlog-前瞻: backlog
+  10-2-官方关卡矩阵扩容-backlog-前瞻: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-条件-oq-1-家长统计一键导出-回流指标最小合规闭环-backlog-条件前瞻: backlog
+  11-2-条件-oq-2-品牌更名迁移-backlog-条件前瞻: backlog
+  epic-11-retrospective: optional
+forward_story_gates:
+  8-1-新锁具-线索-机关-四件套-作者框架交付-backlog-前瞻:
+    gate: tblocked-partial
+    blocked_by:
+      - "债 5（星辉门随卡导出自包含：题库快照 or 进度哈希，=脊线 OQ-3）——仅约束「预告关」类锁具，非预告关类可直接立项 G1"
+      - "每项候选锁具过批次 G1 承重墙判据评审（流程门，epics.md 8.1 前置条件）"
+    unblock: 预告关类立项前完成债 5 方案裁决；其余新锁具按四道门流水线正常立项
+  8-2-新锁具校验管线与-e2e-冻结清单扩展-backlog-前瞻:
+    gate: backlog
+    blocked_by: []
+    conditional: "若新锁具叠加 redstone 扫描分支，先立项债 1（元件索引，触发条件部分命中——脊线 OQ-2 建议随最近扩容/机关批次
+      G1 一并裁决）；实践上随 8-1 首个新锁具同期扩展"
+  9-1-小学低段模板化创作-backlog-前瞻:
+    gate: tblocked-partial
+    blocked_by:
+      - "UX OQ-E2：大字模式是全局档位还是编辑器内限级（epics.md OQ-S3）"
+      - "UX OQ-E5：键位墙/新手引导形态须经 SM-5 儿童测试验证后再定"
+      - "SM-5 儿童测试为发布门槛（流程门，每期 3~5 名目标年级）"
+    unblock: 两项 UX 裁决落地 + 儿童测试安排就绪
+  9-2-小学高段约束挑战赛-backlog-前瞻:
+    gate: backlog
+    blocked_by: []
+    conditional: "若约束挑战触及红石/动力扫描规模，先评估债 1（元件索引）；批次 G1 按流水线立项"
+  10-1-题库多学段-多教材版本扩展-backlog-前瞻:
+    gate: tblocked-partial
+    blocked_by:
+      - "PRD OQ-5（内容版权边界法务确认）——规模化铺量前必须闭环；管线建设（schema/校验器多版本）可先行"
+    conditional: "铺量触及 IndexedDB/存储预算时先立项债 2（存档种子+玩家改动差分）评估"
+  10-2-官方关卡矩阵扩容-backlog-前瞻:
+    gate: backlog
+    blocked_by: []
+    conditional: "命名/难度分级随批次 G1 定；扩容叠加扫描分支或世界扩容先立项债 1，世界扩容还须债 2（AD-7 扩容完整前置）"
+  11-1-条件-oq-1-家长统计一键导出-回流指标最小合规闭环-backlog-条件前瞻:
+    gate: tblocked-hard
+    blocked_by:
+      - "PRD OQ-1（回流率观测闭环）：裁决为「是」才立项；导出文件聚合格式另立小契约（脊线 OQ-6）"
+  11-2-条件-oq-2-品牌更名迁移-backlog-条件前瞻:
+    gate: tblocked-hard
+    blocked_by:
+      - "PRD OQ-2（商标与命名）：裁决改名才立项；格式字符串（mcweb.* / mcweb-levels）冻结不触碰"
+
+human_decision_queue:
+  - id: PRD-OQ-1
+    question: 回流率观测闭环——是否引入家长页一键导出统计（FR-41 最小合规方案）
+    blocks: 11-1（tblocked-hard）
+    source: prd.md §9.1 / EXPERIENCE P12
+  - id: PRD-OQ-2
+    question: 商标与命名——「我的世界-网页复刻版」是否改名（建议关卡生态起量前落定）
+    blocks: 11-2（tblocked-hard）
+    source: prd.md §9.1 / 记忆 minecraft-ip-risk
+  - id: PRD-OQ-4
+    question: M2 奖励梯队去留——退役 or 改造成承重墙形态（现冻结态，SM-C3 只观察不激励）
+    blocks: 2-6（done·冻结态的走向）；若退役涉及 UX OQ-E4 结算与掉落两处表面回收
+    source: prd.md §9.1
+  - id: PRD-OQ-5
+    question: 内容版权边界法务确认（生字/单词/古诗/口算只取不受保护部分）
+    blocks: 10-1 铺量环节（tblocked-partial）
+    source: prd.md §9.1 / FR-39 Out of Scope
+  - id: SPINE-OQ-3
+    question: 星辉门随卡导出自包含方案（题库快照 or 进度哈希）= 债 5
+    blocks: 8-1 的「预告关」类锁具（tblocked-partial）
+    source: ARCHITECTURE-SPINE.md 开放问题 / org-log W 批次
+  - id: SPINE-OQ-2
+    question: 元件索引（债 1）立项时点——触发条件已部分命中（L2 P01 else-if 形态回归 +1.2ms）
+    blocks: 8-2 / 9-2 / 10-2 的条件触发；世界扩容类提案一律先还债
+    source: ARCHITECTURE-SPINE.md 技术债表
+  - id: EPICS-OQ-S1
+    question: 12 项测试缺口是否补齐、范围是否采纳 S1 主线 A 清单（7 项可自动化）
+    blocks: 测试缺口补齐批次的范围确认
+    source: epics.md 测试缺口清单 / OQ-S1
+  - id: RELEASE-APPROVAL
+    question: 每次发布上线批准（唯一必经人工点，批次 G3 全绿后）
+    blocks: 所有批次的上线动作（不改 G0~G3 门禁本身）
+    source: docs/create-lite-org-plan.md §5.5 / ARCHITECTURE-SPINE.md 运营面
