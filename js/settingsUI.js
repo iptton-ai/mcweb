@@ -10,7 +10,7 @@
 
 import { GameModes } from './config.js';
 import { state } from './state.js';
-import { closeSettingsState, getUIState, openSettingsState } from './uiModal.js';
+import { closeSettingsState, getUIState, openSettingsState, syncPointerPolicy } from './uiModal.js';
 import { BGM_PACKS, getBgmStyle, getBgmVolume, setBgmStyle, setBgmVolume } from './bgm.js';
 import { getSfxVolume, setSfxVolume } from './audio.js';
 import { exportSlotJson, importSlotJson, listSaves, savedAtText } from './saveGame.js';
@@ -22,6 +22,7 @@ import { camera } from './engine.js';
 const TAB_KEY = 'mcweb.gameSettings.tab'; // 记住上次停留的页签
 const SENS_KEY = 'mcweb.mouseSensitivity';
 const FOV_KEY = 'mcweb.fov';
+const INPUT_MODE_KEY = 'mcweb.inputMode'; // 输入方式：'mouse'（默认）| 'keyboard'（纯键盘，不锁定指针）
 
 export function getMouseSensitivity() {
     const v = Number(localStorage.getItem(SENS_KEY));
@@ -31,6 +32,19 @@ export function getMouseSensitivity() {
 export function getFov() {
     const v = Number(localStorage.getItem(FOV_KEY));
     return Number.isFinite(v) && v >= 50 && v <= 110 ? v : 75;
+}
+
+export function getInputMode() {
+    return localStorage.getItem(INPUT_MODE_KEY) === 'keyboard' ? 'keyboard' : 'mouse';
+}
+
+// 切换输入方式并即时生效：写偏好 + 更新运行时状态 + 重套指针策略
+// （键盘→若正锁定立即释放；鼠标→按当前 UI 状态决定是否请求锁定）
+export function setInputMode(mode) {
+    const m = mode === 'keyboard' ? 'keyboard' : 'mouse';
+    localStorage.setItem(INPUT_MODE_KEY, m);
+    state.inputMode = m;
+    syncPointerPolicy();
 }
 
 function applyFov(v) {
@@ -169,8 +183,14 @@ export function initSettingsUI(injected) {
         <div class="gs-body hidden" data-page="video">
           <div class="gs-card">
             <h4>🖱️ 鼠标灵敏度</h4>
-            <p class="card-desc">倍率 1 = 默认手感；调大转视角更快。即时生效并记忆。</p>
+            <p class="card-desc">倍率 1 = 默认手感；调大转视角更快（鼠标与纯键盘的方向键共用此倍率）。即时生效并记忆。</p>
             <div class="vol-row"><label>灵敏度</label><input type="range" id="gs-sens" min="20" max="300" step="10"><span class="val" id="gs-sens-val"></span></div>
+          </div>
+          <div class="gs-card">
+            <h4>⌨️ 输入方式</h4>
+            <p class="card-desc">纯键盘模式<b>不锁定鼠标</b>（指针始终可见，专职点选背包/设置等界面，也适合 Esc 会被宿主截获的内嵌浏览器），游戏操作全走键盘。点选即刻生效并记忆。</p>
+            <div id="gs-input-grid"></div>
+            <p class="gs-note" id="gs-input-note"></p>
           </div>
           <div class="gs-card">
             <h4>🔭 视野（FOV）</h4>
@@ -702,6 +722,7 @@ function renderHanziCollection(hanzi) {
 export function openGameSettings() {
     if (!els.modal) return;
     buildStyleCards();
+    buildInputModeCards();
     syncVolumeSliders();
     syncVideoSliders();
     renderSavesPage();
@@ -734,6 +755,31 @@ function syncVideoSliders() {
     els.modal.querySelector('#gs-sens-val').textContent = `${getMouseSensitivity().toFixed(1)}×`;
     fov.value = getFov();
     els.modal.querySelector('#gs-fov-val').textContent = String(getFov());
+}
+
+// ---------- 画面页：输入方式（🖱 鼠标锁定 / ⌨ 纯键盘） ----------
+const INPUT_MODES = [
+    { id: 'mouse', icon: '🖱', name: '鼠标锁定', desc: '点击画面锁定鼠标转视角（默认手感）：左键挖掘/攻击 · 右键放置/交互 · 中键吸取' },
+    { id: 'keyboard', icon: '⌨', name: '纯键盘', desc: '不锁定鼠标、指针始终可见：方向键转视角 · Enter 挖掘/攻击 · X 放置/交互 · I 吸取（创造）' },
+];
+
+function buildInputModeCards() {
+    const grid = els.modal.querySelector('#gs-input-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (const m of INPUT_MODES) {
+        const card = document.createElement('div');
+        card.className = 'bgm-style-card' + (m.id === getInputMode() ? ' active' : '');
+        card.dataset.mode = m.id;
+        card.innerHTML = `<div class="nm">${m.icon} ${m.name}</div><div class="ds">${m.desc}</div>`;
+        card.addEventListener('click', () => {
+            setInputMode(m.id);
+            for (const c of grid.children) c.classList.toggle('active', c.dataset.mode === m.id);
+            flashNote(els.modal.querySelector('#gs-input-note'),
+                m.id === 'keyboard' ? '⌨ 已切换纯键盘：方向键转视角 · Enter 挖 · X 放（本局即刻生效）' : '🖱 已切换鼠标锁定：回到游戏后点击画面锁定');
+        });
+        grid.appendChild(card);
+    }
 }
 
 function syncVolumeSliders() {

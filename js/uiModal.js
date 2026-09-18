@@ -42,13 +42,16 @@ export function getUIState() {
     return uiState;
 }
 
-// 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板
+// 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板。
+// 纯键盘输入模式下永不请求锁定（鼠标指针保持可见，专职操作 UI 浮层）
 function wantLockNow() {
-    return uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
-        && !state.levelExportOpen && !state.prefabPickerOpen && !state.authorPanelOpen;
+    return state.inputMode !== 'keyboard' && uiState === 'playing' && !assistantVisible
+        && !state.recordingControlsOpen && !state.levelExportOpen && !state.prefabPickerOpen
+        && !state.authorPanelOpen;
 }
 
-// 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）
+// 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）。
+// 纯键盘模式下恒为 false：鼠标的视角/挖掘/放置输入全部让位给键盘（见 input.js 的键盘路径）
 export function isPlaying() {
     return uiState === 'playing' && mouseLocked;
 }
@@ -57,6 +60,12 @@ export function isPlaying() {
 export function isGameActive() {
     return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
         && !state.prefabPickerOpen && !state.authorPanelOpen;
+}
+
+// 纯键盘模式下的「正在操作游戏」：不要求指针锁定（本来就没锁）。
+// 条件对齐 isGameActive（助手侧栏不阻塞游戏，与锁定模式行为一致）
+export function isKeyboardPlayActive() {
+    return state.inputMode === 'keyboard' && isGameActive();
 }
 
 export function isAssistantVisible() {
@@ -194,8 +203,9 @@ function syncOverlays() {
     const rp = document.getElementById('result-panel');
     if (rp) rp.classList.toggle('hidden', uiState !== 'result');
     // 准星只在「正在操作」时显示，让玩家一眼看出当前能否操作
+    // （纯键盘模式没有指针锁定，看 isKeyboardPlayActive）
     const cross = document.getElementById('crosshair');
-    if (cross) cross.style.display = isPlaying() ? '' : 'none';
+    if (cross) cross.style.display = (isPlaying() || isKeyboardPlayActive()) ? '' : 'none';
 }
 
 // ==================== 指针锁管理（全游戏仅此处调用） ====================

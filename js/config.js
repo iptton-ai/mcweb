@@ -40,6 +40,10 @@ export const REACH_CREATIVE = 5.2;
 
 export const REACH_SURVIVAL = 4.5;
 
+// ---- 纯键盘输入模式（方向键转视角，见 js/input.js 与 js/main.js）----
+// 方向键转视角角速度（弧度/秒，再乘「🎛 画面」页灵敏度倍率；2.2 ≈ 126°/s，转 180° 约 1.6 秒）
+export const KEYBOARD_TURN_SPEED = 2.2;
+
 // ---- 挖掘节奏（照搬原版，见 js/mining.js）----
 export const BREAK_DELAY = 0.3; // 每破坏一块后的强制间隔（原版 6 tick = 0.3s，即挖方块除外）
 export const CREATIVE_BREAK_INTERVAL = 0.1; // 创造模式按住连续拆除的节奏（原版即点即碎，限速是为区块重建分摊帧耗）

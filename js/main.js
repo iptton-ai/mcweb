@@ -1,6 +1,6 @@
 // ==================== main.js ====================
 
-import { BlockTypes, CHUNK_SIZE, GameModes, MAX_AIR, MAX_HEALTH, MAX_HUNGER, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { BlockTypes, CHUNK_SIZE, GameModes, KEYBOARD_TURN_SPEED, MAX_AIR, MAX_HEALTH, MAX_HUNGER, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
@@ -18,8 +18,8 @@ import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from
 import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI, updateSurvivalStats } from './playerLife.js';
 import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
-import { mouseDown, mouseMoveDelta, setupInput } from './input.js';
-import { getUIState, initUIModal, mouseLocked, onUIStateChange, setState } from './uiModal.js';
+import { keys, mouseDown, mouseMoveDelta, setupInput } from './input.js';
+import { getUIState, initUIModal, isKeyboardPlayActive, isPlaying, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
 import { updateCameraRig, updateBuildFilming, resetBuildFilming } from './cameraRig.js';
 import { captureRecordingFrame, stopRecording } from './recording.js';
@@ -27,7 +27,7 @@ import { updateDayNightCycle } from './daynight.js';
 import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
-import { getFov, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
+import { getFov, getInputMode, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
 import { exitLevelRun, tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
 import { exitLevelEditor, tickLevelEditor } from './levelEditor.js'; // 关卡编辑器：临时世界/草稿自动保存（2026-09-16）
 // B4 并行编写的关卡 UI 导出（updateLevelHud/updateResultPanel/openLevelList/initLevelListUI）
@@ -72,12 +72,26 @@ function gameLoop(timestamp) {
         }
         mouseMoveDelta.x = 0;
         mouseMoveDelta.y = 0;
+    } else if (isKeyboardPlayActive()) {
+        // 纯键盘输入模式：方向键按住积分视角（未锁定时 mouseMoveDelta 恒为 0，鼠标不转视角）。
+        // 方向语义与鼠标对齐：→ 右转、↑ 抬头；灵敏度复用「🎛 画面」页倍率
+        const speed = KEYBOARD_TURN_SPEED * getMouseSensitivity();
+        const maxPitch = Math.PI / 2 - 0.01;
+        const look = state.camMode === 'free' ? state.freeCam : state.player;
+        if (keys['ArrowLeft']) look.yaw += speed * dt;
+        if (keys['ArrowRight']) look.yaw -= speed * dt;
+        if (keys['ArrowUp']) look.pitch += speed * dt;
+        if (keys['ArrowDown']) look.pitch -= speed * dt;
+        look.pitch = Math.max(-maxPitch, Math.min(maxPitch, look.pitch));
     }
 
     // 挖掘/放置（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）。
-    // 挖掘按 js/mining.js 的原版规则：生存按住蓄力（松手/换目标重置），创造即点即碎限速连拆
-    updateMining(dt, mouseLocked && state.camMode === 'player' && mouseDown.left);
-    if (mouseLocked && state.camMode === 'player' && mouseDown.right) {
+    // 挖掘按 js/mining.js 的原版规则：生存按住蓄力（松手/换目标重置），创造即点即碎限速连拆。
+    // 鼠标锁定（isPlaying）与纯键盘模式（isKeyboardPlayActive）共享 mouseDown 按住态——
+    // 键盘模式的 Enter/X 按下同样置位（js/input.js 共享触发点）
+    const gameplayActive = isPlaying() || isKeyboardPlayActive();
+    updateMining(dt, gameplayActive && state.camMode === 'player' && mouseDown.left);
+    if (gameplayActive && state.camMode === 'player' && mouseDown.right) {
         placeBlock();
         mouseDown.right = false; // 防止连续放置
     }
@@ -413,6 +427,8 @@ function init() {
     // UI
     updateHotbar();
     updateHealthUI();
+    // 输入方式（🖱 鼠标锁定 / ⌨ 纯键盘）来自设置浮层，持久化于 localStorage（默认鼠标）
+    state.inputMode = getInputMode();
     setupInput();
     initBuildWidget();
     initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）

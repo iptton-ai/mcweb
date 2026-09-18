@@ -56,6 +56,7 @@ export const state = {
     enemySpawnTimer: 0, // 刷怪游戏刻累积计时器
     viewMode: 0, // 0=第一人称 1=第三人称(背后)
     camMode: 'player', // 摄像头模式（js/cameraRig.js）：'player'=跟随玩家 / 'free'=自由摄像头 / 'build'=建造跟拍
+    inputMode: 'mouse', // 输入方式：'mouse'=鼠标锁定转视角（默认）| 'keyboard'=纯键盘（方向键转视角，不请求指针锁定，见 js/input.js）
     freeCam: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, // 自由摄像头的位姿（进入时从玩家相机初始化）
     buildAutoRecord: true, // AI 施工自动录制偏好，由拍摄面板载入持久化设置
     recordingControlsOpen: false, // Tab 释放鼠标操作拍摄面板，不暂停施工

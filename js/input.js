@@ -13,7 +13,7 @@ import { cycleViewMode } from './playerPhysics.js';
 import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js';
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
 import { closeExportPanel, closeLevelList, closePrefabPicker, isLevelListOpen, isPrefabPickerOpen, openExportPanel, openItemPicker, openPrefabPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
-import { closeSettingsState, getUIState, isAssistantVisible, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
+import { closeSettingsState, getUIState, isAssistantVisible, isKeyboardPlayActive, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
 import { exitLevelRun, isLevelRunActive } from './levelRun.js'; // 闯关模式：绕过通道全闭（W11）+ 结算态退出
 import { cancelPlacing, consumePlaceClick, getPlacing } from './levelEditor.js'; // 关卡编辑器：组件放置（2026-09-16）
 
@@ -49,6 +49,36 @@ export function clearKeys() {
     mouseMoveDelta.x = mouseMoveDelta.y = 0;
 }
 
+// ==================== 左右键共享触发点（鼠标 mousedown 与纯键盘模式 Enter/X 同源） ====================
+// 走同一入口 = 编辑器组件盖章 / 闯关禁挖禁放等守卫全部自动继承，不存在「键盘绕过」通道
+function primaryActionPress() {
+    if (getUIState() !== 'playing' || state.camMode !== 'player') return;
+    // 组件放置态：左键 = 盖章（吞掉这次按压，不进入挖掘/攻击）
+    if (consumePlaceClick()) return;
+    mouseDown.left = true;
+    // 按下瞬间：攻击怪物 / 开始挖掘（生存蓄力、创造与即挖方块直接破坏，见 js/mining.js）；
+    // 按住期间的蓄力推进 / 创造连拆由 main.js 每帧的 updateMining 消费 mouseDown.left
+    miningPress();
+}
+
+function primaryActionRelease() {
+    mouseDown.left = false;
+}
+
+// 右键链：食物→工作台/熔炉→门→TNT→按钮/拉杆→答题机→放置（优先级见 js/interaction.js placeBlock）
+function secondaryAction() {
+    if (getUIState() !== 'playing' || state.camMode !== 'player') return;
+    // 组件放置态：右键 = 结束放置（不放方块，防误盖一手持块）
+    if (getPlacing()) {
+        cancelPlacing();
+        showTooltip('🧱 已结束放置');
+        return;
+    }
+    mouseDown.right = true;
+    placeBlock();
+    swingViewmodel(); // 放置也挥一下手（照原版使用动画）
+}
+
 export function setupInput() {
     // 任何 UI 状态切换都清空输入（防止开关菜单/面板的瞬间粘滞移动）
     onUIStateChange(() => clearKeys());
@@ -73,6 +103,7 @@ export function setupInput() {
             else if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
             else if (st === 'result') exitLevelRun({ toTitle: true }); // 结算浮层：退出关卡回首屏
             else if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
+            else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁定，Esc 能到达页面 = 暂停
             return;
         }
         // Q：Esc 的替代键（推荐在 ZCode 内嵌浏览器里用——Esc 会被宿主截获导致应用退出，Q 不会）：
@@ -84,6 +115,7 @@ export function setupInput() {
             else if (st === 'settings') closeSettingsState();
             else if (st === 'result') exitLevelRun({ toTitle: true });
             else if (st === 'pause' || st === 'inventory') setState('playing');
+            else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁可放，直接弹暂停
             else if (st === 'playing' && mouseLocked) releasePointerToPause();
             return;
         }
@@ -120,6 +152,30 @@ export function setupInput() {
             return;
         }
         // ---- 以下为 playing 状态的游戏键 ----
+        // 纯键盘输入模式（⚙️ 设置「🎛 画面」页切换）：鼠标不锁定只管 UI，游戏操作全走键盘。
+        // Enter/X/I 与鼠标左右中键同源（primary/secondary 共享函数），守卫语义完全一致；
+        // 面板开着（组件库/出题面板）时不触发——与鼠标模式下 isPlaying() 门对齐
+        if (state.inputMode === 'keyboard') {
+            // 方向键转视角：每帧由 main.js 消费 keys 积分 yaw/pitch，这里只挡掉页面滚动
+            if (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+                e.preventDefault();
+                return;
+            }
+            // 自动重复不重复触发按压：按住期间的蓄力/连拆由 updateMining 每帧驱动（与鼠标一致）
+            if (e.code === 'Enter' && isKeyboardPlayActive()) {
+                if (!e.repeat) primaryActionPress();
+                return;
+            }
+            if (e.code === 'KeyX' && isKeyboardPlayActive()) {
+                if (!e.repeat) secondaryAction();
+                return;
+            }
+            if (e.code === 'KeyI' && !e.repeat && isKeyboardPlayActive()
+                && state.camMode === 'player' && isCreative()) {
+                pickBlockUnderCrosshair(); // 中键吸取等价（仅创造）
+                return;
+            }
+        }
         // Z：丢弃手持物品（对齐参考版的 Q 键——本作 Q 被 Esc 替代键占用）
         if (e.code === 'KeyZ') {
             dropHeldItem();
@@ -203,6 +259,11 @@ export function setupInput() {
 
     document.addEventListener('keyup', (e) => {
         keys[e.code] = false;
+        // 纯键盘模式：松开键 = 松开左/右键（蓄力中断、连放结束）
+        if (state.inputMode === 'keyboard') {
+            if (e.code === 'Enter') primaryActionRelease();
+            if (e.code === 'KeyX') mouseDown.right = false;
+        }
     });
 
     // 窗口失焦/切走时清空按键（alt-tab 后角色不再漂移）
@@ -218,32 +279,18 @@ export function setupInput() {
             // 面板保持打开；按 Esc 释放鼠标即回到面板操作。
             // 出题面板打开时鼠标归表单：点画布空白处不抢回指针（面板点 ✖/Q/Esc/走远关闭）
             if (state.authorPanelOpen) return;
+            // 纯键盘模式：鼠标只管 UI 浮层，点画布不抢锁、无任何游戏操作（全键盘哲学）
+            if (state.inputMode === 'keyboard') return;
             requestLock();
             return;
         }
         if (e.button === 0) {
-            if (state.camMode === 'player') {
-                // 组件放置态：左键 = 盖章（吞掉这次点击，不进入挖掘/攻击）
-                if (consumePlaceClick()) return;
-                mouseDown.left = true;
-                // 按下瞬间：攻击怪物 / 开始挖掘（生存蓄力、创造与即挖方块直接破坏，见 js/mining.js）
-                miningPress();
-            }
+            primaryActionPress();
         } else if (e.button === 1) {
             e.preventDefault(); // 挡掉浏览器中键自动滚动
             if (state.camMode === 'player' && isCreative()) pickBlockUnderCrosshair();
         } else if (e.button === 2) {
-            if (state.camMode === 'player') {
-                // 组件放置态：右键 = 结束放置（不放方块，防误盖一手持块）
-                if (getPlacing()) {
-                    cancelPlacing();
-                    showTooltip('🧱 已结束放置');
-                    return;
-                }
-                mouseDown.right = true;
-                placeBlock();
-                swingViewmodel(); // 放置也挥一下手（照原版使用动画）
-            }
+            secondaryAction();
         }
     });
 
@@ -277,6 +324,8 @@ export function setupInput() {
     document.addEventListener('click', () => {
         // playing 但指针未锁定（如冷却期锁定失败）：任意点击重新锁定。
         // 助手面板/出题面板打开时鼠标归面板，不在此抢锁。
+        // 纯键盘模式永不抢锁（鼠标专职 UI）
+        if (state.inputMode === 'keyboard') return;
         if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen
             && !state.levelExportOpen && !state.authorPanelOpen && !isPlaying()) requestLock();
     });
