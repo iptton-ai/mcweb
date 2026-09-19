@@ -15,6 +15,7 @@ import { clearStuckKeys, getUIState, mouseLocked, onUIStateChange, requestLock, 
 import { downloadRecording, getRecordingStatus, initRecording, isRecording, toggleBuildRecording } from './recording.js';
 export { isCamOwnedRecording, isLevelOwnedRecording, isRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
+import { uiKick } from './uiKeys.js'; // 浮层键盘导航：打开面板后落焦（方向键移焦 / Enter 激活）
 // 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
 import { buildLevelCard, cardHash, deleteLevelCard, deleteLevelTemplate, exportLevelCardJson, getLevelCard, getLevelTemplate, importLevelCardFromJson, listBuiltinLevelCards, listLevelCards, listLevelTemplates, saveLevelCard, saveLevelTemplate, validateLevelCard } from './levelWorkshop.js';
 import { enterLevel, exitLevelRun, getBestScores, getHudState, isLevelRunActive } from './levelRun.js';
@@ -22,6 +23,7 @@ import { enterLevel, exitLevelRun, getBestScores, getHudState, isLevelRunActive 
 import { PREFABS, getPrefab, listPrefabCats } from './levelPrefabs.js';
 import { cancelPlacing, enterLevelEditor, exitLevelEditor, getEditorInfo, getPlacing, isLevelEditorActive, saveEditorDraft, startPlacing } from './levelEditor.js';
 import { renderRegionThumbnail } from './levelPoster.js'; // P1 · B6：俯视缩略图（列表行 + 导出随卡入库）
+import { openQuestionBank } from './questionBankUI.js'; // 📝 我的题库平铺录题页（关卡列表/编辑器 HUD 入口，2026-09-18）
 
 // ==================== 游戏模式切换 ====================
 export function setGameMode(mode) {
@@ -209,6 +211,7 @@ function buildRecipeRow(recipe, stations) {
     const stationOk = !recipe.station || stations[recipe.station];
     const row = document.createElement('div');
     row.className = 'recipe-row' + ((enough && stationOk) ? '' : ' disabled');
+    row.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 合成（uiKeys.js）
     const out = document.createElement('span');
     out.className = 'recipe-out';
     out.appendChild(makeItemIcon(recipe.out, 22));
@@ -288,8 +291,8 @@ export function buildInventoryGrid() {
     const hint = document.getElementById('inventory-close-hint');
     if (hint) {
         hint.innerHTML = survival
-            ? '点物品 = 选中并关闭 &nbsp;|&nbsp; 点配方 = 合成一次 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起'
-            : '点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起';
+            ? '<kbd>方向键</kbd> 选择 · <kbd>Enter</kbd> 确认 &nbsp;|&nbsp; 点物品 = 选中并关闭 &nbsp;|&nbsp; 点配方 = 合成一次 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起'
+            : '<kbd>方向键</kbd> 选择 · <kbd>Enter</kbd> 确认 &nbsp;|&nbsp; 点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起';
     }
     // 物品格
     HotbarBlocks.forEach((blockType, index) => {
@@ -297,6 +300,7 @@ export function buildInventoryGrid() {
         if (invSearch && !name.includes(invSearch)) return;
         const slot = document.createElement('div');
         slot.className = 'inv-slot' + (index === state.player.selectedSlot ? ' selected' : '');
+        slot.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 选中（uiKeys.js）
         slot.appendChild(makeItemIcon(blockType, 24));
         if (index < 9) {
             const numSpan = document.createElement('span');
@@ -746,6 +750,17 @@ function ensureLevelListDom() {
             actions.insertBefore(btn, actions.firstChild);
         }
     }
+    // 「📝 题目库」（平铺录题批次 2026-09-18）：B1 骨架没有这个按钮，兜底补建
+    if (!q('btn-level-bank')) {
+        const actions = panel.querySelector('.lvl-actions');
+        if (actions) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-level-bank';
+            btn.className = 'save-btn';
+            btn.textContent = '📝 题目库';
+            actions.insertBefore(btn, actions.firstChild);
+        }
+    }
     return rows;
 }
 
@@ -882,6 +897,12 @@ export function initLevelListUI() {
         });
     }
 
+    // ---- 📝 题目库（平铺录题批次 2026-09-18）：打开我的题库浮层（不关列表，返回即见） ----
+    const bankBtn = q('btn-level-bank');
+    if (bankBtn) {
+        bankBtn.addEventListener('click', () => openQuestionBank());
+    }
+
     // ---- ✏️ 新建空白关卡（编辑器批次）：进独立编辑世界（草稿自动保存） ----
     const newBtn = q('btn-level-new');
     if (newBtn) {
@@ -930,7 +951,7 @@ export function openLevelList() {
     const panel = q('level-list');
     if (!panel) return;
     panel.classList.remove('hidden'); // 显隐照首屏浮层惯例（hidden class，同 #start-screen）
-    renderLevelList();
+    void renderLevelList().then(uiKick); // 行异步渲染，落焦 defer 到行就位后（键盘导航）
 }
 
 export function closeLevelList() {
@@ -1397,6 +1418,7 @@ export function openExportPanel() {
         document.getElementById('export-panel-close')?.addEventListener('click', closeExportPanel);
     }
     clearStuckKeys(); // 清空移动键，避免开面板瞬间角色继续走
+    uiKick(); // 键盘导航落焦：关卡名输入框（首个文本框）直接可打字
 }
 
 export function closeExportPanel() {
@@ -1483,6 +1505,7 @@ function ensureEditorHudDom() {
       <span class="ed-title">✏️ 编辑中</span>
       <input id="editor-name" placeholder="关卡名" maxlength="40">
       <button id="btn-editor-prefabs" title="B 键开关">🧱 组件库</button>
+      <button id="btn-editor-bank" title="平铺录题：游戏内出题笔面板可直接选">📝 题目库</button>
       <button id="btn-editor-draft" title="退出时也会自动存">💾 存草稿</button>
       <button id="btn-editor-export" title="K 键同款">📤 完成导出</button>
       <button id="btn-editor-exit" title="草稿自动保存后回首屏">🚪 退出</button>
@@ -1500,6 +1523,8 @@ function ensureEditorHudDom() {
             if (id === 'btn-editor-prefabs') {
                 if (isPrefabPickerOpen()) closePrefabPicker();
                 else openPrefabPicker();
+            } else if (id === 'btn-editor-bank') {
+                openQuestionBank(); // 平铺录题：录完拿 ✏️ 出题笔右键答题机「📋 我的题目」选入
             } else if (id === 'btn-editor-draft') {
                 void saveEditorDraft({ silent: false });
             } else if (id === 'btn-editor-export') {
@@ -1580,7 +1605,10 @@ function renderPrefabGrid() {
                 `<span class="pf-desc">${escapeHtml(p.desc)}</span>` +
                 `<span class="pf-desc">${p.w}×${p.h}×${p.d}</span>`;
             item.addEventListener('click', () => {
-                if (startPlacing(p.id)) closePrefabPicker(); // 放置需要指针回画布（自动回锁）
+                // 放置需要指针回画布（自动回锁）；keepPlacing：点选成功的放置态不能被
+                // 收浮层的 cancelPlacing 抹掉（否则左键盖章变挖掘，2026-09-18 UK09 揪出）
+                if (startPlacing(p.id)) closePrefabPicker(true);
+                else closePrefabPicker();
             });
             rowEl.appendChild(item);
         }
@@ -1606,11 +1634,12 @@ export function openPrefabPicker() {
     ensurePrefabPickerDom().classList.remove('hidden');
     state.prefabPickerOpen = true;
     syncPointerPolicy(); // 释放鼠标点选（关闭时自动回锁）
+    uiKick(); // 键盘导航落焦：首个组件按钮，方向键选、Enter 进入放置
 }
 
-export function closePrefabPicker() {
+export function closePrefabPicker(keepPlacing = false) {
     if (pickerEl) pickerEl.classList.add('hidden');
     state.prefabPickerOpen = false;
-    cancelPlacing(); // 收起组件库 = 结束放置态（不误触盖 prefab 的左键）
-    syncPointerPolicy(); // 回锁指针继续游戏
+    if (!keepPlacing) cancelPlacing(); // 收起组件库 = 结束放置态（不误触盖 prefab 的左键）；
+    syncPointerPolicy(); // 回锁指针继续游戏（点选组件进放置态时 keepPlacing 保留放置态）
 }

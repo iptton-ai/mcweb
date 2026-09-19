@@ -46,7 +46,7 @@ export const KEYBOARD_TURN_SPEED = 2.2;
 
 // ---- 挖掘节奏（照搬原版，见 js/mining.js）----
 export const BREAK_DELAY = 0.3; // 每破坏一块后的强制间隔（原版 6 tick = 0.3s，即挖方块除外）
-export const CREATIVE_BREAK_INTERVAL = 0.1; // 创造模式按住连续拆除的节奏（原版即点即碎，限速是为区块重建分摊帧耗）
+export const CREATIVE_BREAK_INTERVAL = 0.25; // 创造模式按住连续拆除的节奏（对齐原版 5 tick：人手一次点击约 100~150ms 不跨间隔连拆两块，按住扫射 4 块/秒；宽松限速同时为区块重建分摊帧耗）
 export const INSTANT_BREAK_SEC = 0.05; // ≤此值视为即挖（原版规则），不受连挖间隔限制
 export const MINING_HIT_FX_SEC = 0.25; // 挖掘中撞击音效/粒子/挥动的循环周期（原版体感值）
 

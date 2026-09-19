@@ -31,6 +31,8 @@
 //   - 作者面板：interactKeypadAuthorAt（手持出题笔右键答题机，interaction.js 接线）——
 //     自拟/「从题库抽」、数学算式「算一算」系统算答案（evalMathExpr，禁 eval/Function）、
 //     保存后双通过试答校验、考核锁开关（getExamIntent 待导出意图 → buildLevelCard rules 覆盖参数）。
+//     2026-09-18 平铺录题批次新增「📋 我的题目」（mode 'pick'）：从我的题库
+//     （questionBank.js，普通 2D 页 questionBankUI.js 录入）选一题回填表单，原有交互全保留。
 //   - 导出新增：getAuthoredLock / isLockVerified（levelWorkshop.buildLevelCard 默认锁题提供者消费）、
 //     getExamIntent、interactKeypadAuthorAt、evalMathExpr。既有导出/行为/头 PURE 区一律不动。
 
@@ -46,6 +48,7 @@ import { loadEduProgress, saveEduProgress, grantEduReward } from './eduRewards.j
 // 与本文件无环（levelWorkshop 对本模块是动态 import，见其 defaultLockMetaProvider）。
 import { getCardQuestion, isLockAIHelpFrozen, isLevelRunActive, recordLockAttempt } from './levelRun.js';
 import { localKey, worldToLocal } from './levelWorkshop.js';
+import { listBankQuestions } from './questionBank.js'; // 「📋 我的题目」：平铺录题页的题库（纯模块，无环）
 
 // >>> PURE-BEGIN
 // （无 DOM 依赖区：Node eval 可直接提取测试；改动请保持区间内零 window/document/state）
@@ -858,6 +861,14 @@ const AUTHOR_CSS = `
 #edu-author .au-pick.ok { border-color: #39d353; color: #39d353; }
 #edu-author .au-msg { color: #ffd84a; font-size: 13px; min-height: 18px; margin: 4px 0; }
 #edu-author .au-tip { color: #6a7a8a; font-size: 11px; margin-top: 8px; }
+/* —— 「📋 我的题目」选择列表（平铺录题页的消费端，2026-09-18） —— */
+#edu-author .au-qrow { display: block; width: 96%; margin: 4px auto; text-align: left;
+    font-size: 13px; line-height: 1.6; color: #edf0f7; }
+#edu-author .au-qrow b { color: #ffd84a; margin-right: 4px; }
+#edu-author .au-qrow .au-qkind { display: inline-block; min-width: 17px; margin-right: 3px;
+    color: #9ae6b4; font-weight: bold; }
+#edu-author .au-qrow .au-qmeta { float: right; color: #6a7a8a; font-size: 11px; max-width: 40%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* —— 试答校验/双通过态（照玩家答题卡的视觉语言） —— */
 #edu-author .au-q { color: #fff; font-size: 26px; font-weight: bold; text-shadow: 0 2px 0 #000; }
 #edu-author .au-unit { color: #6a9a7a; font-size: 11px; margin-bottom: 6px; }
@@ -959,6 +970,7 @@ function renderEditForm() {
             <input type="text" data-field="unit" value="${escAttr(f.unit)}" placeholder="单元标签（选填，抽题按前缀过滤）" style="flex:1">
         </div>
         <div class="au-row">
+            <button data-act="mine">📋 我的题目</button>
             <button data-act="pick">🎲 从题库抽</button>
             ${isMathInput ? '<button data-act="calc">🧮 算一算</button>' : ''}
             <label title="整张关卡卡的 rules.lockAIHelp 设置：开=导出后 AI 助手对此卡的锁题拒答提示">
@@ -967,6 +979,31 @@ function renderEditForm() {
         <div class="au-msg">${escAttr(authorSession.msg || '')}</div>
         <div class="au-row"><button data-act="save" style="font-size:15px">✅ 保存并校验</button></div>
         <div class="au-tip">按 Q 释放鼠标点选表单 · Esc 关闭面板 · 保存后以玩家视角连答对 2 次完成校验（答错清零重计）</div>`;
+}
+
+// 「📋 我的题目」选择视图：列出 questionBank 里的题，点选（或按 1~9）回填表单。
+// 平铺录题在普通 2D 页（questionBankUI.js）做，这里只消费——打字录题不再必须进游戏。
+function renderPickView() {
+    const bank = listBankQuestions();
+    const rows = bank.slice(0, 9).map((q, i) => `
+        <button class="au-qrow" data-act="pickmine" data-id="${escAttr(q.id)}">
+            <b>${i + 1}.</b> ${CARD_SUBJECT_META[q.subject] ? CARD_SUBJECT_META[q.subject].emoji + ' ' : ''}
+            <span class="au-qkind">${q.kind === 'choice' ? '选' : '数'}</span>
+            ${escAttr(q.stem.length > 22 ? q.stem.slice(0, 22) + '…' : q.stem)}
+            <span class="au-qmeta">${escAttr(q.unit || '')}</span>
+        </button>`).join('');
+    const more = bank.length > 9 ? `<div class="au-tip">还有 ${bank.length - 9} 题没显示——键盘 1~9 选前九题，更多请去题库页管理</div>` : '';
+    return `
+        <div class="au-title">📋 我的题目 · 点选填入表单</div>
+        <div class="au-status">${escAttr(authorStatusLine())}</div>
+        ${rows || '<div class="au-tip" style="padding:8px 0">题库还是空的：点「📝 打开题库页」先录几题（存进浏览器，跨世界共用）</div>'}
+        ${more}
+        <div class="au-msg">${escAttr(authorSession.msg || '')}</div>
+        <div class="au-row">
+            <button data-act="backedit">↩ 返回编辑</button>
+            <button data-act="openbank">📝 打开题库页</button>
+        </div>
+        <div class="au-tip">选中后仍要「保存并校验」连答对 2 次 · Esc 返回编辑</div>`;
 }
 
 function renderVerifyView() {
@@ -1028,6 +1065,7 @@ function renderAuthorPanel() {
         authorPanel.classList.remove('au-shake');
     }
     if (authorSession.mode === 'edit') card.innerHTML = renderEditForm();
+    else if (authorSession.mode === 'pick') card.innerHTML = renderPickView();
     else if (authorSession.mode === 'verify') card.innerHTML = renderVerifyView();
     else card.innerHTML = renderDoneView();
 }
@@ -1057,7 +1095,7 @@ function openAuthorPanel(x, y, z) {
     }
     authorSession = {
         x, y, z,
-        mode: 'edit', // 'edit' 表单 → 'verify' 试答双通过 → 'done' 可导出
+        mode: 'edit', // 'edit' 表单 → 'pick' 选我的题目 → 'verify' 试答双通过 → 'done' 可导出
         form,
         verify: { typed: '', wrongShake: false, passStreak: 0, msg: '' },
         msg: '',
@@ -1113,8 +1151,22 @@ function onAuthorClick(e) {
         renderAuthorPanel();
         return;
     }
+    // 「📋 我的题目」选择视图（从 edit 进入，只消费选回表单/返回/跳题库页）
+    if (authorSession.mode === 'pick') {
+        if (act === 'pickmine') pickMineIntoForm(btn.dataset.id);
+        else if (act === 'backedit') {
+            authorSession.mode = 'edit';
+            authorSession.msg = '';
+            renderAuthorPanel();
+        } else if (act === 'openbank') openBankPage();
+        return;
+    }
     if (authorSession.mode !== 'edit') return;
-    if (act === 'pickans') {
+    if (act === 'mine') {
+        authorSession.mode = 'pick';
+        authorSession.msg = '';
+        renderAuthorPanel();
+    } else if (act === 'pickans') {
         const i = Number(btn.dataset.i);
         const f = authorSession.form;
         if (i >= 0 && i < f.options.length) {
@@ -1265,6 +1317,50 @@ async function authorPickFromBank() {
     renderAuthorPanel();
 }
 
+// 「📋 我的题目」选中：把题库里的一题回填表单（可再改，改动后仍按自拟计）。
+// 与「🎲 从题库抽」的差别：教材题库是按格哈希确定性抽，这里是作者自己录的题主动选。
+function pickMineIntoForm(id) {
+    const s = authorSession;
+    if (!s) return;
+    const q = listBankQuestions().find((it) => it.id === id);
+    if (!q) {
+        s.msg = '❌ 这道题刚被删了（题库页操作过？），换一道吧';
+        renderAuthorPanel();
+        return;
+    }
+    const f = s.form;
+    f.custom = false; // 题库条目必落具体学科（questionBank.validateBankQuestion 保证）
+    f.subject = q.subject;
+    f.kind = q.kind === 'choice' ? 'choice' : 'input';
+    f.stem = typeof q.stem === 'string' ? q.stem : '';
+    if (f.kind === 'choice') {
+        f.options = Array.isArray(q.options) ? q.options.map(String).slice(0, 4) : ['', '', ''];
+        while (f.options.length < 3) f.options.push('');
+        f.answerIdx = q.answer | 0;
+        if (f.answerIdx < 0 || f.answerIdx >= f.options.length) f.answerIdx = 0;
+        f.ansRaw = '';
+    } else {
+        f.ansRaw = String(q.answer ?? '');
+        f.options = ['', '', ''];
+        f.answerIdx = 0;
+    }
+    f.hint = typeof q.hint === 'string' ? q.hint : '';
+    f.unit = typeof q.unit === 'string' ? q.unit : '';
+    f.pickedFromBank = false; // 自录题不是教材抽取 → meta.source 照旧记 'custom'
+    s.mode = 'edit';
+    s.msg = '📋 已选入「我的题目」——可再改，确认无误就「保存并校验」';
+    renderAuthorPanel();
+}
+
+// 「📝 打开题库页」：跳去平铺录题页（questionBankUI）。作者面板先收——两个释放鼠标的
+// 浮层叠着会抢指针策略与 Esc 语义；表单未保存内容随面板丢弃（选录完重开面板重填）。
+function openBankPage() {
+    closeAuthorPanel();
+    import('./questionBankUI.js').then((m) => m.openQuestionBank()).catch(() => {
+        import('./ui.js').then(({ showTooltip }) => showTooltip('⚠️ 题库页打开失败（模块缺失？）'));
+    });
+}
+
 // 「🧮 算一算」（仅数学+数字输入显示）：对题干做安全算式求值并回填答案框。
 // G2 P1-2：系统算的答案必须回显给作者（作者亲眼确认后才能完成双通过），
 // 否则「出题者不知道自己锁的答案」会造成双通过死锁。求值器 evalMathExpr 在文件尾 AUTHOR-PURE 区。
@@ -1394,6 +1490,24 @@ function chooseAuthorVerifyOption(idx) {
 // 返回 true = 本分支独占处理（跳过玩家答题分支；未消费的键照常传给后续监听者）。
 function handleAuthorKeydown(e) {
     const s = authorSession;
+    if (s.mode === 'pick') {
+        // 选择视图：数字 1~9 直接选列表里的题（键盘模式友好），Esc/Q 返回编辑表单
+        if (state.assistantOpen || getUIState() !== 'playing') { closeAuthorPanel(); return true; }
+        const m = /^(Digit|Numpad)(\d)$/.exec(e.code);
+        if (m) {
+            const idx = parseInt(m[2], 10) - 1;
+            const bank = listBankQuestions();
+            if (idx >= 0 && idx < Math.min(9, bank.length)) pickMineIntoForm(bank[idx].id);
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        } else if (e.code === 'Escape' || e.code === 'KeyQ') {
+            s.mode = 'edit';
+            s.msg = '';
+            renderAuthorPanel();
+            e.stopImmediatePropagation();
+        }
+        return true;
+    }
     if (s.mode === 'verify') {
         // 浮层激活即收（键让给浮层），与玩家答题卡同款守卫
         if (state.assistantOpen || getUIState() !== 'playing') { closeAuthorPanel(); return true; }

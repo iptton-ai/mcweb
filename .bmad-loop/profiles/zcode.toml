@@ -1,0 +1,30 @@
+# zcode adapter profile for bmad-loop (verified against zcode 0.16.5, 2026-09-16)
+#
+# Transport: headless one-shot. The generic adapter passes the rendered prompt
+# as a positional arg, so argv becomes:
+#   zcode --prompt "Use the <skill> skill now: <args>"
+# zcode runs the prompt at the default `yolo` permission mode, prints the
+# result, and EXITS — completion is detected by the adapter's window-death
+# fallback (the same path Codex uses for its missing SessionEnd).
+#
+# Why no live hooks: zcode 0.16.5 wires workspace hooks (SessionStart/Stop)
+# only into app-server/desktop sessions; the headless `--prompt` runtime never
+# fires them (verified empirically, including with trust granted via
+# `zcode hooks trust grant`). Do NOT switch this profile to dialect "none" —
+# hookless profiles are routed to the HTTP/SSE adapter, which zcode is not.
+#
+# The [hooks] table below therefore registers the relay into a dead file that
+# zcode never reads, solely so `bmad-loop init`/`validate` have a concrete,
+# inspectable registration site. Completion does not depend on it.
+name = "zcode"
+binary = "zcode"
+launch_args = ["--prompt"]
+prompt_template = "Use the {skill} skill now: {args}"
+usage_parser = "none"
+skill_tree = ".zcode/skills"
+first_run_note = "skills are invoked by name in natural language (slash-command promotion covers user-level skills only in 0.16.5); headless defaults to yolo permission mode"
+
+[hooks]
+dialect = "claude-settings-json"
+config_path = ".bmad-loop/zcode-hooks-registration.json"
+events = { SessionStart = "SessionStart", Stop = "Stop" }

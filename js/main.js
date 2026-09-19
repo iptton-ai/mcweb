@@ -5,7 +5,6 @@ import { state } from './state.js';
 import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
 import { isSolid, rebuildChunk, updateChunkMeshes } from './chunk.js';
-import { placeBlock } from './interaction.js';
 import { updateMining } from './mining.js';
 import { initViewmodel, renderViewmodel, updateViewmodel } from './viewmodel.js';
 import { initParticles, updateParticles } from './particles.js';
@@ -28,6 +27,7 @@ import { updateHighlight } from './highlight.js';
 import { clearBuildQueue, updateBuild } from './buildQueue.js';
 import { initSaves, deleteSave, listSaves, loadGame, saveGame, initAutoSave } from './saveGame.js';
 import { getFov, getInputMode, getMouseSensitivity, initSettingsUI, openGameSettings, renderSlotRows } from './settingsUI.js';
+import { initUIKeys } from './uiKeys.js'; // UI 键盘导航：浮层内方向键移焦 / Enter 激活（2026-09-18 键盘化）
 import { exitLevelRun, tickLevelRun } from './levelRun.js'; // 闯关运行时每帧驱动（关卡工坊批次 W）
 import { exitLevelEditor, tickLevelEditor } from './levelEditor.js'; // 关卡编辑器：临时世界/草稿自动保存（2026-09-16）
 // B4 并行编写的关卡 UI 导出（updateLevelHud/updateResultPanel/openLevelList/initLevelListUI）
@@ -85,16 +85,13 @@ function gameLoop(timestamp) {
         look.pitch = Math.max(-maxPitch, Math.min(maxPitch, look.pitch));
     }
 
-    // 挖掘/放置（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）。
-    // 挖掘按 js/mining.js 的原版规则：生存按住蓄力（松手/换目标重置），创造即点即碎限速连拆。
-    // 鼠标锁定（isPlaying）与纯键盘模式（isKeyboardPlayActive）共享 mouseDown 按住态——
-    // 键盘模式的 Enter/X 按下同样置位（js/input.js 共享触发点）
+    // 挖掘（自由摄像头/跟拍视角下准星不再是玩家视线，禁用世界交互）：生存按住蓄力、创造即点即碎限速连拆。
+    // 鼠标锁定（isPlaying）与纯键盘模式（isKeyboardPlayActive）共享 mouseDown 按住态——键盘模式的
+    // Enter 按下同样置位（js/input.js 共享触发点）。
+    // 右键/X 不在这里消费：secondaryAction 已在按下瞬间触发一次（js/input.js），若再按帧消费
+    // mouseDown.right，按住跨帧的一次点击会放置两次（2026-09-18 修复）；该标志只作按住态镜像
     const gameplayActive = isPlaying() || isKeyboardPlayActive();
     updateMining(dt, gameplayActive && state.camMode === 'player' && mouseDown.left);
-    if (gameplayActive && state.camMode === 'player' && mouseDown.right) {
-        placeBlock();
-        mouseDown.right = false; // 防止连续放置
-    }
 
     // 玩家物理
     updatePlayerPhysics(dt);
@@ -429,6 +426,7 @@ function init() {
     updateHealthUI();
     // 输入方式（🖱 鼠标锁定 / ⌨ 纯键盘）来自设置浮层，持久化于 localStorage（默认鼠标）
     state.inputMode = getInputMode();
+    initUIKeys(); // 浮层键盘导航先注册（document 捕获阶段，先于 input.js 消费方向键/Enter）
     setupInput();
     initBuildWidget();
     initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）

@@ -737,6 +737,7 @@ function buildStyleCards() {
     for (const p of BGM_PACKS) {
         const card = document.createElement('div');
         card.className = 'bgm-style-card' + (p.id === getBgmStyle() ? ' active' : '');
+        card.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 选风格包（uiKeys.js）
         card.dataset.pack = p.id;
         card.innerHTML = `<div class="nm">${p.icon} ${p.name}</div><div class="ds">${p.desc}</div>`;
         card.addEventListener('click', () => {
@@ -770,6 +771,7 @@ function buildInputModeCards() {
     for (const m of INPUT_MODES) {
         const card = document.createElement('div');
         card.className = 'bgm-style-card' + (m.id === getInputMode() ? ' active' : '');
+        card.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 切输入方式（uiKeys.js）
         card.dataset.mode = m.id;
         card.innerHTML = `<div class="nm">${m.icon} ${m.name}</div><div class="ds">${m.desc}</div>`;
         card.addEventListener('click', () => {
@@ -824,6 +826,7 @@ export function renderSlotRows(container, { currentSlot, onEnter, onNew, onDelet
     metas.forEach((meta, i) => {
         const row = document.createElement('div');
         row.className = 'slot-row' + (i === currentSlot ? ' current' : '');
+        row.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 进入该槽/提示开新（uiKeys.js）
         if (meta) {
             const icon = meta.gameMode === GameModes.SURVIVAL ? '⚔️' : '🏗️';
             row.innerHTML =
