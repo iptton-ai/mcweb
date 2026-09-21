@@ -2,6 +2,8 @@
 // AI 助手工具集：
 //   世界类：get_game_context / scan_terrain / place_blocks / clear_area / read_blocks / run_build_script / set_build_speed
 //   关卡类（P3 AI 三角色）：check_level / gen_level_draft（关卡工坊，见 docs/edu-workshop-impl-contract.md §6）
+//   知识类：search_game_docs（检索 js/assistant/knowledge.js 精简知识库——机制/数值/ID/配方
+//           先查这里，查不到才 read_game_file 整读源码）
 //   文件类：list_game_files / read_game_file / write_game_file / reload_game / get_runtime_errors
 // 全部返回字符串（通常是 JSON），直接作为 tool 消息回传给 LLM。
 // 建造类工具经 buildQueue 渐进放置（可调速/暂停，便于录制延时摄影），
@@ -9,6 +11,7 @@
 
 import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, doorId, flagId, HotbarBlocks, keypadId, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { normalizeBank, sanitizeManifest } from '../eduKeypad.js'; // 题库归一化（纯函数，gen_level_draft 抽题用）
+import { KNOWLEDGE_SECTIONS, searchKnowledge } from './knowledge.js'; // 精简知识库检索
 import { isCreative, isNight, state } from '../state.js';
 import { getBlock } from '../world.js';
 import { isSolid } from '../chunk.js';
@@ -338,6 +341,33 @@ function toolSetBuildSpeed({ speed } = {}) {
         已设置: speedText(),
         当前任务: getBuildStatus(),
         提示: '施工进行中也可随时调速；玩家可用 [ ] 键调速、P 键暂停、R 键录制游戏画面（存为 webm）',
+    });
+}
+
+// ---------- 知识库检索（先查精简手册，查不到才读源码） ----------
+
+function toolSearchDocs({ query, id } = {}) {
+    // id 精确读节：模型看完目录/提示后按 id 补读某一节
+    if (id) {
+        const sec = KNOWLEDGE_SECTIONS.find((s) => s.id === String(id).trim());
+        if (!sec) {
+            return `错误：没有 id 为「${id}」的知识节。可用：${KNOWLEDGE_SECTIONS.map((s) => s.id).join('、')}`;
+        }
+        return JSON.stringify({ 命中: [{ id: sec.id, 标题: sec.title, 内容: sec.text }] });
+    }
+    if (!query || !String(query).trim()) return '错误：需要 query（空格分隔的关键词）或 id（精确读某节）';
+    const hits = searchKnowledge(query, 3);
+    if (!hits.length) {
+        return JSON.stringify({
+            命中: [],
+            全部章节: KNOWLEDGE_SECTIONS.map((s) => `${s.id}｜${s.title}`),
+            提示: '换更短的关键词再试，或用 id 参数精确读某节；知识库确实没有的细节才 read_game_file 读源码',
+        });
+    }
+    return JSON.stringify({
+        命中: hits.map((s) => ({ id: s.id, 标题: s.title, 内容: s.text })),
+        其余章节: KNOWLEDGE_SECTIONS.filter((s) => !hits.includes(s)).map((s) => `${s.id}｜${s.title}`),
+        提示: '需要更多细节可用 id 参数重读某一节',
     });
 }
 
@@ -856,6 +886,13 @@ export function getToolSchemas() {
             },
             required: ['subject'],
         }),
+        fn('search_game_docs', '检索游戏知识库（机制/数值/方块ID/配方/常见修改步骤的精简手册）。回答「XX 怎么工作/数值是多少」类问题、或动手修改源码前，先查这里；知识库没有的细节才 read_game_file 读源码（config.js/kinetic.js 等大文件整读很慢很贵）。', {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: '空格分隔的多个关键词，如「粉碎轮 应力」「红石 时钟」「新增 方块 配方」' },
+                id: { type: 'string', description: '可选：精确读取某一节（ids/mining/world/redstone/piston/kinetic/logistics/elevator/survival/mobs/saves/modules/recipes/keys/edu）' },
+            },
+        }),
         fn('list_game_files', '列出项目全部源码文件（路径+大小）。', { type: 'object', properties: {} }),
         fn('read_game_file', '读取项目文件内容。修改前必须先读取最新内容。', {
             type: 'object',
@@ -891,6 +928,7 @@ export async function executeTool(name, args) {
             case 'set_build_speed': result = toolSetBuildSpeed(args); break;
             case 'check_level': result = await toolCheckLevel(args); break;
             case 'gen_level_draft': result = await toolGenLevelDraft(args); break;
+            case 'search_game_docs': result = toolSearchDocs(args); break;
             case 'list_game_files': result = await toolListFiles(); break;
             case 'read_game_file': result = await toolReadFile(args); break;
             case 'write_game_file': result = await toolWriteFile(args); break;

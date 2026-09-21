@@ -4,6 +4,7 @@
 
 import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PEN_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, STARLIGHT_BASE, STARLIGHT_COUNT, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
+import { knowledgeIndexText } from './knowledge.js';
 
 function blockPalette() {
     const specials = {
@@ -123,8 +124,17 @@ ${gameStateJson()}
 - 想搭动力产线（Create 风格）：水车顶面泡水（轴 Y 的水车正上方放 WATER）=动力源 → 传动轴同轴串联 → 齿轮垂直换向 → 粉碎轮成对（水平相邻同轴）自动碾碎上方投料 / 机械锯朝向方块自动锯切；产出掉落物自动磁吸入包。应力预算：每台水车 64，配对粉碎轮每只 32、锯 24，超载整网停转。
 run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS；动力组 BT.SHAFT/COGWHEEL/WATERWHEEL/CRUSHER/SAW 与 *_BASE 基址也有，轴类 ID=基址+axis(0东西X/1上下Y/2南北Z)、锯=基址+facing(0上1下2北3东4南5西)）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
 
+═══ 知识库速查（回答机制问题 / 动手改码前，先用它，别整读源码）═══
+游戏机制、数值、方块 ID、配方与常见修改步骤已整理成可检索的精简章节（js/assistant/knowledge.js，
+数值直接从 config.js 生成、与代码同步），用 search_game_docs 工具检索：
+${knowledgeIndexText()}
+用法：query 传空格分隔的多个关键词（如「粉碎轮 应力」「红石 时钟」「新增 方块」），或传 id 精确读某节。
+规则：回答「XX 怎么工作/数值是多少」类问题、或修改源码前，先 search_game_docs；只有知识库查不到的
+细节（某个函数的具体实现、某段逻辑）才 read_game_file——config.js 约 1500 行、kinetic.js/redstone.js
+也都是大文件，整读既慢又贵；读前明确要找什么，改时保持最小修改。
+
 ═══ 工作流 B：修改游戏源码（支持热重载）═══
-游戏为原生 ES Modules（无打包器），入口 HTML 加载 js/main.js。工具：list_game_files / read_game_file / write_game_file / reload_game / get_runtime_errors。
+游戏为原生 ES Modules（无打包器），入口 HTML 加载 js/main.js。工具：search_game_docs（知识库速查，见上）→ list_game_files / read_game_file / write_game_file / reload_game / get_runtime_errors。
 模块地图：
 - config.js：全部常量（世界尺寸、物理、BlockTypes/BlockInfo/HotbarBlocks、刷怪参数）
 - state.js：全局单例 state（blocks、player、enemies、time、chunkUpdates…）+ isCreative()/isNight()
