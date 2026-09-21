@@ -112,8 +112,9 @@ export const BUILD_SPEED_LEVELS = [
     { label: '瞬间', bps: Infinity },
 ];
 
-// 默认速度档：极速（日常建造接近即时，又不会像瞬间档那样集中重建）
-export const BUILD_DEFAULT_SPEED_IDX = 4;
+// 默认速度档：瞬间（2026-09-21 起默认最高档，建造即刻完成；展示型建造由
+// 系统提示词引导模型先 set_build_speed 调慢速，跟拍系统也会自管档位）
+export const BUILD_DEFAULT_SPEED_IDX = 5;
 
 // 每帧最多重建的区块网格数：把大量网格重建分摊到多帧，避免建造瞬间掉帧
 export const BUILD_REBUILDS_PER_FRAME = 4;

@@ -4,6 +4,7 @@
 
 import { runAgentTurn } from './agent.js';
 import { DEFAULT_CONFIG, getConfig, isConfigured, saveConfig } from './llm.js';
+import { DEFAULT_JEV_CONFIG, getJevConfig, saveJevConfig } from './jev.js';
 import {
     createSession, deleteSession, getActiveSession, listSessions, setActiveSession,
     autoTitle, touchSession,
@@ -286,9 +287,26 @@ function buildDom() {
             <label>附加系统提示词（可选，追加在游戏档案之后）</label>
             <textarea id="ai-set-extra" placeholder="例如：回复尽量简短；建造风格偏好现代简约…"></textarea>
           </div>
+          <div class="ai-set-card">
+            <h4>⚡ Jev 快速路由（可选，默认关）</h4>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="ai-set-jev-enable">启用——常见机制/数值问题约 1 秒直答（跳过主模型），建造类消息预取相关知识加速首轮
+            </label>
+            <label style="margin-top:9px;">TypeSafe API Key（console.typesafe.ai 申请）</label>
+            <input type="password" id="ai-set-jev-key" placeholder="apikey_…">
+            <label style="margin-top:9px;">网关地址（必填）</label>
+            <input type="text" id="ai-set-jev-gateway" placeholder="https://your-relay.example.com/api/jev">
+            <div class="hint" style="margin:4px 0 0;">typesafe.ai 不支持在 Web 页面直接访问（官方接口不开浏览器跨域 CORS），需自行搭建中转：
+            用任意反代（如 Cloudflare Worker）转发 POST 到官方 /v1/systemone、透传 Authorization 并补 CORS 响应头，再把网关地址填到这里。</div>
+            <label style="margin-top:9px;">自定义请求头（每行一条「Key: Value」，可覆盖下方 Key 的鉴权方式）</label>
+            <textarea id="ai-set-jev-headers" rows="3" placeholder="X-App: mcweb&#10;Authorization: Bearer xxx"></textarea>
+            <label style="margin-top:9px;">模型（pin 固定版本，勿用 jev-latest）</label>
+            <input type="text" id="ai-set-jev-model" placeholder="jev-1.13.0">
+          </div>
           <div class="hint">密钥仅保存在本机 localStorage；LLM 请求由浏览器直连上游接口（需上游允许跨域）。
           选 Ollama 无需真实 Key，填任意非空值即可（如 ollama）；HTTPS 页面无法直连本机 http 接口。
-          文件读写/热重载依赖 server.py（python3 server.py 启动）。</div>
+          文件读写/热重载依赖 server.py（python3 server.py 启动）。
+          Jev 路由失败或未配置时自动走原路径，不影响正常对话；闯关模式中永不直答（苏格拉底红线）。</div>
         </div>
         <div class="ai-set-foot">
           <span class="hint" id="ai-set-note"></span>
@@ -572,6 +590,7 @@ function matchPreset(baseUrl) {
 
 function openSettings() {
     const c = getConfig();
+    const j = getJevConfig();
     const hit = matchPreset(c.baseUrl);
     els.settings.querySelector('#ai-set-preset').value = hit ? hit.id : 'custom';
     els.settings.querySelector('#ai-set-baseurl').value = c.baseUrl;
@@ -581,6 +600,11 @@ function openSettings() {
     els.settings.querySelector('#ai-set-iters').value = c.maxToolIterations;
     els.settings.querySelector('#ai-set-effort').value = c.reasoningEffort || '';
     els.settings.querySelector('#ai-set-extra').value = c.extraInstructions || '';
+    els.settings.querySelector('#ai-set-jev-enable').checked = !!j.enabled;
+    els.settings.querySelector('#ai-set-jev-key').value = j.apiKey;
+    els.settings.querySelector('#ai-set-jev-gateway').value = j.gateway;
+    els.settings.querySelector('#ai-set-jev-headers').value = j.customHeaders || '';
+    els.settings.querySelector('#ai-set-jev-model').value = j.model;
     fillModelSuggestions(hit);
     els.settings.classList.remove('hidden');
 }
@@ -594,6 +618,13 @@ function saveSettings() {
         maxToolIterations: Number(els.settings.querySelector('#ai-set-iters').value) || 30,
         reasoningEffort: els.settings.querySelector('#ai-set-effort').value,
         extraInstructions: els.settings.querySelector('#ai-set-extra').value,
+    });
+    saveJevConfig({
+        enabled: els.settings.querySelector('#ai-set-jev-enable').checked,
+        apiKey: els.settings.querySelector('#ai-set-jev-key').value.trim(),
+        gateway: els.settings.querySelector('#ai-set-jev-gateway').value.trim(),
+        customHeaders: els.settings.querySelector('#ai-set-jev-headers').value,
+        model: els.settings.querySelector('#ai-set-jev-model').value.trim() || DEFAULT_JEV_CONFIG.model,
     });
     els.settings.classList.add('hidden');
     updateModelBadge();

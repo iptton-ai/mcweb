@@ -6,6 +6,8 @@
 import { chatCompletion, getConfig, isConfigured } from './llm.js';
 import { buildFinalSystemPrompt } from './docs.js';
 import { executeTool, getToolSchemas } from './tools.js';
+import { jevPreflight } from './jev.js';
+import { state } from '../state.js';
 import { setAgentHold } from '../buildQueue.js';
 
 // 建造类工具：执行其一即认为本轮对话在做施工流程，跨轮次等 LLM 期间跟拍保持取景
@@ -58,14 +60,34 @@ function buildApiMessages(session) {
  * 返回 { finalText, reloading }
  */
 export async function runAgentTurn({ session, signal, onStreamText, onReasoningText, onAssistantDone, onToolCall, onToolResult, onStatus }) {
-    if (!isConfigured()) {
-        throw new Error('尚未配置 LLM：请点击面板右上角 ⚙️ 填写 API 地址 / Key / 模型');
-    }
     const cfg = getConfig();
     const messages = buildApiMessages(session);
     const tools = getToolSchemas();
     let lastText = '';
     let buildStarted = false; // 本轮是否执行过建造类工具（决定收尾时是否摘掉跟拍 hold）
+
+    // Jev 快速路由（⚙️ 里开启）放在 LLM 配置检查之前：纯知识直答不依赖主模型也能用。
+    // 仅对用户真实发言生效（系统事件/任务续跑跳过——续跑消息路由会误判，直答会打断任务恢复）。
+    // 高置信 FAQ 免 LLM 直答；其余预取知识注入首轮省一轮工具往返。失败静默走原路径，绝不抛错。
+    const lastMsg = session.messages[session.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user' && !lastMsg.meta) {
+        const route = await jevPreflight(lastMsg.content, { signal, inLevelRun: !!state.levelRun });
+        if (route?.action === 'direct') {
+            onStatus?.('⚡ 快速回答…');
+            const assistantMsg = { role: 'assistant', content: route.answer };
+            session.messages.push(assistantMsg);
+            onAssistantDone?.(assistantMsg);
+            return { finalText: route.answer, reloading: false };
+        }
+        if (route?.action === 'prefetch' && route.hint) {
+            // 追加在用户消息之后（仅进 API 不进会话历史）：模型首轮即可见，省一轮工具往返
+            messages.push({ role: 'user', content: route.hint });
+        }
+    }
+
+    if (!isConfigured()) {
+        throw new Error('尚未配置 LLM：请点击面板右上角 ⚙️ 填写 API 地址 / Key / 模型');
+    }
 
     try {
         for (let iter = 0; iter < cfg.maxToolIterations; iter++) {
