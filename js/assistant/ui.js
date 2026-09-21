@@ -9,7 +9,7 @@ import {
     createSession, deleteSession, getActiveSession, listSessions, setActiveSession,
     autoTitle, touchSession,
 } from './sessions.js';
-import { closeSettingsState, getUIState, setAssistantVisible, togglePauseMenu } from '../uiModal.js';
+import { closeSettingsState, getUIState, isTypingTarget, setAssistantVisible, togglePauseMenu } from '../uiModal.js';
 
 // ---------- 样式 ----------
 const STYLE = `
@@ -385,10 +385,12 @@ function fillModelSuggestions(preset) {
 
 // ---------- 键盘（捕获阶段，优先于游戏输入） ----------
 // 面板是「不阻塞游戏的侧栏」：只拦截 Esc 与 T，其余按键放行给游戏——
-// AI 建造时面板开着也能用 WASD/E/M/1-9 继续玩；在聊天框打字时由输入焦点天然隔离。
+// AI 建造时面板开着也能用 WASD/E/M/1-9 继续玩；
+// 打字焦点一律让路（isTypingTarget，与 input.js 同一约定）：聊天框、设置表单、
+// 面板外的游戏输入框（题库/搜索等）里按 T 都是打字，绝不开关面板。
 export function handleKeydown(e) {
     if (els.panel.classList.contains('hidden')) {
-        if (e.code === 'KeyT') {
+        if (e.code === 'KeyT' && !isTypingTarget(e)) {
             e.preventDefault();
             e.stopPropagation();
             openPanel();
@@ -402,7 +404,7 @@ export function handleKeydown(e) {
         else if (!els.sessions.classList.contains('hidden')) els.sessions.classList.add('hidden');
         else if (getUIState() === 'settings') closeSettingsState(); // 游戏设置浮层开着：先关它
         else togglePauseMenu(); // Esc = 暂停/回到游戏，面板保持打开（z-index 高于菜单）
-    } else if (e.code === 'KeyT' && document.activeElement !== els.input) {
+    } else if (e.code === 'KeyT' && !isTypingTarget(e)) {
         e.preventDefault();
         e.stopPropagation();
         closePanel();
