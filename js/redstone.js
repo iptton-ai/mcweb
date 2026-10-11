@@ -11,7 +11,9 @@
 //   充能方块：激活的红石粉把它脚下与四邻水平的实心方块充能；
 //             拉杆/按钮/压力板也把各自的挂靠（支撑）方块充能。
 //   反相器：红石火把默认亮；挂靠的方块被充能则熄灭、解除后复亮，
-//           切换有 RTORCH_DELAY 延迟——输出粉绕回挂靠方块即成时钟（闪烁灯）。
+//           切换有 RTORCH_DELAY 延迟——输出粉绕回挂靠方块即成时钟（闪烁灯）；
+//           亮火把强充能正上方方块（原版）——方块+侧面火把交替叠成火把塔 = 竖直布线，
+//           每级反相一次且信号重新 15 级（电梯等竖直控制线路的基础）。
 //   负载（6 邻有激活红石粉或激活源即动作）：
 //     红石灯点亮；门在信号上升沿开、下降沿关（手动右键不受影响）；TNT 在上升沿点燃。
 // 任何红石放置/交互/破坏后调 updateRedstoneNetwork() 全量重算（全图扫描约几毫秒，仅事件时执行）。
@@ -75,6 +77,7 @@ import {
     leverOn,
     observerFacing,
     observerPowered,
+    pistonExtended,
     plateId,
     platePressed,
     rtorchFacing,
@@ -332,6 +335,11 @@ export function updateRedstoneTick(dt) {
 // 离合器按电平语义判定接合/断开并回写变体（Create-lite L1，见文末）。
 // 网格刷新：贴面元件与红石粉走 refreshPropAt（customMesh），红石灯走 rebuildChunk（立方体贴图变化）。
 export function updateRedstoneNetwork() {
+    solveRedstoneNetwork();
+}
+
+// 恢复按钮时先只读求出旧供电；禁止基线采集执行机关或污染瞬时队列。
+function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null, restorePistonState = false } = {}) {
     if (!state.blocks) return;
     const blocks = state.blocks;
 
@@ -377,14 +385,17 @@ export function updateRedstoneNetwork() {
             }
         }
     }
-    plateRegistry = plates;
-    syncObserverRegistry(observers); // 活塞组：观察者注册进每帧侦测表（piston.js）
+    if (!captureOnly) {
+        plateRegistry = plates;
+        syncObserverRegistry(observers); // 活塞组：观察者注册进每帧侦测表（piston.js）
+    }
     // 早退门条件含离合器与滑轮（G2 裁决 R1-03/R2-03 同源，L2 追加 pulleys）：拆掉最后
     // 一根信号源后，断开态离合器/卷绳态滑轮仍能被这里的重算收敛回接合/放绳
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
         plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
         pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0 &&
         keypads.length === 0) {
+        if (captureOnly) return { doors: new Set() };
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
         pistonPoweredPrev = new Map();
@@ -438,7 +449,8 @@ export function updateRedstoneNetwork() {
     }
 
     // ---- 充能方块集合（红石火把反相判定用）----
-    // 激活红石粉充能脚下 + 四邻水平实心方块；激活源充能各自挂靠/支撑方块。
+    // 激活红石粉充能脚下 + 四邻水平实心方块；激活源充能各自挂靠/支撑方块；
+    // 亮红石火把充能正上方方块（原版火把塔，见下方循环注释）。
     const poweredBlocks = new Set();
     const powerBlock = (x, y, z) => {
         if (inBounds(x, y, z)) poweredBlocks.add(keyOf(x, y, z));
@@ -452,19 +464,21 @@ export function updateRedstoneNetwork() {
         for (const [dx, dz] of HORIZ_DIRS) powerBlock(x + dx, y, z + dz);
     }
     for (const s of activeSources) {
-        if (isRTorchId(s.id)) continue; // 火把不充能自己的挂靠方块（原版行为）——否则亮火把自己供能挂靠块=310ms 自振荡
         const [dx, dy, dz] = FACING_NORMALS[mountedFacing(s.id)];
         // 观察者的 mountedFacing 是背面（输出面）：充能 s+法线 = 背面输出格；
         // 其余源的 mountedFacing 是挂靠方向：充能 s-法线 = 挂靠/支撑方块
-        if (isObserverId(s.id)) powerBlock(s.x + dx, s.y + dy, s.z + dz);
-        else powerBlock(s.x - dx, s.y - dy, s.z - dz);
-    }
-
-    // ---- 红石火把：目标态 = 挂靠方块未被充能；翻转走 RTORCH_DELAY 延迟队列 ----
-    for (const tc of torches) {
-        const [dx, dy, dz] = FACING_NORMALS[rtorchFacing(tc.id)];
-        const lit = poweredBlocks.has(keyOf(tc.x - dx, tc.y - dy, tc.z - dz)) ? 0 : 1;
-        if (rtorchLit(tc.id) !== lit) queueTorchFlip(tc.x, tc.y, tc.z, lit);
+        if (isObserverId(s.id)) {
+            powerBlock(s.x + dx, s.y + dy, s.z + dz);
+        } else if (isRTorchId(s.id)) {
+            // 火把强充能正上方方块（原版行为）——「方块 + 侧面火把」交替叠层 = 火把塔
+            // 竖直布线：每级反相一次、信号重新 15 级（电梯等竖直控制线路的基础）。
+            // 挂靠方块仍然不充能（否则亮火把自己供能挂靠块 = 310ms 自振荡）；
+            // 挂靠 = 贴地/贴墙（法线 ↓ 或水平），永远不是正上方格，两者不冲突，
+            // 唯一例外 facing=1（吊顶，正常放不出来）防御性跳过。
+            if (rtorchFacing(s.id) !== 1) powerBlock(s.x, s.y + 1, s.z);
+        } else {
+            powerBlock(s.x - dx, s.y - dy, s.z - dz);
+        }
     }
 
     // ---- 负载判定：6 邻有激活红石粉（strength>0）或激活源 ----
@@ -476,6 +490,21 @@ export function updateRedstoneNetwork() {
         }
         return false;
     };
+
+    if (captureOnly) {
+        return {
+            doors: new Set(doors.filter(d => doorHalf(d.id) === 0 &&
+                (isCellActive(d.x, d.y, d.z) || isCellActive(d.x, d.y + 1, d.z)))
+                .map(d => keyOf(d.x, d.y, d.z))),
+        };
+    }
+
+    // ---- 红石火把：目标态 = 挂靠方块未被充能；翻转走 RTORCH_DELAY 延迟队列 ----
+    for (const tc of torches) {
+        const [dx, dy, dz] = FACING_NORMALS[rtorchFacing(tc.id)];
+        const lit = poweredBlocks.has(keyOf(tc.x - dx, tc.y - dy, tc.z - dz)) ? 0 : 1;
+        if (rtorchLit(tc.id) !== lit) queueTorchFlip(tc.x, tc.y, tc.z, lit);
+    }
 
     // 红石粉亮灭回写（视觉反馈）
     for (const du of dusts) {
@@ -504,7 +533,9 @@ export function updateRedstoneNetwork() {
         const k = keyOf(d.x, d.y, d.z);
         const powered = isCellActive(d.x, d.y, d.z) || isCellActive(d.x, d.y + 1, d.z);
         doorPrev.set(k, powered);
-        if (powered !== (doorPoweredPrev.get(k) ?? false)) applyDoorPower(d.x, d.y, d.z, powered);
+        // 只补按钮释放产生的下降沿；最终仍供电的负载照常初始化，无电手动门保持原样。
+        const previous = doorPoweredPrev.get(k) ?? (!powered && !!releasedButtonPower?.doors.has(k));
+        if (powered !== previous) applyDoorPower(d.x, d.y, d.z, powered);
     }
     doorPoweredPrev = doorPrev;
 
@@ -527,7 +558,9 @@ export function updateRedstoneNetwork() {
         const k = keyOf(pi.x, pi.y, pi.z);
         const powered = isCellActive(pi.x, pi.y, pi.z);
         pistonPrev.set(k, powered);
-        if (powered !== (pistonPoweredPrev.get(k) ?? false)) enqueuePistonAction(pi.x, pi.y, pi.z, powered);
+        // 初始化清掉旧动作队列后，按实际伸/收变体重建动作；重复初始化也不会丢失待收回动作。
+        const previous = restorePistonState ? pistonExtended(pi.id) === 1 : (pistonPoweredPrev.get(k) ?? false);
+        if (powered !== previous) enqueuePistonAction(pi.x, pi.y, pi.z, powered);
     }
     pistonPoweredPrev = pistonPrev;
 
@@ -594,5 +627,23 @@ export function initRedstone() {
     tntPoweredPrev = new Map();
     pistonPoweredPrev = new Map();
     resetPistons();
-    updateRedstoneNetwork();
+    // 按钮按下态没有持久化剩余计时；恢复时弹起，避免永久供能。
+    const pressedButtons = [];
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+        for (let z = 0; z < WORLD_DEPTH; z++) {
+            for (let x = 0; x < WORLD_WIDTH; x++) {
+                const id = getBlock(x, y, z);
+                if (isButtonId(id) && buttonPressed(id)) {
+                    pressedButtons.push({ x, y, z, id });
+                }
+            }
+        }
+    }
+    // 读取恢复前的真实线路，不执行 TNT/活塞/火把动作；随后只为断电门补下降沿。
+    const releasedButtonPower = pressedButtons.length ? solveRedstoneNetwork({ captureOnly: true }) : null;
+    for (const b of pressedButtons) {
+        setBlockSafe(b.x, b.y, b.z, buttonId(buttonFacing(b.id), 0));
+        refreshPropAt(b.x, b.y, b.z);
+    }
+    solveRedstoneNetwork({ releasedButtonPower, restorePistonState: true });
 }

@@ -1,0 +1,394 @@
+TAP version 13
+# Subtest: 清单与文件：格式正确、确定性哈希稳定、无重名
+ok 1 - 清单与文件：格式正确、确定性哈希稳定、无重名
+  ---
+  duration_ms: 4.004167
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：村口热身赛
+ok 2 - schema 校验零错误零警告：村口热身赛
+  ---
+  duration_ms: 5.53225
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：诗文书院
+ok 3 - schema 校验零错误零警告：诗文书院
+  ---
+  duration_ms: 8.167625
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：规矩小城
+ok 4 - schema 校验零错误零警告：规矩小城
+  ---
+  duration_ms: 4.408375
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：科学实验站
+ok 5 - schema 校验零错误零警告：科学实验站
+  ---
+  duration_ms: 1.088541
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：算术矿洞
+ok 6 - schema 校验零错误零警告：算术矿洞
+  ---
+  duration_ms: 5.062625
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：时光钟楼
+ok 7 - schema 校验零错误零警告：时光钟楼
+  ---
+  duration_ms: 7.031125
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：星辉城堡
+ok 8 - schema 校验零错误零警告：星辉城堡
+  ---
+  duration_ms: 7.074666
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：地牢寻宝记
+ok 9 - schema 校验零错误零警告：地牢寻宝记
+  ---
+  duration_ms: 4.538083
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：云间跳跳乐
+ok 10 - schema 校验零错误零警告：云间跳跳乐
+  ---
+  duration_ms: 5.070542
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：弹跳云梯
+ok 11 - schema 校验零错误零警告：弹跳云梯
+  ---
+  duration_ms: 5.725542
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：深海龙宫
+ok 12 - schema 校验零错误零警告：深海龙宫
+  ---
+  duration_ms: 5.433083
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：电梯工厂
+ok 13 - schema 校验零错误零警告：电梯工厂
+  ---
+  duration_ms: 9.75975
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：机关迷阵
+ok 14 - schema 校验零错误零警告：机关迷阵
+  ---
+  duration_ms: 6.289459
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：全能冠军试炼
+ok 15 - schema 校验零错误零警告：全能冠军试炼
+  ---
+  duration_ms: 8.952916
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：村口热身赛
+ok 16 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：村口热身赛
+  ---
+  duration_ms: 18.654583
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：诗文书院
+ok 17 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：诗文书院
+  ---
+  duration_ms: 53.525167
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：规矩小城
+ok 18 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：规矩小城
+  ---
+  duration_ms: 17.778375
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：科学实验站
+ok 19 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：科学实验站
+  ---
+  duration_ms: 7.812
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：算术矿洞
+ok 20 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：算术矿洞
+  ---
+  duration_ms: 30.797333
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：时光钟楼
+ok 21 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：时光钟楼
+  ---
+  duration_ms: 29.0985
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：星辉城堡
+ok 22 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：星辉城堡
+  ---
+  duration_ms: 36.572875
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：地牢寻宝记
+ok 23 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：地牢寻宝记
+  ---
+  duration_ms: 21.871334
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：云间跳跳乐
+ok 24 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：云间跳跳乐
+  ---
+  duration_ms: 2.051625
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：弹跳云梯
+ok 25 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：弹跳云梯
+  ---
+  duration_ms: 4.364958
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：深海龙宫
+ok 26 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：深海龙宫
+  ---
+  duration_ms: 25.634292
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：电梯工厂
+ok 27 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：电梯工厂
+  ---
+  duration_ms: 65.049083
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：机关迷阵
+ok 28 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：机关迷阵
+  ---
+  duration_ms: 31.243292
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：全能冠军试炼
+ok 29 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：全能冠军试炼
+  ---
+  duration_ms: 85.31625
+  type: 'test'
+  ...
+# Subtest: 运行时加载器：Node 无页面环境时安静降级为空数组
+ok 30 - 运行时加载器：Node 无页面环境时安静降级为空数组
+  ---
+  duration_ms: 8.723875
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：村口热身赛
+ok 31 - 锁具接线与门墙防绕行：村口热身赛
+  ---
+  duration_ms: 1.0535
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：诗文书院
+ok 32 - 锁具接线与门墙防绕行：诗文书院
+  ---
+  duration_ms: 1.223625
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：规矩小城
+ok 33 - 锁具接线与门墙防绕行：规矩小城
+  ---
+  duration_ms: 0.871375
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：科学实验站
+ok 34 - 锁具接线与门墙防绕行：科学实验站
+  ---
+  duration_ms: 0.600791
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：算术矿洞
+ok 35 - 锁具接线与门墙防绕行：算术矿洞
+  ---
+  duration_ms: 1.142041
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：时光钟楼
+ok 36 - 锁具接线与门墙防绕行：时光钟楼
+  ---
+  duration_ms: 1.484542
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：星辉城堡
+ok 37 - 锁具接线与门墙防绕行：星辉城堡
+  ---
+  duration_ms: 1.593875
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：地牢寻宝记
+ok 38 - 锁具接线与门墙防绕行：地牢寻宝记
+  ---
+  duration_ms: 0.32925
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：云间跳跳乐
+ok 39 - 锁具接线与门墙防绕行：云间跳跳乐
+  ---
+  duration_ms: 0.245125
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：弹跳云梯
+ok 40 - 锁具接线与门墙防绕行：弹跳云梯
+  ---
+  duration_ms: 0.361958
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：深海龙宫
+ok 41 - 锁具接线与门墙防绕行：深海龙宫
+  ---
+  duration_ms: 0.346
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：电梯工厂
+ok 42 - 锁具接线与门墙防绕行：电梯工厂
+  ---
+  duration_ms: 0.517042
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：机关迷阵
+ok 43 - 锁具接线与门墙防绕行：机关迷阵
+  ---
+  duration_ms: 0.485417
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：全能冠军试炼
+ok 44 - 锁具接线与门墙防绕行：全能冠军试炼
+  ---
+  duration_ms: 0.595917
+  type: 'test'
+  ...
+# Subtest: 旗组与卡面坐标逐格对得上（含旗类型）
+ok 45 - 旗组与卡面坐标逐格对得上（含旗类型）
+  ---
+  duration_ms: 14.606416
+  type: 'test'
+  ...
+# Subtest: 关卡清单：锁数/检查点数与设计稿一致
+ok 46 - 关卡清单：锁数/检查点数与设计稿一致
+  ---
+  duration_ms: 0.074959
+  type: 'test'
+  ...
+# Subtest: 星辉城堡：三道门墙无绕行 + 楼梯几何正确 + 星辉塔彩蛋存在
+ok 47 - 星辉城堡：三道门墙无绕行 + 楼梯几何正确 + 星辉塔彩蛋存在
+  ---
+  duration_ms: 0.298125
+  type: 'test'
+  ...
+# Subtest: 地牢寻宝记：三道门墙无绕行 + 星辉半截门存在
+ok 48 - 地牢寻宝记：三道门墙无绕行 + 星辉半截门存在
+  ---
+  duration_ms: 0.103875
+  type: 'test'
+  ...
+# Subtest: 村口热身赛：两道墙门贯穿全深防绕行
+ok 49 - 村口热身赛：两道墙门贯穿全深防绕行
+  ---
+  duration_ms: 0.084625
+  type: 'test'
+  ...
+# Subtest: 云间跳跳乐：关卡墙门无绕行 + 终点蹦床存在
+ok 50 - 云间跳跳乐：关卡墙门无绕行 + 终点蹦床存在
+  ---
+  duration_ms: 0.047167
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：村口热身赛
+ok 51 - 嵌入临时世界：村口热身赛
+  ---
+  duration_ms: 1.385458
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：诗文书院
+ok 52 - 嵌入临时世界：诗文书院
+  ---
+  duration_ms: 1.223375
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：规矩小城
+ok 53 - 嵌入临时世界：规矩小城
+  ---
+  duration_ms: 0.857833
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：科学实验站
+ok 54 - 嵌入临时世界：科学实验站
+  ---
+  duration_ms: 1.201292
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：算术矿洞
+ok 55 - 嵌入临时世界：算术矿洞
+  ---
+  duration_ms: 1.313167
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：时光钟楼
+ok 56 - 嵌入临时世界：时光钟楼
+  ---
+  duration_ms: 1.765042
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：星辉城堡
+ok 57 - 嵌入临时世界：星辉城堡
+  ---
+  duration_ms: 1.076458
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：地牢寻宝记
+ok 58 - 嵌入临时世界：地牢寻宝记
+  ---
+  duration_ms: 0.304167
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：云间跳跳乐
+ok 59 - 嵌入临时世界：云间跳跳乐
+  ---
+  duration_ms: 0.267542
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：弹跳云梯
+ok 60 - 嵌入临时世界：弹跳云梯
+  ---
+  duration_ms: 0.903334
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：深海龙宫
+ok 61 - 嵌入临时世界：深海龙宫
+  ---
+  duration_ms: 0.200958
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：电梯工厂
+ok 62 - 嵌入临时世界：电梯工厂
+  ---
+  duration_ms: 1.3575
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：机关迷阵
+ok 63 - 嵌入临时世界：机关迷阵
+  ---
+  duration_ms: 0.252625
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：全能冠军试炼
+ok 64 - 嵌入临时世界：全能冠军试炼
+  ---
+  duration_ms: 1.730917
+  type: 'test'
+  ...
+1..64
+# tests 64
+# suites 0
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 578.933916

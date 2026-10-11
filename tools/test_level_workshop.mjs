@@ -441,7 +441,7 @@ test('saveLevelCard/list/get/delete：Node 无 IndexedDB 走会话兜底（W17�
     assert.equal(globalThis.indexedDB, undefined); // 前提：Node 无 indexedDB
     const card = await buildFixtureCard();
     const saved = await saveLevelCard(card);
-    assert.deepEqual(saved, { ok: true, id: saved.id, sessionOnly: true });
+    assert.deepEqual(saved, { ok: true, id: saved.id, sessionOnly: true, storageError: 'IndexedDB 不可用' });
     assert.match(saved.id, /^[0-9a-f]{8}-[0-9a-z]+$/); // cardHash-created 短码
 
     const rows = await listLevelCards();

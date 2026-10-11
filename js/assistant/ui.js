@@ -4,12 +4,16 @@
 
 import { runAgentTurn } from './agent.js';
 import { DEFAULT_CONFIG, getConfig, isConfigured, saveConfig } from './llm.js';
-import { DEFAULT_JEV_CONFIG, getJevConfig, saveJevConfig } from './jev.js';
+import {
+    DEFAULT_JEV_CONFIG, getJevConfig, saveJevConfig,
+    getJevStats, getKnowledgeGaps, logKnowledgeGap, clearKnowledgeGaps, exportKnowledgeGapsJson,
+} from './jev.js';
 import {
     createSession, deleteSession, getActiveSession, listSessions, setActiveSession,
     autoTitle, touchSession,
 } from './sessions.js';
 import { closeSettingsState, getUIState, isTypingTarget, setAssistantVisible, togglePauseMenu } from '../uiModal.js';
+import { state } from '../state.js';
 
 // ---------- 样式 ----------
 const STYLE = `
@@ -122,6 +126,19 @@ const STYLE = `
 #ai-toast{position:fixed;left:14px;bottom:96px;z-index:120;background:rgba(30,30,50,.96);
   border:2px solid #4a4a6a;border-radius:8px;padding:8px 13px;color:#fff;font-size:13px;
   max-width:360px;transition:opacity .35s;pointer-events:none;}
+/* Jev 直答 👍/👎 反馈行 + ⚙️ Jev 卡统计/缺口入口（批次 E2） */
+.ai-jev-fb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#77779a;padding-left:2px;}
+.ai-jev-fb-btn{background:transparent;border:1px solid #3d3d5c;border-radius:6px;color:#c0c0d8;
+  cursor:pointer;font-size:12px;padding:2px 9px;line-height:1.4;}
+.ai-jev-fb-btn:hover{border-color:#7ec850;color:#fff;}
+.ai-jev-fb.done .ai-jev-fb-btn{opacity:.5;cursor:default;}
+.ai-jev-fb.done .ai-jev-fb-btn.picked{opacity:1;border-color:#7ec850;color:#9fe06a;}
+.ai-jev-stats{margin-top:9px;padding:7px 9px;background:#1c1c30;border:1px solid #2d2d44;border-radius:6px;
+  color:#9ab;font-size:11.5px;line-height:1.6;}
+.ai-jev-actions{display:flex;gap:6px;margin-top:7px;}
+.ai-jev-mini{background:#2d2d4a;color:#e0e0e0;border:1px solid #4a4a6a;border-radius:6px;
+  padding:3px 10px;cursor:pointer;font-size:12px;}
+.ai-jev-mini:hover{border-color:#7ec850;}
 `;
 
 // ---------- 模块状态 ----------
@@ -297,11 +314,17 @@ function buildDom() {
             <label style="margin-top:9px;">网关地址（必填）</label>
             <input type="text" id="ai-set-jev-gateway" placeholder="https://your-relay.example.com/api/jev">
             <div class="hint" style="margin:4px 0 0;">typesafe.ai 不支持在 Web 页面直接访问（官方接口不开浏览器跨域 CORS），需自行搭建中转：
-            用任意反代（如 Cloudflare Worker）转发 POST 到官方 /v1/systemone、透传 Authorization 并补 CORS 响应头，再把网关地址填到这里。</div>
+            用任意反代（如 Cloudflare Worker）转发 POST 到官方 /v1/systemone、透传 Authorization 并补 CORS 响应头。
+            网关只填域名也可以，会自动补默认路径 /api/jev；自定义路径的网关请填完整地址。</div>
             <label style="margin-top:9px;">自定义请求头（每行一条「Key: Value」，可覆盖下方 Key 的鉴权方式）</label>
             <textarea id="ai-set-jev-headers" rows="3" placeholder="X-App: mcweb&#10;Authorization: Bearer xxx"></textarea>
             <label style="margin-top:9px;">模型（pin 固定版本，勿用 jev-latest）</label>
             <input type="text" id="ai-set-jev-model" placeholder="jev-1.13.0">
+            <div class="ai-jev-stats" id="ai-set-jev-stats">路由统计：待刷新</div>
+            <div class="ai-jev-actions">
+              <button class="ai-jev-mini" id="ai-btn-jev-export" title="把知识缺口列表下载为 JSON 文件（喂给知识库迭代）">导出缺口</button>
+              <button class="ai-jev-mini" id="ai-btn-jev-clear" title="清空全部知识缺口记录（需二次确认）">清空</button>
+            </div>
           </div>
           <div class="hint">密钥仅保存在本机 localStorage；LLM 请求由浏览器直连上游接口（需上游允许跨域）。
           选 Ollama 无需真实 Key，填任意非空值即可（如 ollama）；HTTPS 页面无法直连本机 http 接口。
@@ -345,6 +368,9 @@ function buildDom() {
     panel.querySelector('#ai-btn-settings').addEventListener('click', openSettings);
     panel.querySelector('#ai-set-cancel').addEventListener('click', () => els.settings.classList.add('hidden'));
     panel.querySelector('#ai-set-save').addEventListener('click', saveSettings);
+    // ⚙️ Jev 卡：缺口导出/清空（清空需二次确认，防手滑丢数据）
+    panel.querySelector('#ai-btn-jev-export').addEventListener('click', exportJevGaps);
+    panel.querySelector('#ai-btn-jev-clear').addEventListener('click', clearJevGapsWithConfirm);
     els.send.addEventListener('click', () => { running ? stopRun() : trySend(); });
     els.input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -389,6 +415,7 @@ function fillModelSuggestions(preset) {
 // 打字焦点一律让路（isTypingTarget，与 input.js 同一约定）：聊天框、设置表单、
 // 面板外的游戏输入框（题库/搜索等）里按 T 都是打字，绝不开关面板。
 export function handleKeydown(e) {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return; // 退出选择独占按键，不能抢焦点或切暂停态。
     if (els.panel.classList.contains('hidden')) {
         if (e.code === 'KeyT' && !isTypingTarget(e)) {
             e.preventDefault();
@@ -413,12 +440,15 @@ export function handleKeydown(e) {
 
 // ---------- 面板开关 ----------
 function openPanel() {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     els.panel.classList.remove('hidden');
     // 状态机负责让指针锁让位（鼠标归面板）；游戏状态不受影响，关闭后照常继续
     setAssistantVisible(true);
     renderAll(getActiveSession());
     updateModelBadge();
-    setTimeout(() => els.input.focus(), 50);
+    setTimeout(() => {
+        if (!state.editorExitOpen && !state.levelEdit?.exiting) els.input.focus();
+    }, 50);
 }
 
 function closePanel() {
@@ -494,6 +524,8 @@ function renderMsg(msg) {
             setCardResultFromToolMsg(card, tc.id);
             div.appendChild(card);
         }
+        // Jev 直答消息（jev 标记由 agent.js direct 分支打入）：尾部挂 👍/👎 反馈行
+        if (msg.jev) div.appendChild(buildJevFeedbackRow(msg));
     } else if (msg.role === 'tool') {
         return null; // 工具结果已并入上面的卡片
     }
@@ -509,6 +541,43 @@ function fmtArgs(argsJson) {
     } catch {
         return String(argsJson || '').slice(0, 2000);
     }
+}
+
+// ---------- Jev 直答反馈（👍/👎，批次 E2） ----------
+// 👎 = 这条直答没帮上忙 → 记入知识缺口日志（reason=user_down），喂知识库迭代；
+// 👍 仅记录态度不落缺口。反馈态写回消息对象（msg.jevFb，随会话持久化）：
+// 重渲染/重开面板不重复计数，重复点击被锁定。
+function buildJevFeedbackRow(msg) {
+    const row = document.createElement('div');
+    row.className = 'ai-jev-fb';
+    const tip = document.createElement('span');
+    tip.textContent = '这个快速回答有用吗？';
+    row.appendChild(tip);
+    const mark = (picked, label, tipText, isDown) => {
+        const b = document.createElement('button');
+        b.className = 'ai-jev-fb-btn';
+        b.textContent = label;
+        b.title = tipText;
+        b.addEventListener('click', () => {
+            if (msg.jevFb) return; // 已反馈：锁定，防重复点击/重复落盘
+            msg.jevFb = picked;
+            if (isDown) logKnowledgeGap({ query: msg.jevQuery, section: msg.jevSection || '', reason: 'user_down' });
+            row.classList.add('done');
+            b.classList.add('picked');
+            touchSession(getActiveSession()); // 反馈态立刻随会话落盘
+            toast(isDown ? '📝 已记入知识缺口，帮助知识库改进' : '👍 感谢反馈');
+        });
+        return b;
+    };
+    const up = mark('up', '👍', '有帮助');
+    const down = mark('down', '👎', '没帮上忙——记入知识缺口列表，帮知识库改进', true);
+    row.appendChild(up);
+    row.appendChild(down);
+    if (msg.jevFb) { // 历史消息重渲染：恢复已反馈的锁定态
+        row.classList.add('done');
+        (msg.jevFb === 'up' ? up : down).classList.add('picked');
+    }
+    return row;
 }
 
 // 重建历史时：把 tool 消息的结果回填到对应卡片的索引
@@ -607,6 +676,7 @@ function openSettings() {
     els.settings.querySelector('#ai-set-jev-gateway').value = j.gateway;
     els.settings.querySelector('#ai-set-jev-headers').value = j.customHeaders || '';
     els.settings.querySelector('#ai-set-jev-model').value = j.model;
+    refreshJevStatsRow(); // 统计/缺口计数每次打开都刷新（显示最新值）
     fillModelSuggestions(hit);
     els.settings.classList.remove('hidden');
 }
@@ -631,6 +701,39 @@ function saveSettings() {
     els.settings.classList.add('hidden');
     updateModelBadge();
     toast('✅ 设置已保存');
+}
+
+// ---------- Jev 路由统计与知识缺口（⚙️ Jev 卡，批次 E2） ----------
+// ⚙️ Jev 卡统计行：直答/预取/放行/失败计数 + 均耗时 + 缺口条数——「提速」从此可度量
+function refreshJevStatsRow() {
+    const el = els.settings.querySelector('#ai-set-jev-stats');
+    if (!el) return;
+    const s = getJevStats();
+    const avg = s.count ? Math.round(s.totalElapsedMs / s.count) : 0;
+    el.textContent = `路由统计：直答 ${s.direct}｜预取 ${s.prefetch}｜放行 ${s.none}｜失败 ${s.fail}｜均耗 ${avg} ms`
+        + ` · 知识缺口 ${getKnowledgeGaps().length} 条`;
+}
+
+// 导出缺口 JSON：标准下载方式（Blob + a[download]），文件直接喂给知识库迭代（E1 式补节）
+function exportJevGaps() {
+    const gaps = getKnowledgeGaps();
+    if (!gaps.length) { toast('暂无缺口记录'); return; }
+    const blob = new Blob([exportKnowledgeGapsJson()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `jev-knowledge-gaps-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`📥 已导出 ${gaps.length} 条知识缺口`);
+}
+
+// 清空缺口：二次确认防手滑
+function clearJevGapsWithConfirm() {
+    if (!getKnowledgeGaps().length) { toast('暂无缺口记录'); return; }
+    if (!confirm('确定清空全部知识缺口记录？此操作不可恢复。')) return;
+    clearKnowledgeGaps();
+    refreshJevStatsRow();
+    toast('✅ 已清空知识缺口记录');
 }
 
 // ---------- 提示条 / 状态 ----------
@@ -840,6 +943,47 @@ async function runTurn(session) {
             onToolResult: (toolMsg) => {
                 const item = pendingToolCards.find((c) => c.id === toolMsg.toolCallId);
                 if (item) setCardResult(item.card, toolMsg.content, !!toolMsg.isError);
+                scrollBottom();
+            },
+            onJevRoute: (info) => {
+                // Jev 路由以工具卡片样式展示（与会话内其他工具一致）；面板关着时不渲染 DOM
+                if (els.panel.classList.contains('hidden')) return;
+                const card = toolCard('⚡ Jev 路由', fmtArgs(JSON.stringify({ 消息: String(info.text || '').slice(0, 80) })));
+                els.messages.appendChild(card);
+                const lines = [
+                    `动作：${info.action === 'direct' ? '⚡ 直答（跳过主模型）' : info.action === 'prefetch' ? '📥 预取知识注入首轮' : '未干预'}`,
+                    info.reason ? `原因：${info.reason}` : null,
+                    info.intent ? `意图：${info.intent.choice}（置信 ${info.intent.confidence}）` : null,
+                    info.section && info.section.id ? `章节：${info.section.id}（置信 ${info.section.confidence}）` : null,
+                    info.modules && info.modules.length ? `建造系统：${info.modules.join('、')}` : null,
+                    info.quiz != null ? `索要闯关答案概率：${info.quiz}` : null,
+                    info.sections && info.sections.length ? `注入章节：${info.sections.join('、')}` : null,
+                    `耗时：${info.elapsedMs}ms`,
+                    info.error ? `错误：${info.error}（已降级走原路径）` : null,
+                ].filter(Boolean);
+                setCardResult(card, lines.join('\n'), !!info.error);
+                scrollBottom();
+            },
+            onEvidence: (info) => {
+                // E3 证据校验卡片（复用 Jev 路由卡样式）：每条件支持度/冲突/遗漏/门控结果/降级原因；
+                // 仅存 DOM 不进会话历史（模型收不到），面板关着时不渲染 DOM
+                if (els.panel.classList.contains('hidden')) return;
+                const card = toolCard('🔍 证据校验', fmtArgs(JSON.stringify({ 触发: '已登记条件的证据 checkpoint' })));
+                els.messages.appendChild(card);
+                const lines = [];
+                if (info.ok) {
+                    for (const c of info.conditions || []) {
+                        lines.push(`${Number(info.scores?.[c.id] ?? 0).toFixed(2)}  ${c.id}｜${c.text}`);
+                    }
+                    lines.push(`冲突：${Number(info.conflict ?? 0).toFixed(2)} · 遗漏：${Number(info.missing ?? 0).toFixed(2)}`);
+                    lines.push(info.gate?.pass
+                        ? '门控：✓ 通过（证据充分，放行收束）'
+                        : `门控：✗ 未过（${(info.gate?.gaps || []).length} 条缺口，已提示补证）`);
+                } else {
+                    lines.push(`降级：${info.reason || '未知原因'}${info.error ? `（${info.error}）` : ''}——跳过校验照常走`);
+                }
+                lines.push(`耗时：${info.elapsedMs ?? 0}ms`);
+                setCardResult(card, lines.join('\n'), !!(info.ok === false && info.reason !== 'aborted'));
                 scrollBottom();
             },
             onStatus: reportStatus,

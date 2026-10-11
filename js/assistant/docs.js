@@ -2,9 +2,15 @@
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
 
-import { BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, PEN_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, STARLIGHT_BASE, STARLIGHT_COUNT, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BELT_BASE, BlockInfo, BlockTypes, BUTTON_BASE, BUTTON_COUNT, BUTTON_ITEM_ID, CLUTCH_BASE, COGWHEEL_BASE, COGWHEEL_COUNT, CRUSHER_BASE, CRUSHER_COUNT, DEPLOYER_BASE, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, LAMP_BASE, LAMP_COUNT, LAMP_ITEM_ID, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, PEN_ID, PISTON_BASE, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, PLATFORM_BASE, PULLEY_BASE, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_COUNT, SHAFT_BASE, SHAFT_COUNT, STARLIGHT_BASE, STARLIGHT_COUNT, STICKY_PISTON_BASE, WATERWHEEL_BASE, WATERWHEEL_COUNT, HotbarBlocks, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { isCreative, isNight, state } from '../state.js';
+import { atlasSize, freeTileRanges } from '../textureTiles.js';
 import { knowledgeIndexText } from './knowledge.js';
+
+// 图集速查文案（textureTiles.js 分配表动态生成）：图集尺寸与空闲 tile 区间绝不手写，
+// 分配表一改系统提示词自动同步（旧版把两者写死在提示词里，曾误导助手把新方块
+// 贴图放进早已占用的 tile 号，出贴图互相覆盖的事故）
+const ATLAS_DOC = `图集 atlasSize=${atlasSize}（${atlasSize}×${atlasSize}=${atlasSize * atlasSize} 格、每格 16px），空闲 tile ${freeTileRanges().map(([a, b]) => (a === b ? String(a) : `${a}..${b}`)).join('、')}`;
 
 function blockPalette() {
     const specials = {
@@ -17,8 +23,9 @@ function blockPalette() {
         [BlockTypes.GRASS]: '（破坏掉泥土）',
         [BlockTypes.GLASS]: '（破坏后无掉落，原版规则）',
         [BlockTypes.LEAVES]: '（破坏后无掉落）',
+        [BlockTypes.SLIME]: '（普通实心立方体；落速 ≥3 格/秒落上=反弹保留 80% 垂直速度免摔伤——垫塔下=弹跳电梯/落地缓冲，被活塞推拉时拖着粘着的方块走=飞行机器）',
         [DUST_ITEM_ID]: '（铺在实心方块顶面走线；信号 15 级每格 -1，0 级断；可沿斜上/斜下 1 格爬坡）',
-        [RTORCH_ITEM_ID]: '（默认亮=信号源；挂靠方块被充能则熄灭=反相器，切换延迟 0.1s，粉绕回挂靠方块即成时钟）',
+        [RTORCH_ITEM_ID]: '（默认亮=信号源；挂靠方块被充能则熄灭=反相器，切换延迟 0.1s，粉绕回挂靠方块即成时钟；亮火把强充能正上方方块——方块+侧面火把交替叠层=火把塔竖直布线）',
         [BUTTON_ITEM_ID]: '（贴面道具，右键按下 1 秒后自动弹出，期间为信号源）',
         [PLATE_ITEM_ID]: '（放顶面；玩家/怪物踩住=信号源，自动门/陷阱用）',
         [LEVER_ITEM_ID]: '（贴面道具，右键开关，开=信号源并充能挂靠方块）',
@@ -51,6 +58,10 @@ function blockPalette() {
     parts.push(`${WATERWHEEL_BASE}..${WATERWHEEL_BASE + WATERWHEEL_COUNT - 1}=水车（ID=基址+axis；顶面接触水（${BlockTypes.WATER}）=动力源，8 RPM + 64 SU 应力容量/台）`);
     parts.push(`${CRUSHER_BASE}..${CRUSHER_BASE + CRUSHER_COUNT - 1}=粉碎轮（ID=基址+axis；水平相邻两轮同轴配对，正上方格=投料口，1.2s 碾碎：石头→圆石→沙砾→沙、玻璃→沙、原木→木板×4）`);
     parts.push(`${SAW_BASE}..${SAW_BASE + SAW_COUNT - 1}=机械锯（ID=基址+facing，朝向格=被锯目标；原木→木板×4、石头→圆石，负载数据见 kinetic.js）`);
+    // 活塞组/物流组/电梯组折叠行：AI 建造要放这些方块，调色板必须给出区间与变体公式（细节查知识库 ids/elevator 节）
+    parts.push(`${PISTON_BASE}..${PISTON_BASE + 11}=活塞（ID=基址+facing*2+extended；朝「所点击面外法线」放置，上升沿伸出/下降沿收回，AI 写基址=朝上·收回） ${STICKY_PISTON_BASE}..${STICKY_PISTON_BASE + 11}=粘性活塞（收回时拉回头前方块） ${OBSERVER_BASE}..${OBSERVER_BASE + 11}=观察者（facing=侦测面，正前方方块变化→背面输出 0.2s 脉冲）`);
+    parts.push(`${BELT_BASE}..${BELT_BASE + 3}=传送带（ID=基址+dir 0北(−Z)/1东(+X)/2南(+Z)/3西(−X)；贴实心顶面，挨着通电动力方块即运转，运物品载人） ${DEPLOYER_BASE}..${DEPLOYER_BASE + 5}=投料器（朝向=面法线，通电把物品变回方块塞进朝向格；正面不传动、背面接轴） ${CLUTCH_BASE}..${CLUTCH_BASE + 5}=离合器（ID=基址+axis*2+断开位；红石充能=断开传动）`);
+    parts.push(`${PULLEY_BASE}..${PULLEY_BASE + 3}=滑轮（ID=基址+up*2+powered：up 0垂挂绳向下/1顶举绳向上；绳永远竖直无水平朝向位，背面格接传动，红石 6 邻充能=卷绳） ${PLATFORM_BASE}=电梯平台（普通实心立方体，滑轮沿绳 ≤32 格自动绑定第一个平台）`);
     // 关卡工坊（P3）：旗组/星辉门折叠行 + 出题笔物品——gen_level_draft 建草稿、讲解工坊玩法时用到
     parts.push(`${FLAG_BASE}..${FLAG_BASE + FLAG_COUNT - 1}=关卡旗（ID=基址+kind：0 起点/1 检查点/2 终点；非固体道具格，普通世界放置无害，闯关时踩到才触发出生/存档/结算）`);
     parts.push(`${STARLIGHT_BASE}..${STARLIGHT_BASE + STARLIGHT_COUNT - 1}=星辉门（ID=基址+state：0 锁定·实心/1 开启·可通行；右键出「还没学到」的超纲题，答对开门并成为常供能红石信号源）`);
@@ -120,9 +131,10 @@ ${gameStateJson()}
 - 墙高 3~4 格；留门洞（宽1~2、高2）；窗户用玻璃；屋顶可悬挑；隔墙分房间；火把照明间距 ≤10 格防刷怪；
 - 建筑外观可用多种方块搭配（原木框架+木板墙+圆石基座等）；
 - 坐标越界自动忽略；把大型建筑拆成多次调用，出错时用 clear_area 重来。
-- 想加红石自动化（路灯/自动门/陷阱/闪烁灯）：拉杆或按钮=信号源，红石粉沿实心顶面走线（每格 -1 级），红石灯/门/TNT 是负载；红石火把挂在被充能的方块上会熄灭=反相器，火把+粉环=时钟。
+- 想加红石自动化（路灯/自动门/陷阱/闪烁灯）：拉杆或按钮=信号源，红石粉沿实心顶面走线（每格 -1 级），红石灯/门/TNT 是负载；红石火把挂在被充能的方块上会熄灭=反相器，火把+粉环=时钟。竖直传信号（电梯/高塔，粉不能垂直叠放）用火把塔：亮火把强充能正上方方块，「方块+侧面火把」交替叠层每级反相一次、信号重新 15 级，末端接粉线驱动负载。
 - 想搭动力产线（Create 风格）：水车顶面泡水（轴 Y 的水车正上方放 WATER）=动力源 → 传动轴同轴串联 → 齿轮垂直换向 → 粉碎轮成对（水平相邻同轴）自动碾碎上方投料 / 机械锯朝向方块自动锯切；产出掉落物自动磁吸入包。应力预算：每台水车 64，配对粉碎轮每只 32、锯 24，超载整网停转。
-run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS；动力组 BT.SHAFT/COGWHEEL/WATERWHEEL/CRUSHER/SAW 与 *_BASE 基址也有，轴类 ID=基址+axis(0东西X/1上下Y/2南北Z)、锯=基址+facing(0上1下2北3东4南5西)）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
+run_build_script 可用 api：BT（方块名→ID 表，如 BT.PLANKS；动力/活塞/物流/电梯组的默认物品与全部 *_BASE 基址都有——轴类变体=基址+axis(0东西X/1上下Y/2南北Z)、锯/投料器/活塞组=基址+facing(0上1下2北3东4南5西)、带=基址+dir(0北1东2南3西)、离合器=基址+axis*2+断开位、滑轮=基址+up*2+powered(0垂挂/1顶举，绳永远竖直)，其余变体公式查知识库 ids/elevator 节；有状态方块直接写变体 ID 放置，施工完成自动重算红石+动力）、WORLD{W,D,H}、player{x,y,z}、ground(x,z)（地表实心方块 y，读的是施工前地形，请先生成锚点数据再写方块）、block(x,y,z,t)（放单块）、fill(x1,y1,z1,x2,y2,z2,t)（实心填充）、clearArea(...)（清空区域）、log(msg)。代码为普通 JS（严格模式），总写入上限 4 万格。
+复杂建造开工前可先 plan_conditions 登记 1~6 条可核验条件（每条都要能被工具输出证实或证伪，如「地基区域已清平」「滑轮背面接有运转传动」）；工具取证后会自动做证据校验，收到缺口提示就按指名的工具补证，全部达标再收束汇报。简单建造不必登记。
 
 ═══ 知识库速查（回答机制问题 / 动手改码前，先用它，别整读源码）═══
 游戏机制、数值、方块 ID、配方与常见修改步骤已整理成可检索的精简章节（js/assistant/knowledge.js，
@@ -147,10 +159,10 @@ ${knowledgeIndexText()}
 - chunk.js：区块网格 rebuildChunk(cx,cz)/updateChunkMeshes()，isSolid/isTransparent/isCustomMesh，火把光源，火把/花/门的独立道具网格 getPropMesh，单格道具刷新 refreshPropAt
 - buildQueue.js：AI 施工队列（建造渐进放置，速度档/暂停在 state.buildSpeedIdx、state.buildPaused；每帧分摊网格重建；HUD 进度条与 [ ] P R 键见 ui.js/input.js）
 - saveGame.js：游戏存档（localStorage 多槽：每槽 key mcweb.save.v1.slotN + 轻量索引 mcweb.save.index，槽数 config.SAVE_SLOTS，当前槽 state.saveSlot，旧单槽 mcweb.save.v1 自动迁入槽 0）：每槽一个独立世界（方块 RLE 压缩 base64，enc:'rle'/'raw'，字段对齐本目录 snapshot.js）+ 玩家/模式/时间/出生点；main.js 启动时 initSaves→loadGame 优先于生成新世界，自动存档 30s+页面隐藏兜底写当前槽；改存档字段需同步 SAVE_VERSION 版本号
-- textures.js：Canvas 程序化纹理。tiles 表（type→top/side/bottom 的 tile 索引）+ drawFunctions（按索引绘制）+ blockUVs；图集 atlasSize=8（8×8=64 格、每格 16px），tile 索引 0..44 已占用，45..63 空闲
-- interaction.js：breakBlock/placeBlock/raycastBlocks（破坏/放置/射线拾取）
+- textures.js：Canvas 程序化纹理。tiles 表（type→top/side/bottom 的 tile 索引）+ drawFunctions（按索引绘制）+ blockUVs；分配表下沉在 js/textureTiles.js（纯数据可 Node import）；${ATLAS_DOC}
+- interaction.js：breakBlockAt/placeBlock/tryAttackEnemy/raycastBlocks（破坏/放置/攻击判定/射线拾取；不满格道具按 config.js 的 outline 局部 AABB 精确求交——穿过格内空白不算命中，碰撞/选取框/渲染模型三者解耦）
 - playerPhysics.js：移动、碰撞、相机；playerLife.js：生命、死亡重生、掉落物
-- entities.js：僵尸生成与 AI、玩家第三人称模型；tnt.js：TNT；particles.js：粒子；daynight.js：昼夜光照；highlight.js：选中框；audio.js：WebAudio 音效
+- entities.js：MOB_TYPES 类型化生物（敌对=僵尸追击/苦力怕贴近引信自爆，被动=猪绵羊牛）刷怪与 AI、玩家第三人称模型（原型 clone 共享）；tnt.js：TNT 点燃与爆炸（苦力怕自爆复用同款）；particles.js：粒子；daynight.js：昼夜光照与天空（星点/云/日月盘）；highlight.js：选中框；audio.js：WebAudio 音效（sfxBus 音量总线+录像分轨）
 - input.js：键鼠输入（指针锁定与浮层状态由 uiModal.js 状态机管理；新键位写在 setupInput 的 keydown，游戏键用 isPlaying() 门控、施工控制键用状态判断，打字中的输入框用 isTypingTarget(e) 让路；用 e.code，避开浏览器默认键并 preventDefault）
 - settingsUI.js：游戏设置浮层（首屏/暂停菜单的 ⚙️ 进入，显隐走 uiModal 的 settings 态）：「🎵 音频」=BGM 风格包+音乐/音效音量（即时生效），「💾 存档」=保存/切换/开新/删除（动作经 initSettingsUI 回调 main.js 编排）；槽位行渲染 renderSlotRows 与首屏列表共用
 - ui.js：物品栏/HUD/模式切换；engine.js：three 场景/相机/渲染器；main.js：装配与主循环 gameLoop
@@ -158,7 +170,7 @@ ${knowledgeIndexText()}
 
 配方① 新增一种方块（可开关的「门」已实现，参考 js/door.js + config.js 的 DOOR_BASE 编码 + textures.js 的 tile 20/21 与 TILE_OVERRIDES）：
 1) config.js：BlockTypes 加 ID（下一个可用整数）、BlockInfo 加 {name, solid, transparent, color, 按需 customMesh:true}、按需加入 HotbarBlocks（物品栏自动渲染）；
-2) textures.js：tiles 数组加 {type, top, side, bottom, name}，drawFunctions 加对应 tile 索引的绘制函数（优先用空闲索引 45..63；若必须扩 atlasSize 注意所有 tile 索引按 atlasSize 换行，会整体平移 UV，务必同步检查）；
+2) textures.js：tiles 数组加 {type, top, side, bottom, name}，drawFunctions 加对应 tile 索引的绘制函数（分配表与空闲 tile 区间以 js/textureTiles.js 为准：${ATLAS_DOC}——新增贴图只用空闲号；若必须扩 atlasSize 注意所有 tile 索引按 atlasSize 换行，会整体平移 UV，务必同步检查）；
 3) chunk.js：非标准立方体（如门）设 BlockInfo.customMesh=true 并在 getPropMesh 加网格分支（参考 TORCH/FLOWER）；状态切换（开/关）用两个 BlockType 或修改场景对象后 rebuildChunk；
 4) 交互（右键开关）：input.js 或 interaction.js 加逻辑；若新键位，注意用 isPlaying() 门控。
 配方② 新增按键/交互：input.js keydown 中加 e.code 分支（参考 KeyF 飞行开关）。
@@ -170,6 +182,7 @@ ${knowledgeIndexText()}
 - reload_game 会自动保存世界与玩家状态 → 刷新页面 → 恢复现场并自动继续本会话；
 - 重载后先 get_runtime_errors 检查报错，有错立即修复并再次重载；
 - 代码必须语法正确（ES Module import/export 闭合），否则页面黑屏、助手也无法加载——写文件前在脑内通读一遍改动。
+改码任务开工前可先 plan_conditions 登记可核验条件（如「修改仅触及 js/door.js」「redstone.js 既有负载判定不变」）；证据校验的缺口提示会指名用 read_game_file / get_runtime_errors 等补证，补完再收束汇报。闯关中不用（闯关只服务解题）。
 
 ═══ 关卡工坊与闯关模式（检查员 / 草稿师 / 苏格拉底提示者）═══
 道具与方块：答题机（${KEYPAD_BASE}，实心方块：玩家右键=答题，答对翻转为常供能红石信号源，贴门放=答对直接开门）、

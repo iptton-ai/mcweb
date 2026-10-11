@@ -1,0 +1,478 @@
+[{"native":"PASS","cases":9},{"rafFall":"PASS"},{"keyboardWall":"PASS","z":40.32326313972062},{"keyboardAttack":"PASS","rearHp":20,"frontHp":14}]
+{"lifecycle":"PASS","cases":6,"indexedDB":true}
+[p1 "我的世界 - 网页复刻版" | space "游戏玩法修复回归"(9): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 15:09"
+    button [ref=172]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=173]
+      text "🏗️ 建造"
+    button [ref=174]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=175]
+      text "🏗️ 建造"
+    button [ref=176]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=177]
+      text "🏗️ 建造"
+    button [ref=178]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=179]
+      text "🏗️ 建造"
+    button [ref=180]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=181]
+      text "🏗️ 建造"
+    button [ref=182]
+      text "⚔️ 生存"
+    button [ref=183]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=184]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=185]
+      text "💾 保存进度"
+    button [ref=186]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=187]
+      text "🗺 关卡"
+    button [ref=188]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.6, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "96"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "4"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      heading
+        text "📤 导出关卡卡"
+      button [ref=189]
+        text "✕"
+    text "🔒 考核锁已开：这张卡在别人玩时 AI 助手会拒答提示。"
+    container
+      container
+        text "关卡名"
+        textbox [ref=190, loc=css:input[placeholder="我的关卡"]]
+          text "我的关卡"
+      container
+        text "作者昵称"
+        textbox [ref=191, loc=css:input[placeholder="我"]]
+          text "我"
+    container
+      button [ref=192]
+        text "📤 导出并下载"
+      button [ref=193]
+        text "💾 存进本机关卡列表"
+    text "导出的 .level.json 文件可以发给朋友（微信群导入即玩）；存进列表的卡在首屏「🗺 关卡」里。"
+  container
+    container
+      canvas
+      text "71"
+    container
+      text "铁剑"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=194, loc=css:input[placeholder="关卡名"]]
+      text "浏览器持久备份"
+    button [ref=195]
+      text "🧱 组件库"
+    button [ref=196]
+      text "📝 题目库"
+    button [ref=197]
+      text "💾 存草稿"
+    button [ref=198]
+      text "📤 完成导出"
+    button [ref=199]
+      text "🚪 退出"
+  button [ref=200]
+    text "🤖"
+
+{"exportButton":"PASS","rules":{"timeLimit":90,"lockAIHelp":false},"idbFallbackResume":"PASS","cases":7}
+[p1 "我的世界 - 网页复刻版" | space "游戏玩法修复回归"(9): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      container [ref=201]
+        text "🏗️"
+        container
+          text "世界 1 · 当前"
+          text "上次保存：10月11日 15:09"
+        button [ref=202]
+          text "✕"
+      container [ref=203]
+        text "＋"
+        container
+          text "空槽位"
+          text "开一个新世界"
+        container
+          button [ref=204]
+            text "🏗️ 建造"
+          button [ref=205]
+            text "⚔️ 生存"
+      container [ref=206]
+        text "＋"
+        container
+          text "空槽位"
+          text "开一个新世界"
+        container
+          button [ref=207]
+            text "🏗️ 建造"
+          button [ref=208]
+            text "⚔️ 生存"
+      container [ref=209]
+        text "＋"
+        container
+          text "空槽位"
+          text "开一个新世界"
+        container
+          button [ref=210]
+            text "🏗️ 建造"
+          button [ref=211]
+            text "⚔️ 生存"
+      container [ref=212]
+        text "＋"
+        container
+          text "空槽位"
+          text "开一个新世界"
+        container
+          button [ref=213]
+            text "🏗️ 建造"
+          button [ref=214]
+            text "⚔️ 生存"
+      container [ref=215]
+        text "＋"
+        container
+          text "空槽位"
+          text "开一个新世界"
+        container
+          button [ref=216]
+            text "🏗️ 建造"
+          button [ref=217]
+            text "⚔️ 生存"
+    container
+      button [ref=183]
+        text "🏗️"
+        text "建造模式"
+        text "覆盖世界 1 · 重开新世界"
+      button [ref=184]
+        text "⚔️"
+        text "生存模式"
+        text "覆盖世界 1 · 重开新世界"
+    container
+      button [ref=185]
+        text "💾 保存进度"
+      button [ref=186]
+        text "⚙️ 设置（音频 / 存档）"
+      button [ref=187]
+        text "🗺 关卡"
+      button [ref=188]
+        text "📖 说明"
+    container
+      text "W A S D"
+      text "移动  | "
+      text "空格"
+      text "跳跃（创造双击 = 飞行） | "
+      text "Shift"
+      text "潜行 / 水中下沉  | "
+      text "Ctrl"
+      text "疾跑"
+      text "鼠标左键"
+      text "破坏 / 攻击  | "
+      text "鼠标右键"
+      text "放置 / 进食 / 打开工作台·熔炉  | "
+      text "中键"
+      text "吸取方块（创造）"
+      text "鼠标滚轮"
+      text "/"
+      text "1-9"
+      text "切换手持  | "
+      text "E"
+      text "背包与合成（点配方 = 合成） | "
+      text "Z"
+      text "丢弃手持"
+      text "F"
+      text "切换飞行（建造模式） | "
+      text "M"
+      text "切换游戏模式  | "
+      text "Esc"
+      text "/"
+      text "Q"
+      text "释放鼠标"
+      text "F5"
+      text "或"
+      text "V"
+      text "切换视角  | "
+      text "F1"
+      text "隐藏界面  | "
+      text "F2"
+      text "截图  | "
+      text "F3"
+      text "调试信息  | "
+      text "F6"
+      text "昼夜切换（创造）"
+      text "R"
+      text "开始录制 / 停止并保存  | "
+      text "Tab"
+      text "操作拍摄面板  | "
+      text "C"
+      text "切换镜头"
+      text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+      text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "128.0, 46.0, 128.0"
+  text "区块:"
+  text "8, 8"
+  text "FPS:"
+  text "57"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "0"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 编辑中：浏览器同ID会话稿——B 打开组件库，K 完成导出"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      heading
+        text "🗺 关卡"
+      button [ref=218]
+        text "✕"
+    container
+      text "闯关模式：试玩当前世界摆好的关卡区域，或导入 .json 关卡卡。"
+      text "作者流程：📝 题目库录题 → 摆放 起点/检查点/终点旗 与 答题机（持 ✏️ 出题笔右键选题/出题）→ 试玩。"
+    container [ref=219]
+      container
+        image
+        container
+          container
+            text "村口热身赛"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 2 锁 · 🚩 1 检查点 · 最佳：尚未通关"
+        container
+          button [ref=220]
+            text "✏️ 改副本"
+          button [ref=221]
+            text "▶ 进入"
+          button [ref=222]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "诗文书院"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 07:00 · 最佳：尚未通关"
+        container
+          button [ref=223]
+            text "✏️ 改副本"
+          button [ref=224]
+            text "▶ 进入"
+          button [ref=225]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "规矩小城"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 08:00 · 最佳：尚未通关"
+        container
+          button [ref=226]
+            text "✏️ 改副本"
+          button [ref=227]
+            text "▶ 进入"
+          button [ref=228]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "科学实验站"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 08:00 · 最佳：尚未通关"
+        container
+          button [ref=229]
+            text "✏️ 改副本"
+          button [ref=230]
+            text "▶ 进入"
+          button [ref=231]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "算术矿洞"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 08:00 · 最佳：尚未通关"
+        container
+          button [ref=232]
+            text "✏️ 改副本"
+          button [ref=233]
+            text "▶ 进入"
+          button [ref=234]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "时光钟楼"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 4 锁 · 🚩 2 检查点 · ⏱ 限时 08:00 · 最佳：尚未通关"
+        container
+          button [ref=235]
+            text "✏️ 改副本"
+          button [ref=236]
+            text "▶ 进入"
+          button [ref=237]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "星辉城堡"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 10:00 · 最佳：尚未通关"
+        container
+          button [ref=238]
+            text "✏️ 改副本"
+          button [ref=239]
+            text "▶ 进入"
+          button [ref=240]
+            text "🎥 拍宣传片"
+      container
+        image
+        container
+          container
+            text "地牢寻宝记"
+            text "🏰 官方关卡"
+          text "作者：MCWeb 学院 · 🔒 3 锁 · 🚩 2 检查点 · ⏱ 限时 08:00 · 最佳：尚未通关"
+        container
+          button [ref=241]
+            text "✏️ 改副本"
+          button [ref=242]
+            text "▶ 进入"
+          button [ref=243]
+            text "🎥 拍宣传片"
+    container
+      button [ref=244]
+        text "✏️ 新建空白关卡"
+      button [ref=245]
+        text "📝 题目库"
+      button [ref=246]
+        text "▶ 试玩当前世界"
+      button [ref=247]
+        text "📥 导入关卡卡"
+  container
+    container
+      canvas
+      text "71"
+    container
+      text "铁剑"
+      text "E 或点击 · 选择物品"
+  canvas
+  button [ref=200]
+    text "🤖"
+
+{"trySaveFailure":"PASS","visibleReason":"❌ 当前世界保存失败，请释放存储空间后再进入关卡"}
+FINAL_BROWSER_REGRESSION_PASS
+

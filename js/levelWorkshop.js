@@ -216,7 +216,10 @@ export function computeAutoRegion() {
 // 快照内存序 = 世界内存序：decoded[lx + lz*w + ly*w*d]（x 最快），RLE 沿 x 行连续最易压。
 
 export function snapshotRegion(region) {
-    const blocks = state.blocks;
+    return rleEncode(copyRegionBlocks(region));
+}
+
+function copyRegionBlocks(region, blocks = state.blocks) {
     if (!blocks || !region) return new Uint8Array(0);
     const { x0, y0, z0, w, h, d } = region;
     const out = new Uint8Array(w * h * d);
@@ -228,7 +231,7 @@ export function snapshotRegion(region) {
             for (let lx = 0; lx < w; lx++) out[k++] = blocks[rowBase + lx];
         }
     }
-    return rleEncode(out);
+    return out;
 }
 
 // 卡片 region.blocks（base64+RLE）解码回局部方块数组；布局同 snapshotRegion。
@@ -250,12 +253,12 @@ export function decodeRegionBlocks(card) {
 // 默认锁题提供者：取 eduKeypad 的作者面板锁（getAuthoredLock 由窗口 B3 提供）。
 // 动态 import 惰性加载保持 Node 可测性（eduKeypad 链上有 three/chunk，Node 里加载失败
 // 也必须安静降级）；可选链兼容 B3 尚未落地 exports 的阶段。
-async function defaultLockMetaProvider(x, y, z) {
+async function resolveDefaultLockMetaProvider() {
     try {
         const mod = await import('./eduKeypad.js');
-        return mod.getAuthoredLock?.(x, y, z) ?? null;
+        return mod.getAuthoredLock || (() => null);
     } catch {
-        return null;
+        return () => null;
     }
 }
 
@@ -264,16 +267,26 @@ async function defaultLockMetaProvider(x, y, z) {
 //   verifiedPasses:number } | null；没题的答题机只是装饰，不进 questions。
 // 兼容 A4 文档里的 questionProvider 别名；draft=true ⇒ meta.draft=true（校验降级）。
 export async function buildLevelCard({ name, author, lockMetaProvider, questionProvider, rules: rulesOverride, draft, generator } = {}) {
-    const provider = lockMetaProvider || questionProvider || defaultLockMetaProvider;
     const nm = String(name ?? '').trim();
     if (!nm) return { error: '请先填写关卡名' };
+
+    // 默认提供者先加载一次，随后同步读全表；逐锁动态 import 会让退出恢复的锁混入卡。
+    const world = state.blocks;
+    const editor = state.levelEdit;
+    const run = state.levelRun;
+    const sameWorld = () => state.blocks === world && state.levelEdit === editor && state.levelRun === run;
+    const worldChanged = () => ({ error: '关卡世界已切换，请重新导出或保存草稿' });
+    const rules = { ...rulesOverride };
+    const provider = lockMetaProvider || questionProvider || await resolveDefaultLockMetaProvider();
+    if (!sameWorld()) return worldChanged();
 
     const det = computeAutoRegionDetailed();
     if (det.error) return { error: det.error };
     const region = det.region;
 
     // ---- 扫描 region：旗归类（起点/检查点/终点）、答题机问锁题 ----
-    const blocks = state.blocks;
+    // 旗、锁与 RLE 都读这份区域副本；自定义异步提供者等待期间继续施工也不会混合几何。
+    const blocks = copyRegionBlocks(region, world);
     const flags = { start: null, checkpoints: [], goal: null };
     const questions = [];
     for (let ly = 0; ly < region.h; ly++) {
@@ -282,7 +295,7 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
                 const wx = region.x0 + lx;
                 const wy = region.y0 + ly;
                 const wz = region.z0 + lz;
-                const id = blocks[getBlockIndex(wx, wy, wz)];
+                const id = blocks[lx + lz * region.w + ly * region.w * region.d];
                 if (isFlagId(id)) {
                     const kind = flagKind(id);
                     if (kind === FLAG_START) {
@@ -299,7 +312,8 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
                     }
                     let meta = null;
                     try {
-                        meta = await provider(wx, wy, wz);
+                        const value = provider(wx, wy, wz);
+                        meta = value?.then ? await value : value;
                     } catch {
                         meta = null; // 提供者抛错视同无锁题，不阻塞出卡
                     }
@@ -334,6 +348,7 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
             }
         }
     }
+    if (!sameWorld()) return worldChanged();
     if (!flags.start) return { error: '缺少起点旗：请在关卡内放置一面起点旗' };
     if (!flags.goal) return { error: '缺少终点旗：请在关卡内放置一面终点旗' };
 
@@ -351,12 +366,12 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
             h: region.h,
             d: region.d,
             enc: 'rle',
-            blocks: u8ToBase64(snapshotRegion(region)),
+            blocks: u8ToBase64(rleEncode(blocks)),
         },
         questions,
         rules: {
-            timeLimit: rulesOverride && 'timeLimit' in rulesOverride ? rulesOverride.timeLimit : null,
-            lockAIHelp: rulesOverride && 'lockAIHelp' in rulesOverride ? !!rulesOverride.lockAIHelp : true,
+            timeLimit: 'timeLimit' in rules ? rules.timeLimit : null,
+            lockAIHelp: 'lockAIHelp' in rules ? !!rules.lockAIHelp : true,
         },
         flags: { start: flags.start, checkpoints: flags.checkpoints, goal: flags.goal },
     };
@@ -658,8 +673,15 @@ async function idbRun(storeName, mode, op) {
     };
     const db = await idbRequest(req);
     try {
-        const store = db.transaction(storeName, mode).objectStore(storeName);
-        return await idbRequest(op(store)); // 单请求事务：请求挂起期间事务不会自动提交
+        const tx = db.transaction(storeName, mode);
+        const committed = mode === 'readwrite' ? new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onabort = tx.onerror = () => reject(tx.error || new Error('持久存储事务未能提交'));
+        }) : Promise.resolve();
+        // op 可能同步抛错；提前接住随后到达的事务错误，避免未处理拒绝。
+        committed.catch(() => {});
+        const [result] = await Promise.all([idbRequest(op(tx.objectStore(storeName))), committed]);
+        return result; // 请求成功不等于落盘；只在事务 complete 后确认持久写成功。
     } finally {
         db.close();
     }
@@ -686,10 +708,14 @@ export async function saveLevelCard(card, thumbnailBlob) {
     if (thumbnailBlob) rec.thumbnail = thumbnailBlob;
     try {
         await idbRun(LEVELS_STORE, 'readwrite', (store) => store.put(rec));
+        sessionCards.delete(id); // 同身份曾降级的会话副本已被持久版本替代。
         return { ok: true, id };
-    } catch {
+    } catch (error) {
         sessionCards.set(id, rec);
-        return { ok: true, id, sessionOnly: true };
+        const storageError = error?.name === 'QuotaExceededError'
+            ? '浏览器存储空间不足'
+            : error?.message || '持久存储不可用';
+        return { ok: true, id, sessionOnly: true, storageError };
     }
 }
 
@@ -703,19 +729,31 @@ export async function listLevelCards() {
         }
     } catch { /* 降级：只列会话卡 */ }
     for (const [id, rec] of sessionCards) {
-        if (!out.has(id)) out.set(id, summarizeCard(rec, true));
+        // 同身份的持久写失败时，会话副本也要可见；旧持久版本继续留作刷新后备份。
+        out.set(id, summarizeCard(rec, true));
     }
     return [...out.values()].sort((a, b) => (a.created < b.created ? 1 : -1));
 }
 
-// 取卡片（IndexedDB 优先，未命中/不可用回会话）；无 → null
+// 取卡片（同身份的最新会话副本优先，持久旧版留作刷新后备份）；无 → null
 export async function getLevelCard(id) {
+    const ses = sessionCards.get(id);
+    if (ses) return ses.card;
+    return getPersistentLevelCard(id);
+}
+
+// 查询持久备份时绕过会话覆盖，续编降级稿不能把 sessionOnly 当成磁盘上不存在。
+export async function getPersistentLevelCard(id) {
     try {
         const rec = await idbRun(LEVELS_STORE, 'readonly', (store) => store.get(id));
         if (rec && rec.card) return rec.card;
-    } catch { /* 降级查会话 */ }
-    const ses = sessionCards.get(id);
-    return ses ? ses.card : null;
+    } catch { /* 持久存储不可读 */ }
+    return null;
+}
+
+// 草稿替换会话版本时，只清内存副本，不能连带删除同身份的持久备份。
+export function deleteSessionLevelCard(id) {
+    return sessionCards.delete(id);
 }
 
 // 删卡片（两处都清）；命中过任一处返回 true

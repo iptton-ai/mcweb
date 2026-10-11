@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: computeStars 全分支：3/2(零死亡)/2(全锁最终答对)/1/0(超时)/无锁跑酷
+ok 1 - computeStars 全分支：3/2(零死亡)/2(全锁最终答对)/1/0(超时)/无锁跑酷
+  ---
+  duration_ms: 38.97325
+  type: 'test'
+  ...
+# Subtest: recordLockAttempt：tries 累计、solved 保持，两把锁独立记账
+ok 2 - recordLockAttempt：tries 累计、solved 保持，两把锁独立记账
+  ---
+  duration_ms: 16.810333
+  type: 'test'
+  ...
+# Subtest: tickRun：检查点踩踏切换 respawn + 起点回退 + 重复踩刷新
+ok 3 - tickRun：检查点踩踏切换 respawn + 起点回退 + 重复踩刷新
+  ---
+  duration_ms: 2.758125
+  type: 'test'
+  ...
+# Subtest: tickRun：终点触发结算（注入 onFinish 收结果），finished 后不再触发
+ok 4 - tickRun：终点触发结算（注入 onFinish 收结果），finished 后不再触发
+  ---
+  duration_ms: 4.564167
+  type: 'test'
+  ...
+# Subtest: tickRun：OOB 谓词注入 → 模拟死亡（deaths+1 + onOOB），不结算
+ok 5 - tickRun：OOB 谓词注入 → 模拟死亡（deaths+1 + onOOB），不结算
+  ---
+  duration_ms: 0.282208
+  type: 'test'
+  ...
+# Subtest: tickRun：timeLimit 超时 → 失败结算（stars=0、timeout:true）
+ok 6 - tickRun：timeLimit 超时 → 失败结算（stars=0、timeout:true）
+  ---
+  duration_ms: 0.141083
+  type: 'test'
+  ...
+# Subtest: getCardQuestion：世界→局部换算命中两把不同锁，未命中返回 null
+ok 7 - getCardQuestion：世界→局部换算命中两把不同锁，未命中返回 null
+  ---
+  duration_ms: 0.250917
+  type: 'test'
+  ...
+# Subtest: getHudState：计时/死亡/解锁计数
+ok 8 - getHudState：计时/死亡/解锁计数
+  ---
+  duration_ms: 0.134875
+  type: 'test'
+  ...
+# Subtest: onPlayerDeath / getRespawnPos / isLockAIHelpFrozen / isLevelRunActive / getLevelRun
+ok 9 - onPlayerDeath / getRespawnPos / isLockAIHelpFrozen / isLevelRunActive / getLevelRun
+  ---
+  duration_ms: 0.481833
+  type: 'test'
+  ...
+# Subtest: finishRun + 最佳成绩：localStorage 桩落盘、isNewBest、差成绩不降级、plays 累计
+ok 10 - finishRun + 最佳成绩：localStorage 桩落盘、isNewBest、差成绩不降级、plays 累计
+  ---
+  duration_ms: 10.811083
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 354.937

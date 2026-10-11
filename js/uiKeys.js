@@ -25,6 +25,7 @@
 
 import { state } from './state.js';
 import { getUIState, isTypingTarget, onUIStateChange } from './uiModal.js';
+import { resolveEditorExitDecision } from './levelEditor.js';
 
 let inited = false;
 let focused = null;   // 当前被本模块聚焦的元素（挂 .uik-focus 类）
@@ -38,7 +39,9 @@ const FOCUS_STYLE = `
 
 // —— 导航范围表：on() 判可见（用显隐标志或 class，别信 display 计算），sel 是容器选择器 ——
 const SCOPES = [
+    { sel: ['#editor-exit-dialog'], on: () => !!state.editorExitOpen },             // 退出失败选择优先于所有其他浮层
     { sel: ['#question-bank'], on: () => !!state.questionBankOpen },               // 📝 我的题库（平铺录题页）
+    { sel: ['#help-doc'], on: () => !!state.helpDocOpen },                         // 📖 游戏说明（目录+iframe 文档）
     { sel: ['#export-panel'], on: () => !!state.levelExportOpen },                 // K 导出关卡卡
     { sel: ['#prefab-picker'], on: () => !!state.prefabPickerOpen },               // B 组件库
     { sel: ['#level-list'], on: isLevelListVisible },                              // 🗺 关卡列表
@@ -231,6 +234,23 @@ function onKeydown(e) {
     const containers = scope.containers;
     const ae = document.activeElement;
     const inScope = !!ae && containers.some((c) => c.contains(ae));
+    if (state.editorExitOpen && scope.key === '#editor-exit-dialog') {
+        if (e.key === 'Escape' || e.key === 'q' || e.key === 'Q') {
+            resolveEditorExitDecision(false);
+            e.preventDefault(); e.stopImmediatePropagation(); // 原生事件监听之间可跑微任务；同节点助手不能再消费 Esc。
+            return;
+        }
+        if (e.key === 'Tab') {
+            const items = focusables(containers);
+            if (items.length) {
+                const at = items.indexOf(ae);
+                const next = at < 0 ? 0 : (at + (e.shiftKey ? -1 : 1) + items.length) % items.length;
+                applyFocus(items[next]);
+            }
+            e.preventDefault(); e.stopImmediatePropagation();
+            return;
+        }
+    }
     // 焦点在范围外的输入框（助手聊天框、搜索框打字中……）：整体让路
     if (isTypingTarget(e) && !inScope) return;
     const k = e.key;

@@ -16,6 +16,7 @@ import { isLevelRunActive } from './levelRun.js';
 
 // ==================== TNT 爆炸 ====================
 export function spawnTntEntity(bx, by, bz) {
+    if (getBlock(bx, by, bz) !== BlockTypes.TNT || state.tntEntities.some(t => t.x === bx && t.y === by && t.z === bz)) return;
     state.tntEntities.push({ x: bx, y: by, z: bz, fuse: 2.5, flashTimer: 0 });
     showTooltip('💣 TNT 已点燃，快跑！');
     playBlockSound(true);
@@ -24,6 +25,10 @@ export function spawnTntEntity(bx, by, bz) {
 export function updateTnt(dt) {
     for (let i = state.tntEntities.length - 1; i >= 0; i--) {
         const t = state.tntEntities[i];
+        if (getBlock(t.x, t.y, t.z) !== BlockTypes.TNT) {
+            state.tntEntities.splice(i, 1);
+            continue;
+        }
         t.fuse -= dt;
         t.flashTimer += dt;
         if (t.fuse <= 0) {
@@ -44,7 +49,7 @@ export function clearTntEntities() {
 export function explode(cx, cy, cz) {
     playExplosionSound();
     const R = 3;
-    const chunksToRebuild = new Set();
+    const chunksToRebuild = new Set([`${Math.floor(cx / CHUNK_SIZE)},${Math.floor(cz / CHUNK_SIZE)}`]);
     // 闯关模式（W12 爆炸保护）：锁具/旗组/星辉门/门免疫爆炸——谜题结构不许被炸穿；
     // 普通方块照炸（苦力怕在关卡里本就不刷，这里的 TNT 来自关卡作者自己的布置）
     const protectLevelBlocks = isLevelRunActive();
@@ -98,8 +103,10 @@ export function explode(cx, cy, cz) {
     if (pd < 5 && !p.dead) {
         damagePlayer(Math.round((5 - pd) * 3));
         const kb = 8;
-        p.vx += (p.x - cx - 0.5) / pd * kb;
-        p.vz += (p.z - cz - 0.5) / pd * kb;
+        if (pd > 0) {
+            p.vx += (p.x - cx - 0.5) / pd * kb;
+            p.vz += (p.z - cz - 0.5) / pd * kb;
+        }
         p.vy += 5;
     }
     // 伤害怪物

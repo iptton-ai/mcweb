@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """G0 修复批次回归验收（org-plan §5.1 清单）。
 
-- R-R1 反相器 / R-R2 时钟 / R-R3 压力板自动门
+- R-R1 反相器 / R-R2 时钟 / R-R3 压力板自动门 / R-R4 火把塔竖直布线
 - R-P1 活塞推拉 / R-P2 粘液拖动 / R-P3 观察者脉冲点灯 / R-P4 粘性往返（降级：粘性拉回验证）
 - R-K1 拆水停转 / R-K2 齿轮啮合换向 / R-K3 过载停转 / R-K4 粉碎链 / R-K5 锯切 / R-K6 存档往返
 
@@ -139,6 +139,54 @@ return JSON.stringify(RESULT);
         ("离开 → 门关", d.get("doorClosed") == 0, f"doorOpen={d.get('doorClosed')}"),
     ]
     return lib.report("R-R3 压力板自动门", res, checks)
+
+
+@case
+def R_R4(e2e):
+    """火把塔竖直布线（2026-09-21 新规则：亮火把强充能正上方方块）。
+    初态 T1 灭 = 亮 T0 充能其上方方块（新规则判别面）；拉杆经地粉控 T0 → 信号沿塔
+    爬两级（两次反相）；稳态窗口零振荡（旧隐患「火把充能挂靠块=自振荡」不复发：
+    挂靠=贴地/贴墙，永远不是正上方格）。"""
+    res = e2e.run(r"""
+setDay(); S.gameMode='creative';
+platform(56,36,12,8,20); // x56..67, z36..43
+// 塔沿 x 逐级上升：S0(60,20,40) | T0(61,20,40) 挂 S0 东面 | C1(61,21,40)=T0 正上方
+// | T1(62,21,40) 挂 C1 东面 | C2(62,22,40)=T1 正上方 | T2(63,22,40) 挂 C2 东面。
+// 驱动链：拉杆(58,20,40) → 粉(59,20,40) → 充能 S0 → 塔底翻转入塔
+sb(60,20,40,BT.STONE);
+rs.placeRedstone(61,20,40, cfg.RTORCH_ITEM_ID, N[3]);
+sb(61,21,40,BT.STONE);
+rs.placeRedstone(62,21,40, cfg.RTORCH_ITEM_ID, N[3]);
+sb(62,22,40,BT.STONE);
+rs.placeRedstone(63,22,40, cfg.RTORCH_ITEM_ID, N[3]);
+rs.placeRedstone(59,20,40, cfg.DUST_ITEM_ID, N[0]);
+rs.placeRedstone(58,20,40, cfg.LEVER_ITEM_ID, N[0]);
+rs.updateRedstoneNetwork();
+await sleep(600); // 三级火把 0.1s 延迟级联收敛
+const tl=(x,y,z)=>cfg.rtorchLit(gb(x,y,z));
+const base={t0:tl(61,20,40),t1:tl(62,21,40),t2:tl(63,22,40)};
+// 拉杆合 → 粉亮 → S0 充能 → T0 灭 → C1 解除 → T1 亮 → C2 充能 → T2 灭
+rs.toggleLeverAt(58,20,40); rs.updateRedstoneNetwork();
+await sleep(700);
+const on={t0:tl(61,20,40),t1:tl(62,21,40),t2:tl(63,22,40)};
+const win=await pollSample(()=>tl(63,22,40),600,25);
+const steady=win.length>0 && win.every(s=>s.v===0);
+// 拉杆开 → 全塔回初态
+rs.toggleLeverAt(58,20,40); rs.updateRedstoneNetwork();
+await sleep(700);
+const off={t0:tl(61,20,40),t1:tl(62,21,40),t2:tl(63,22,40)};
+RESULT={base,on,steady,samples:win.length,off,log:LOG};
+return JSON.stringify(RESULT);
+""")
+    d = res if isinstance(res, dict) else {}
+    checks = [
+        ("初态：T0 亮、T1 灭（亮 T0 充能其上方方块=新规则）、T2 亮——交替反相", d.get("base", {}).get("t0") == 1 and d.get("base", {}).get("t1") == 0 and d.get("base", {}).get("t2") == 1, f"base={d.get('base')}"),
+        ("拉杆合：T0 熄灭（地粉充能 S0，塔底翻转入塔）", d.get("on", {}).get("t0") == 0, f"on={d.get('on')}"),
+        ("拉杆合：信号爬两级——T1 亮、T2 灭（两次反相到位）", d.get("on", {}).get("t1") == 1 and d.get("on", {}).get("t2") == 0, f"on={d.get('on')}"),
+        ("稳态零振荡（600ms 窗口 T2 100% 灭）", d.get("steady"), f"{d.get('samples')} 个采样全灭"),
+        ("拉杆开：全塔回初态（T0 亮 / T1 灭 / T2 亮）", d.get("off", {}).get("t0") == 1 and d.get("off", {}).get("t1") == 0 and d.get("off", {}).get("t2") == 1, f"off={d.get('off')}"),
+    ]
+    return lib.report("R-R4 火把塔竖直布线", res, checks)
 
 
 # ================================================================ 活塞组
@@ -474,7 +522,7 @@ return JSON.stringify(RESULT);
     return lib.report("R-K6 存档往返", res, checks)
 
 
-ALL = {fn.__name__: fn for fn in [R_R1, R_R2, R_R3, R_P1, R_P2, R_P3, R_P4, R_K1, R_K2, R_K3, R_K4, R_K5, R_K6]}
+ALL = {fn.__name__: fn for fn in [R_R1, R_R2, R_R3, R_R4, R_P1, R_P2, R_P3, R_P4, R_K1, R_K2, R_K3, R_K4, R_K5, R_K6]}
 
 if __name__ == "__main__":
     names = sys.argv[1:] or list(ALL)

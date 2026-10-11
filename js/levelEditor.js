@@ -45,6 +45,7 @@ const MOD_PATHS = {
     particles: './particles.js',
     eduKeypad: './eduKeypad.js',         // 锁题快照/种子（模板重嵌入免重出题）
     interaction: './interaction.js',     // raycastBlocks（组件放置拾取）
+    input: './input.js',                 // clearKeys（进入退出流程即停用残留按键/鼠标按住态）
     ui: './ui.js',                       // showTooltip（放置反馈）
     uiModal: './uiModal.js',             // setState
     levelPoster: './levelPoster.js',     // renderRegionThumbnail（草稿缩略图）
@@ -100,13 +101,31 @@ export function getEditorInfo() {
 // enterLevelEditor(card?, opts?)：card 为模板/草稿卡（deep copy 由调用方负责），
 // null = 空白关。opts.name 覆盖默认名；opts.templateName 记「从哪个模板来」给 HUD 展示。
 // 返回 true/false；任何模块缺失都不抛错（失败回读原世界）。
-export async function enterLevelEditor(card = null, { name, templateName } = {}) {
-    if (state.levelRun) return false; // 闯关态绝不可进编辑器（世界会被清零）
+let editorEntryError = '';
+export function getEditorEntryError() { return editorEntryError; }
+
+export async function enterLevelEditor(card = null, options = {}) {
+    editorEntryError = '';
+    if (state.temporaryWorldTransition) return false;
+    const transition = {};
+    state.temporaryWorldTransition = transition;
+    try { return await enterLevelEditorImpl(card, options); }
+    finally { if (state.temporaryWorldTransition === transition) state.temporaryWorldTransition = null; }
+}
+
+async function enterLevelEditorImpl(card = null, { name, templateName } = {}) {
+    if (state.levelRun || state.levelEdit) return false; // 已有临时世界会话时不能再清零世界
 
     // 1) 当前世界强制落盘（必须在挂 state.levelEdit 之前——saveGame 入口闸见 saveGame.js）
     {
         const sg = await modPromise('saveGame');
-        try { sg?.saveGame?.(); } catch { /* 落盘失败不阻塞（配额满等） */ }
+        let saved = false;
+        try { saved = sg?.saveGame?.() === true; } catch { }
+        if (!saved) {
+            editorEntryError = '❌ 当前世界保存失败，请释放存储空间后再进入编辑器';
+            void tip(editorEntryError);
+            return false;
+        }
         try { (await modPromise('buildQueue'))?.clearBuildQueue?.(); } catch { }
     }
 
@@ -116,18 +135,40 @@ export async function enterLevelEditor(card = null, { name, templateName } = {})
     try { lockSnapshot = ek?.listAuthoredLocks?.() || []; } catch { }
     try { ek?.restoreAuthoredLocks?.([]); } catch { }
 
-    // 3) 组装会话对象并挂上 state（此后 saveGame 全线拒写，见 saveGame.js 入口闸）
+    // 3) 仅「继续编辑」继承草稿身份；模板即使带 draft 标记，也应另开一份自己的稿。
+    const continuingDraft = !!card?.meta?.draft && !templateName;
+    const lw = await modPromise('levelWorkshop');
+    const sourceDraftId = continuingDraft ? lw?.levelCardId?.(card) : null;
+    let sourceSessionOnly = false;
+    let persistentDraftId = null;
+    if (sourceDraftId) {
+        try {
+            const row = (await lw?.listLevelCards?.())?.find((item) => item.id === sourceDraftId);
+            sourceSessionOnly = row?.sessionOnly === true;
+            if (!sourceSessionOnly || await lw.getPersistentLevelCard(sourceDraftId)) {
+                persistentDraftId = sourceDraftId;
+            }
+        } catch { }
+    }
+    // 挂上 state 后 saveGame 全线拒写；持久备份与当前会话稿分开记，防降级写误删备份。
     const ed = {
         name: String(name ?? card?.name ?? '未命名关卡').trim() || '未命名关卡',
         templateName: String(templateName || ''),
-        draftCard: card && card.meta && card.meta.draft ? card : null, // 草稿续编：created 沿用保证 id 稳定
-        lastDraftId: null,
+        draftCard: continuingDraft ? card : null,
+        lastDraftId: sourceDraftId,
+        lastDraftSessionOnly: sourceSessionOnly,
+        persistentDraftId,
+        rules: card?.rules ? { ...card.rules } : undefined,
         lockSnapshot,
+        examSnapshot: ek?.getExamIntent?.() || false,
+        draftSaveError: '',
         autosaveT: 0,
         placing: null,
         restore: { time: state.time, gameMode: state.gameMode },
     };
     state.levelEdit = ed;
+    // 编辑源卡的考核锁初始化到同一意图源，之后作者面板切换仍可即时生效。
+    ek?.setExamIntent?.(card?.rules ? card.rules.lockAIHelp === false : false);
 
     // 4) 临时编辑世界：整体清零 + 地基层（闯关世界同款清零路径）
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
@@ -151,6 +192,7 @@ export async function enterLevelEditor(card = null, { name, templateName } = {})
             // 嵌入失败：回滚（世界已清零，读回落盘的槽位），锁题快照还原
             state.levelEdit = null;
             try { ek?.restoreAuthoredLocks?.(lockSnapshot); } catch { }
+            ek?.setExamIntent?.(ed.examSnapshot);
             const sg = await modPromise('saveGame');
             try { sg?.loadGame?.(state.saveSlot); } catch { }
             void tip(`❌ 模板嵌入失败：${(res && res.error) || '卡数据损坏'}`);
@@ -163,7 +205,8 @@ export async function enterLevelEditor(card = null, { name, templateName } = {})
                 if (!q || !Number.isInteger(q.x)) continue;
                 const w = lw?.localToWorld?.(q.x, q.y, q.z) ||
                     { x: q.x + 80, y: q.y + 4, z: q.z + 80 };
-                const passes = Math.min(2, ((q.meta && q.meta.verifiedPasses) | 0) || 2);
+                // 缺省兼容旧正式卡；显式零次必须保留，避免续编绕过双通过。
+                const passes = Math.max(0, Math.min(2, (q.meta?.verifiedPasses ?? (card.meta?.draft ? 0 : 2)) | 0));
                 ek?.seedAuthoredLock?.(w.x, w.y, w.z, q, passes);
             }
         } catch { }
@@ -206,6 +249,7 @@ export async function enterLevelEditor(card = null, { name, templateName } = {})
         p.z = spawn.z + 0.5;
         p.vx = 0; p.vy = 0; p.vz = 0;
         p.flying = false;
+        p.onGround = false;
         p.fallStartY = null;
         p.dead = false;
     }
@@ -232,60 +276,174 @@ export async function enterLevelEditor(card = null, { name, templateName } = {})
 
 // 草稿落盘：buildLevelCard(draft:true) 全图扫锚点（编辑世界 = 整张卡），星辉门容忍
 //（草稿不拦，正式导出仍按契约拦）。失败（无锚点/超上限）静默或提示由 silent 决定。
+function draftFailure(ed, reason, silent) {
+    ed.draftSaveError = String(reason || '未知错误');
+    if (!silent) void tip(`⚠️ 暂时存不了草稿：${ed.draftSaveError}`);
+    return null;
+}
+
 export async function saveEditorDraft({ silent = false } = {}) {
     const ed = state.levelEdit;
-    if (!ed) return null;
-    const lw = await modPromise('levelWorkshop');
-    if (!lw?.buildLevelCard) return null;
-    let author = '我';
-    try { author = localStorage.getItem('mcweb.level.author') || '我'; } catch { }
-    const card = await lw.buildLevelCard({ name: ed.name, author, draft: true });
-    if (!card || card.error) {
-        if (!silent) void tip(`⚠️ 暂时存不了草稿：${(card && card.error) || '未知错误'}`);
-        return null;
-    }
-    // 草稿 id 稳定：沿用首存时间戳（levelCardId = hash + created 短码）；hash 随编辑变化
-    // 会让 id 漂移——保存后清掉旧 id 记录，列表里永远只有这一份草稿
-    if (ed.draftCard && ed.draftCard.created) card.created = ed.draftCard.created;
-    let thumbBlob = null;
+    if (!ed || ed.exiting) return null;
+    // 同一会话串行保存；退出存稿等待已在途的自动存稿，避免旧内容删除新草稿。
+    const previous = ed.draftSavePending;
+    let release;
+    const pending = new Promise(resolve => { release = resolve; });
+    ed.draftSavePending = pending;
     try {
-        const lp = await modPromise('levelPoster');
-        const cv = lp?.renderRegionThumbnail?.(card, 128);
-        if (cv) {
-            thumbBlob = await new Promise((resolve) => {
-                try { cv.toBlob((b) => resolve(b || null), 'image/png'); } catch { resolve(null); }
-            });
+        await previous;
+        const lw = await modPromise('levelWorkshop');
+        if (!lw?.buildLevelCard || !lw?.saveLevelCard) {
+            return draftFailure(ed, '草稿保存模块不可用，请稍后重试', silent);
         }
-    } catch { }
-    const saved = await lw.saveLevelCard(card, thumbBlob).catch(() => null);
-    if (!saved || !saved.ok) {
-        if (!silent) void tip('⚠️ 草稿保存失败（存储不可用？）');
-        return null;
+        if (state.levelEdit !== ed) return draftFailure(ed, '编辑会话已切换，请重新保存', silent);
+        let author = '我';
+        try { author = localStorage.getItem('mcweb.level.author') || '我'; } catch { }
+        const card = await lw.buildLevelCard({ name: ed.name, author, draft: true, rules: ed.rules });
+        if (!card || card.error) {
+            return draftFailure(ed, card?.error || '未能生成草稿卡', silent);
+        }
+        // 时间戳沿用首稿；内容 hash 改变时先写新卡、再删旧 id，保留单条草稿身份。
+        if (ed.draftCard && ed.draftCard.created) card.created = ed.draftCard.created;
+        let thumbBlob = null;
+        try {
+            const lp = await modPromise('levelPoster');
+            const cv = lp?.renderRegionThumbnail?.(card, 128);
+            if (cv) {
+                thumbBlob = await new Promise((resolve) => {
+                    try { cv.toBlob((b) => resolve(b || null), 'image/png'); } catch { resolve(null); }
+                });
+            }
+        } catch { }
+        if (state.levelEdit !== ed) return draftFailure(ed, '编辑会话已切换，请重新保存', silent);
+        const saved = await lw.saveLevelCard(card, thumbBlob);
+        if (!saved || !saved.ok) {
+            return draftFailure(ed, saved?.error || '草稿保存失败：存储不可用，请检查存储空间后重试', silent);
+        }
+        const obsoleteIds = new Set();
+        // 持久写成功才可替换持久旧稿；会话写成功只替换上一个会话版本。
+        if (!saved.sessionOnly && ed.persistentDraftId && ed.persistentDraftId !== saved.id) {
+            obsoleteIds.add(ed.persistentDraftId);
+        }
+        if (ed.lastDraftSessionOnly && ed.lastDraftId && ed.lastDraftId !== saved.id) {
+            // 会话清理一律不碰磁盘；持久旧稿只能由上面的成功写分支替换。
+            lw.deleteSessionLevelCard(ed.lastDraftId);
+        }
+        for (const id of obsoleteIds) {
+            try { await lw.deleteLevelCard?.(id); } catch { }
+        }
+        if (!saved.sessionOnly) ed.persistentDraftId = saved.id;
+        ed.lastDraftId = saved.id;
+        ed.lastDraftSessionOnly = !!saved.sessionOnly;
+        ed.draftCard = card;
+        ed.draftSaveError = saved.sessionOnly
+            ? `${saved.storageError || '持久存储不可用'}，最新草稿仅本次会话可用，刷新或关闭页面会丢失这次修改。继续编辑可稍后重试保存。`
+            : '';
+        if (!silent) void tip(`💾 草稿已保存「${ed.name}」${saved.sessionOnly ? '（仅本次会话，刷新会丢失这次修改）' : '（关卡列表可继续编辑）'}`);
+        return card;
+    } catch (error) {
+        return draftFailure(ed, `草稿保存失败：${error?.message || String(error) || '未知错误'}`, silent);
+    } finally {
+        release();
+        if (ed.draftSavePending === pending) ed.draftSavePending = null;
     }
-    if (ed.lastDraftId && ed.lastDraftId !== saved.id) {
-        try { await lw.deleteLevelCard?.(ed.lastDraftId); } catch { }
-    }
-    ed.lastDraftId = saved.id;
-    ed.draftCard = card;
-    if (!silent) void tip(`💾 草稿已保存「${ed.name}」（关卡列表可继续编辑）`);
-    return card;
 }
 
 // ==================== 退编辑器 ====================
 
-// 退编辑器：草稿落盘 → 锁题快照恢复 → loadGame 读回原世界 → 回首屏。
+// 退编辑器：持久末稿成功后恢复原世界；保存失败保留编辑世界，等待继续或明确放弃。
 // toTitle=false 回到游戏（切世界守卫路径用，main.js 会再接手自己的编排）。
 export async function exitLevelEditor({ saveDraft = true, toTitle = true } = {}) {
     const ed = state.levelEdit;
     if (!ed) return false;
-    if (saveDraft) await saveEditorDraft({ silent: true });
+    if (ed.exitPending) {
+        // 显式不存稿退出可结算已显示的选择，也可在末稿仍在途时提前表明放弃意图。
+        if (!saveDraft) {
+            ed.discardExitRequested = true;
+            resolveEditorExitDecision(true);
+        }
+        return ed.exitPending;
+    }
+    // saveDraft:false 只是不追加末稿，已开始的保存仍须在切世界前完成。
+    // 同步封住新保存入口，并把并发退出合并成一次恢复，防旧退出覆盖下一会话。
+    const lastSave = saveDraft ? saveEditorDraft({ silent: true }) : ed.draftSavePending;
+    ed.exiting = true;
+    ed.discardExitRequested = !saveDraft;
+    try { mod('input')?.clearKeys?.(); } catch { }
+    syncEditorPointerPolicy();
+    let pending;
+    pending = (async () => {
+        try {
+            try { (await modPromise('input'))?.clearKeys?.(); } catch { }
+            let card = null;
+            try { card = await lastSave; }
+            catch (error) { ed.draftSaveError = `草稿保存失败：${error?.message || String(error)}`; }
+            if (state.levelEdit !== ed) return false;
+            if (saveDraft && !ed.discardExitRequested && (!card || ed.lastDraftSessionOnly)) {
+                const reason = ed.draftSaveError || '末稿未能保存，请继续编辑后重试，或明确放弃未保存的修改。';
+                const discard = await awaitEditorExitDecision(ed, reason);
+                if (!discard && !ed.discardExitRequested) return false;
+            }
+            return await restoreEditorWorld(ed, toTitle);
+        } finally {
+            if (ed.exitPending === pending) ed.exitPending = null;
+            ed.exiting = false;
+            ed.discardExitRequested = false;
+            // 继续编辑时不改 UI 状态（例如 pause）；只解除退出守卫并恢复当前指针策略。
+            if (state.levelEdit === ed) syncEditorPointerPolicy();
+        }
+    })();
+    ed.exitPending = pending;
+    return pending;
+}
+
+function syncEditorPointerPolicy() {
+    try { mod('uiModal')?.syncPointerPolicy?.(); } catch { }
+}
+
+async function awaitEditorExitDecision(ed, reason) {
+    let resolve;
+    const decision = new Promise(done => { resolve = done; });
+    const prompt = { reason, resolve };
+    ed.exitPrompt = prompt;
+    state.editorExitOpen = true;
+    syncEditorPointerPolicy();
+    const ui = await modPromise('ui');
+    // 等待模块期间可能有程序化显式放弃或继续，不能再把过时选择框弹出来。
+    if (state.levelEdit !== ed || ed.exitPrompt !== prompt) return decision;
+    let shown = false;
+    try { shown = await ui?.openEditorExitDialog?.(reason) === true; } catch { }
+    if (ed.exitPrompt !== prompt) {
+        try { ui?.closeEditorExitDialog?.(); } catch { }
+        return decision;
+    }
+    if (!shown) {
+        void tip(`⚠️ ${reason} 退出选择框暂不可用，已保留修改，请继续编辑后重试。`);
+        resolveEditorExitDecision(false);
+    }
+    return decision;
+}
+
+// UI 的继续/Esc/Q 传 false，明确放弃按钮传 true。无待决框时迟到点击无效。
+export function resolveEditorExitDecision(discard = false) {
+    const ed = state.levelEdit;
+    const prompt = ed?.exitPrompt;
+    if (!prompt) return false;
+    ed.exitPrompt = null;
+    state.editorExitOpen = false;
+    try { mod('ui')?.closeEditorExitDialog?.(); } catch { }
+    syncEditorPointerPolicy();
+    prompt.resolve(discard === true);
+    return true;
+}
+
+async function restoreEditorWorld(ed, toTitle) {
+    // 在摘守卫前加载完恢复所需模块；摘守卫到原世界恢复之间不再 await，防下一会话插入。
+    const [ek, rc, sg, w, um] = await Promise.all(
+        ['eduKeypad', 'recording', 'saveGame', 'world', 'uiModal'].map(modPromise));
+    if (state.levelEdit !== ed) return false;
+    try { ek?.restoreAuthoredLocks?.(ed.lockSnapshot); } catch { }
     try {
-        const ek = await modPromise('eduKeypad');
-        ek?.restoreAuthoredLocks?.(ed.lockSnapshot);
-    } catch { }
-    state.levelEdit = null; // 先摘守卫（loadGame 读档不受影响，自动存档闸恢复正常）
-    try {
-        const rc = await modPromise('recording');
         if (rc?.isLevelOwnedRecording?.()) rc.stopRecording?.();
     } catch { }
     // 恢复进关前时间与模式（loadGame 成功后会被存档值覆盖，这里是读档失败兜底）
@@ -293,16 +451,15 @@ export async function exitLevelEditor({ saveDraft = true, toTitle = true } = {})
         if (typeof ed.restore.time === 'number') state.time = ed.restore.time;
         if (ed.restore.gameMode) state.gameMode = ed.restore.gameMode;
     }
-    const sg = await modPromise('saveGame');
+    state.levelEdit = null;
+    ek?.setExamIntent?.(ed.examSnapshot);
     let restored = false;
     try { restored = !!sg?.loadGame?.(state.saveSlot); } catch { }
     if (!restored) {
         try {
-            const w = await modPromise('world');
             if (w?.generateWorld) w.generateWorld();
         } catch { }
     }
-    const um = await modPromise('uiModal');
     try { um?.setState?.(toTitle ? 'title' : 'playing'); } catch { }
     return true;
 }
@@ -314,6 +471,7 @@ export function tickLevelEditor(dt) {
     if (!ed) return;
     // 时间锁正午：tick 每帧写回（编辑器要恒定亮堂的施工光；也顺带压掉夜间刷怪）
     state.time = state.dayLength / 2;
+    if (ed.exiting) return; // 保存/选择待决时仍锁正午，但不启动额外自动存稿。
     // 草稿自动保存（静默；无锚点时本轮跳过、下轮再试）
     ed.autosaveT += dt;
     if (ed.autosaveT >= DRAFT_AUTOSAVE_SEC) {
@@ -350,6 +508,7 @@ export function getPlacing() {
 // 左键消费（input.js mousedown 最早处调）：正在放置 → 盖章并吞掉这次点击（不挖掘）。
 // 返回 true = 已消费。
 export function consumePlaceClick() {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return false;
     const id = getPlacing();
     if (!id) return false;
     void placePlacingNow(id);
@@ -375,6 +534,9 @@ async function placePlacingNow(prefabId) {
 // 盖章：组件几何写世界（AIR=雕刻）→ 重建受影响区块 → 红石/动力重算。
 // 供 consumePlaceClick 与 E2E 烟雾直调；返回 true=成功落格。
 export async function stampPrefabAt(prefabId, hit) {
+    const editSession = state.levelEdit;
+    const blocks = state.blocks;
+    if (state.editorExitOpen || editSession?.exiting) return false;
     const pf = getPrefab(prefabId);
     if (!pf || !hit) return false;
     const { cells, error } = buildPrefabCells(pf);
@@ -384,7 +546,8 @@ export async function stampPrefabAt(prefabId, hit) {
     }
     const origin = prefabOrigin(pf, hit);
     const w = await modPromise('world');
-    if (!w?.setBlockSafe) return false;
+    if (!w?.setBlockSafe || state.blocks !== blocks || state.levelEdit !== editSession
+        || state.editorExitOpen || editSession?.exiting) return false;
     const dirty = new Set();
     for (const c of cells) {
         const bx = origin.x + c.x;

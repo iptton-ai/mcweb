@@ -11,17 +11,17 @@ import { killEnemySilent, mobSpawnTick } from './entities.js';
 import { addXp, updateHealthUI } from './playerLife.js';
 import { adjustBuildSpeed, getBuildFocus, getBuildStatus, lastFinishedAgeMs, speedText, toggleBuildPaused } from './buildQueue.js';
 import { camModeText, getBuildFilmingStatus, setCamMode } from './cameraRig.js';
-import { clearStuckKeys, getUIState, mouseLocked, onUIStateChange, requestLock, setRecordingControlsOpen, setState, syncPointerPolicy } from './uiModal.js';
+import { clearStuckKeys, getUIState, isAssistantVisible, mouseLocked, onUIStateChange, requestLock, setRecordingControlsOpen, setState, syncPointerPolicy } from './uiModal.js';
 import { downloadRecording, getRecordingStatus, initRecording, isRecording, toggleBuildRecording } from './recording.js';
 export { isCamOwnedRecording, isLevelOwnedRecording, isRecording, toggleBuildRecording } from './recording.js';
 import { hideItemInfo, makeItemIcon, showItemInfo } from './itemInfo.js';
 import { uiKick } from './uiKeys.js'; // 浮层键盘导航：打开面板后落焦（方向键移焦 / Enter 激活）
 // 关卡工坊（批次 W · B4）：关卡卡存取（levelWorkshop）+ 闯关运行时（levelRun），见文件尾「关卡工坊 UI」段
 import { buildLevelCard, cardHash, deleteLevelCard, deleteLevelTemplate, exportLevelCardJson, getLevelCard, getLevelTemplate, importLevelCardFromJson, listBuiltinLevelCards, listLevelCards, listLevelTemplates, saveLevelCard, saveLevelTemplate, validateLevelCard } from './levelWorkshop.js';
-import { enterLevel, exitLevelRun, getBestScores, getHudState, isLevelRunActive } from './levelRun.js';
+import { enterLevel, exitLevelRun, getBestScores, getHudState, getLevelEntryError, isLevelRunActive } from './levelRun.js';
 // 关卡编辑器（2026-09-16 界面化建关）：编辑会话 + 预设组件库，见「关卡编辑器 UI」段
 import { PREFABS, getPrefab, listPrefabCats } from './levelPrefabs.js';
-import { cancelPlacing, enterLevelEditor, exitLevelEditor, getEditorInfo, getPlacing, isLevelEditorActive, saveEditorDraft, startPlacing } from './levelEditor.js';
+import { cancelPlacing, enterLevelEditor, exitLevelEditor, getEditorInfo, getEditorEntryError, getPlacing, isLevelEditorActive, resolveEditorExitDecision, saveEditorDraft, startPlacing } from './levelEditor.js';
 import { renderRegionThumbnail } from './levelPoster.js'; // P1 · B6：俯视缩略图（列表行 + 导出随卡入库）
 import { openQuestionBank } from './questionBankUI.js'; // 📝 我的题库平铺录题页（关卡列表/编辑器 HUD 入口，2026-09-18）
 
@@ -197,8 +197,8 @@ export function craftRecipe(recipe) {
         const id = Number(idStr);
         inv[id] -= recipe.cost[id];
     }
-    inv[recipe.out] = (inv[recipe.out] || 0) + recipe.outCount;
-    if (BlockInfo[recipe.out]?.maxDurability) delete state.player.toolWear[recipe.out]; // 新工具满耐久
+    if (!inv[recipe.out] && BlockInfo[recipe.out]?.maxDurability) delete state.player.toolWear[recipe.out];
+    inv[recipe.out] = (inv[recipe.out] || 0) + recipe.outCount; // 保留当前在用工具的磨损，备用工具满耐久
     addXp(XP_PER_CRAFT);
     return null;
 }
@@ -558,13 +558,15 @@ export function teleportToBuildSite() {
     showTooltip(`📍 已前往施工现场：${focus.label}`);
 }
 
-// 常驻入口与施工状态各自更新，普通游玩时也能发现录像按钮。
+// 面板显隐跟随 AI 助手面板（2026-09-23 用户明令）：助手隐藏 → 整个录像面板隐藏，
+// 不再常驻底部；T 开/关助手即带出/收起面板。录制本身不受影响（R 键照常启停，
+// 施工自动录制照常工作），只是没有可见面板时看不到状态行。
 export function updateBuildWidget() {
     if (!buildEls) return;
     const st = getBuildStatus();
     const rec = getRecordingStatus();
     const filming = getBuildFilmingStatus();
-    const visible = getUIState() !== 'title' || st.active || rec.recording || rec.hasDownload;
+    const visible = isAssistantVisible() && (getUIState() !== 'title' || st.active || rec.recording || rec.hasDownload);
     buildEls.panel.classList.toggle('hidden', !visible);
     buildEls.panel.classList.toggle('menu-mode', ['pause', 'inventory', 'settings'].includes(getUIState()));
     const expanded = state.recordingControlsOpen || !mouseLocked;
@@ -613,6 +615,15 @@ const LEVEL_UI_STYLE = `
    B1/B2 后续任一方统一机制后本段冗余无害。 ---- */
 .lvl-overlay.hidden { display: none !important; }
 .lvl-overlay:not(.hidden) { display: flex; }
+/* 导出面板要高于画布与编辑器 HUD，才能接收真实鼠标点击。 */
+#export-panel { z-index: 74; }
+/* 保存失败后必须先让用户选择；高于首屏、拍摄 HUD 与错误提示。 */
+#editor-exit-dialog { z-index: 140; }
+#editor-exit-dialog .lvl-panel { width: min(92vw, 500px); }
+#editor-exit-dialog h3 { color: #fff; }
+#editor-exit-dialog button:focus { outline: 3px solid #ffd77a; outline-offset: 1px; }
+#editor-exit-reason { color: #ffd77a; margin: 10px 0; white-space: pre-wrap; line-height: 1.6; }
+#btn-editor-exit-discard { border-color: #c95460; background: #672b36; }
 /* ---- 关卡列表行（列表行由 renderLevelList 动态渲染，B1 只给了容器与 .lvl-empty 空态） ---- */
 .level-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
  background:rgba(48,53,65,.6);border:1px solid #44475a;}
@@ -887,7 +898,7 @@ export function initLevelListUI() {
                 }
                 const run = await enterLevel(card); // 不 saveLevelCard：试玩卡只存在内存
                 if (!run) {
-                    showTooltip('❌ 试玩失败：关卡嵌入世界出错');
+                    showTooltip(getLevelEntryError() || '❌ 试玩失败：关卡嵌入世界出错');
                     return;
                 }
                 closeLevelList(); // enterLevel 内部已 setState('playing')，这里只收起列表
@@ -911,7 +922,7 @@ export function initLevelListUI() {
             try {
                 const ok = await enterLevelEditor(null, { name: '未命名关卡' });
                 if (ok) closeLevelList();
-                else showTooltip('❌ 进入关卡编辑器失败');
+                else showTooltip(getEditorEntryError() || '❌ 进入关卡编辑器失败');
             } finally {
                 newBtn.disabled = false;
             }
@@ -973,7 +984,7 @@ async function editCardCopy(card, templateName) {
         closeLevelList();
         showTooltip(templateName ? `✏️ 已按「${templateName}」开稿——原关卡不会动` : '✏️ 继续编辑草稿');
     } else {
-        showTooltip('❌ 进入关卡编辑器失败');
+        showTooltip(getEditorEntryError() || '❌ 进入关卡编辑器失败');
     }
 }
 
@@ -1057,7 +1068,7 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false, rowKind =
         const run = await enterLevel(card);
         play.disabled = false;
         if (!run) {
-            showTooltip('❌ 进入关卡失败：卡片可能已损坏');
+            showTooltip(getLevelEntryError() || '❌ 进入关卡失败：卡片可能已损坏');
             return;
         }
         closeLevelList();
@@ -1073,7 +1084,7 @@ async function buildLevelRow(summary, cardOverride, isBuiltin = false, rowKind =
             const run = await enterLevel(card);
             film.disabled = false;
             if (!run) {
-                showTooltip('❌ 进入关卡失败：卡片可能已损坏');
+                showTooltip(getLevelEntryError() || '❌ 进入关卡失败：卡片可能已损坏');
                 return;
             }
             closeLevelList();
@@ -1381,6 +1392,7 @@ export function isLevelListOpen() {
 }
 
 export function openExportPanel() {
+    ensureLevelStyles();
     let panel = document.getElementById('export-panel');
     if (!panel) {
         // DOM 兜底自建（index.html 缺失时仍可用，正常路径走骨架）
@@ -1429,7 +1441,7 @@ export function closeExportPanel() {
     clearStuckKeys();
 }
 
-async function doLevelExport(andDownload) {
+export async function doLevelExport(andDownload) {
     const nameEl = document.getElementById('export-name');
     const authorEl = document.getElementById('export-author');
     const name = (nameEl?.value || '').trim() || '我的关卡';
@@ -1443,7 +1455,7 @@ async function doLevelExport(andDownload) {
     const card = await buildLevelCard({
         name,
         author,
-        rules: { lockAIHelp: !examIntent }, // 考核锁开 = 别人玩时 AI 拒答提示（P3 生效）
+        rules: { ...state.levelEdit?.rules, lockAIHelp: !examIntent }, // 保留限时，考核锁仍按作者当前选择。
     });
     if (!card || card.error) {
         showTooltip('⚠️ ' + (card?.error || '当前世界没有可导出的关卡（先放旗子和答题机）'));
@@ -1495,6 +1507,45 @@ async function doLevelExport(andDownload) {
 let editorHudEl = null;
 let editorHudBound = false;
 let lastEditorName = ''; // 名字输入框只在变化时回写（防打断输入焦点）
+let editorExitDialogEl = null;
+
+// 返回是否成功显示。生命周期模块负责等待与结算，UI 不替用户决定。
+export function openEditorExitDialog(reason) {
+    ensureLevelStyles();
+    if (!state.editorExitOpen || !state.levelEdit?.exitPrompt) return false;
+    if (!editorExitDialogEl) {
+        editorExitDialogEl = document.createElement('div');
+        editorExitDialogEl.id = 'editor-exit-dialog';
+        editorExitDialogEl.className = 'lvl-overlay hidden';
+        editorExitDialogEl.setAttribute('role', 'alertdialog');
+        editorExitDialogEl.setAttribute('aria-modal', 'true');
+        editorExitDialogEl.setAttribute('aria-labelledby', 'editor-exit-title');
+        editorExitDialogEl.setAttribute('aria-describedby', 'editor-exit-reason');
+        editorExitDialogEl.innerHTML = `<div class="lvl-panel">
+          <h3 id="editor-exit-title">⚠️ 草稿没有保存成功</h3>
+          <p id="editor-exit-reason"></p>
+          <p class="lvl-sub">当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。</p>
+          <div class="lvl-actions">
+            <button class="save-btn" id="btn-editor-exit-continue">继续编辑</button>
+            <button class="save-btn" id="btn-editor-exit-discard">放弃修改并退出</button>
+          </div></div>`;
+        document.body.appendChild(editorExitDialogEl);
+        document.getElementById('btn-editor-exit-continue').addEventListener('click', () => resolveEditorExitDecision(false));
+        document.getElementById('btn-editor-exit-discard').addEventListener('click', () => resolveEditorExitDecision(true));
+    }
+    document.getElementById('editor-exit-reason').textContent = String(reason || '草稿保存失败，请修正问题后重试');
+    editorExitDialogEl.classList.remove('hidden');
+    clearStuckKeys(); syncPointerPolicy(); uiKick();
+    document.getElementById('btn-editor-exit-continue').focus({ preventScroll: true });
+    return true;
+}
+
+export function closeEditorExitDialog() {
+    editorExitDialogEl?.classList.add('hidden');
+    document.getElementById('btn-editor-exit-continue')?.blur();
+    document.getElementById('btn-editor-exit-discard')?.blur();
+    clearStuckKeys(); syncPointerPolicy(); uiKick();
+}
 
 function ensureEditorHudDom() {
     ensureLevelStyles();
@@ -1514,11 +1565,13 @@ function ensureEditorHudDom() {
     if (!editorHudBound) {
         editorHudBound = true;
         editorHudEl.addEventListener('input', (e) => {
+            if (state.levelEdit?.exiting) return;
             if (e.target && e.target.id === 'editor-name' && state.levelEdit) {
                 state.levelEdit.name = e.target.value.trim() || '未命名关卡';
             }
         });
         editorHudEl.addEventListener('click', (e) => {
+            if (state.levelEdit?.exiting) return;
             const id = e.target && e.target.id;
             if (id === 'btn-editor-prefabs') {
                 if (isPrefabPickerOpen()) closePrefabPicker();

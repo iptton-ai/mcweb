@@ -702,7 +702,7 @@ function sawSeconds(id) {
 // 停转（断水/过载/离合器断开）冷却冻结不动；未命中目标冷却保持 0（T 一空立即投）。
 //
 // 性能守卫（G2 裁决 R4-02/03——必然而非可选：D=10 台持续供料若无守卫会超性能门 5 倍）：
-//   · 动力重算仅当投的是 WATER（普通方块不改动力图——水车供电判定读世界，水是唯一例外）；
+//   · 动力重算仅当投放或替换 WATER（改变水车供水；其它普通方块不改动力图）；
 //   · 红石重算仅当 T 的切比雪夫距离 2 内（5×5×5=125 格扫描）存在红石网络关心的方块；
 //   · 帧末聚合：迭代循环内只置 dirty 标志 + 收集待重建区块（去重），循环结束后统一
 //     重算一次 + rebuildChunk——消除 D 台同帧风暴与嵌套重算。
@@ -749,7 +749,7 @@ function updateDeployers(dt) {
         hit.count -= 1; // count>1 减一保留实体；count 归 0 帧末移除
         setBlockSafe(tx, ty, tz, hit.itemId);
         markChunksAroundLocal(chunksToRebuild, tx, tz);
-        if (hit.itemId === BlockTypes.WATER) kineticDirty = true; // 水例外：可能改变水车顶面供水
+        if (hit.itemId === BlockTypes.WATER || cur === BlockTypes.WATER) kineticDirty = true; // 放水或替换水都会改变水车供水
         if (!redstoneDirty && hasRedstoneNear(tx, ty, tz)) redstoneDirty = true; // 5×5×5 邻接守卫
         deployerCool.set(k, DEPLOYER_SEC);
     }
@@ -767,7 +767,7 @@ function updateDeployers(dt) {
         for (const ck of chunksToRebuild) rebuildChunk(Math.floor(ck / 1000), ck % 1000);
     }
     if (redstoneDirty) updateRedstoneNetwork(); // 仅 T 附近有红石才重算（守卫二）
-    if (kineticDirty) updateKineticNetwork();   // 仅投水才重算（守卫一）
+    if (kineticDirty) updateKineticNetwork();   // 仅投放或替换水才重算（守卫一）
 }
 
 // ==================== 终端机器 D：滑轮电梯（Create-lite L2）====================

@@ -1,0 +1,2242 @@
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=277]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=278]
+      text "🏗️ 建造"
+    button [ref=279]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=280]
+      text "🏗️ 建造"
+    button [ref=281]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=282]
+      text "🏗️ 建造"
+    button [ref=283]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=284]
+      text "🏗️ 建造"
+    button [ref=285]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=286]
+      text "🏗️ 建造"
+    button [ref=287]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.6, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "23"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "4"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-no-anchors"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=277]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=278]
+      text "🏗️ 建造"
+    button [ref=279]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=280]
+      text "🏗️ 建造"
+    button [ref=281]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=282]
+      text "🏗️ 建造"
+    button [ref=283]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=284]
+      text "🏗️ 建造"
+    button [ref=285]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=286]
+      text "🏗️ 建造"
+    button [ref=287]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "23"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "7"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-no-anchors"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "未找到关卡锚点：请先放置旗组、答题机、星辉门或门"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+/private/tmp/editor-exit-no-anchors.png
+{"kind":"no-anchors","reason":"未找到关卡锚点：请先放置旗组、答题机、星辉门或门","opening":"PASS","continueEditing":"PASS","correctedSaveExit":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=303]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=304]
+      text "🏗️ 建造"
+    button [ref=305]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=306]
+      text "🏗️ 建造"
+    button [ref=307]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=308]
+      text "🏗️ 建造"
+    button [ref=309]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=310]
+      text "🏗️ 建造"
+    button [ref=311]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=312]
+      text "🏗️ 建造"
+    button [ref=313]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.7, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "28"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "6"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-missing-goal"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=303]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=304]
+      text "🏗️ 建造"
+    button [ref=305]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=306]
+      text "🏗️ 建造"
+    button [ref=307]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=308]
+      text "🏗️ 建造"
+    button [ref=309]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=310]
+      text "🏗️ 建造"
+    button [ref=311]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=312]
+      text "🏗️ 建造"
+    button [ref=313]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "28"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "6"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-missing-goal"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "缺少终点旗：请在关卡内放置一面终点旗"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+{"kind":"missing-goal","reason":"缺少终点旗：请在关卡内放置一面终点旗","opening":"PASS","continueEditing":"PASS","correctedSaveExit":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=314]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=315]
+      text "🏗️ 建造"
+    button [ref=316]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=317]
+      text "🏗️ 建造"
+    button [ref=318]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=319]
+      text "🏗️ 建造"
+    button [ref=320]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=321]
+      text "🏗️ 建造"
+    button [ref=322]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=323]
+      text "🏗️ 建造"
+    button [ref=324]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.7, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "27"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "6"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-oversize"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=314]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=315]
+      text "🏗️ 建造"
+    button [ref=316]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=317]
+      text "🏗️ 建造"
+    button [ref=318]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=319]
+      text "🏗️ 建造"
+    button [ref=320]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=321]
+      text "🏗️ 建造"
+    button [ref=322]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=323]
+      text "🏗️ 建造"
+    button [ref=324]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "27"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "6"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-oversize"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "区域超出 96×64×96，请缩小关卡或减少装饰"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+/private/tmp/editor-exit-oversize.png
+{"kind":"oversize","reason":"区域超出 96×64×96，请缩小关卡或减少装饰","opening":"PASS","explicitDiscardKeyboard":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=325]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=326]
+      text "🏗️ 建造"
+    button [ref=327]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=328]
+      text "🏗️ 建造"
+    button [ref=329]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=330]
+      text "🏗️ 建造"
+    button [ref=331]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=332]
+      text "🏗️ 建造"
+    button [ref=333]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=334]
+      text "🏗️ 建造"
+    button [ref=335]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.6, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "37"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "3"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-quota"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=325]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=326]
+      text "🏗️ 建造"
+    button [ref=327]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=328]
+      text "🏗️ 建造"
+    button [ref=329]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=330]
+      text "🏗️ 建造"
+    button [ref=331]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=332]
+      text "🏗️ 建造"
+    button [ref=333]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=334]
+      text "🏗️ 建造"
+    button [ref=335]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "37"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "3"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-quota"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "浏览器存储空间不足，最新草稿仅本次会话可用，刷新或关闭页面会丢失这次修改。继续编辑可稍后重试保存。"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+{"kind":"quota","reason":"浏览器存储空间不足，最新草稿仅本次会话可用，刷新或关闭页面会丢失这次修改。继续编辑可稍后重试保存。","opening":"PASS","continueEditing":"PASS","correctedSaveExit":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=336]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=337]
+      text "🏗️ 建造"
+    button [ref=338]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=339]
+      text "🏗️ 建造"
+    button [ref=340]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=341]
+      text "🏗️ 建造"
+    button [ref=342]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=343]
+      text "🏗️ 建造"
+    button [ref=344]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=345]
+      text "🏗️ 建造"
+    button [ref=346]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.6, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "23"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "4"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-commit-abort"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    text "🏗️"
+    text "世界 1 · 当前"
+    text "上次保存：10月11日 16:08"
+    button [ref=336]
+      text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=337]
+      text "🏗️ 建造"
+    button [ref=338]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=339]
+      text "🏗️ 建造"
+    button [ref=340]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=341]
+      text "🏗️ 建造"
+    button [ref=342]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=343]
+      text "🏗️ 建造"
+    button [ref=344]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=345]
+      text "🏗️ 建造"
+    button [ref=346]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "23"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "4"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-commit-abort"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "持久存储事务未能提交，最新草稿仅本次会话可用，刷新或关闭页面会丢失这次修改。继续编辑可稍后重试保存。"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+{"kind":"commit-abort","reason":"持久存储事务未能提交，最新草稿仅本次会话可用，刷新或关闭页面会丢失这次修改。继续编辑可稍后重试保存。","opening":"PASS","continueEditing":"PASS","correctedSaveExit":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=347]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=348]
+      text "🏗️ 建造"
+    button [ref=349]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=350]
+      text "🏗️ 建造"
+    button [ref=351]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=352]
+      text "🏗️ 建造"
+    button [ref=353]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=354]
+      text "🏗️ 建造"
+    button [ref=355]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=356]
+      text "🏗️ 建造"
+    button [ref=357]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.4, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "31"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "2"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-missing-goal"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+  button [ref=300]
+    text "🤖"
+
+{"pendingInput":"mouse","result":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=358]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=359]
+      text "🏗️ 建造"
+    button [ref=360]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=361]
+      text "🏗️ 建造"
+    button [ref=362]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=363]
+      text "🏗️ 建造"
+    button [ref=364]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=365]
+      text "🏗️ 建造"
+    button [ref=366]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=367]
+      text "🏗️ 建造"
+    button [ref=368]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "27"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "草方块"
+  text "怪物:"
+  text "4"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-missing-goal"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+    text "放置中：💡 火把柱（Esc 取消）"
+  button [ref=300]
+    text "🤖"
+
+{"pendingInput":"author","result":"PASS"}
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    container
+      text "🏗️"
+      text "世界 1 · 当前"
+      text "上次保存：10月11日 16:08"
+      button [ref=369]
+        text "✕"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=370]
+      text "🏗️ 建造"
+    button [ref=371]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=372]
+      text "🏗️ 建造"
+    button [ref=373]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=374]
+      text "🏗️ 建造"
+    button [ref=375]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=376]
+      text "🏗️ 建造"
+    button [ref=377]
+      text "⚔️ 生存"
+    text "＋"
+    text "空槽位"
+    text "开一个新世界"
+    button [ref=378]
+      text "🏗️ 建造"
+    button [ref=379]
+      text "⚔️ 生存"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "覆盖世界 1 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处可直接进入当前世界"
+  text "XYZ:"
+  text "88.5, 4.4, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "23"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "5"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-no-anchors"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+    text "放置中：💡 火把柱（Esc 取消）"
+  button [ref=300]
+    text "🤖"
+
+[p1 "我的世界 - 网页复刻版" | space "编辑退出保护验证"(10): 1 managed, 0 untracked — p1* "我的世界 - 网页复刻版"]
+root
+  container
+    heading
+      text "⛏ 我的世界"
+    text "网页复刻版"
+    button [ref=380]
+      text "▶"
+      text "回到游戏"
+      text "回到当前世界 · 每 30 秒自动存档"
+    button [ref=288]
+      text "🏗️"
+      text "建造模式"
+      text "放弃当前存档 · 重开新世界"
+    button [ref=289]
+      text "⚔️"
+      text "生存模式"
+      text "放弃当前存档 · 重开新世界"
+    button [ref=290]
+      text "💾 保存进度"
+    button [ref=291]
+      text "⚙️ 设置（音频 / 存档）"
+    button [ref=292]
+      text "🗺 关卡"
+    button [ref=293]
+      text "📖 说明"
+    text "W A S D"
+    text "移动  | "
+    text "空格"
+    text "跳跃（创造双击 = 飞行） | "
+    text "Shift"
+    text "潜行 / 水中下沉  | "
+    text "Ctrl"
+    text "疾跑"
+    text "鼠标左键"
+    text "破坏 / 攻击  | "
+    text "鼠标右键"
+    text "放置 / 进食 / 打开工作台·熔炉  | "
+    text "中键"
+    text "吸取方块（创造）"
+    text "鼠标滚轮"
+    text "/"
+    text "1-9"
+    text "切换手持  | "
+    text "E"
+    text "背包与合成（点配方 = 合成） | "
+    text "Z"
+    text "丢弃手持"
+    text "F"
+    text "切换飞行（建造模式） | "
+    text "M"
+    text "切换游戏模式  | "
+    text "Esc"
+    text "/"
+    text "Q"
+    text "释放鼠标"
+    text "F5"
+    text "或"
+    text "V"
+    text "切换视角  | "
+    text "F1"
+    text "隐藏界面  | "
+    text "F2"
+    text "截图  | "
+    text "F3"
+    text "调试信息  | "
+    text "F6"
+    text "昼夜切换（创造）"
+    text "R"
+    text "开始录制 / 停止并保存  | "
+    text "Tab"
+    text "操作拍摄面板  | "
+    text "C"
+    text "切换镜头"
+    text "游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像"
+    text "⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。"
+    text "🖱 点击空白处回到游戏"
+  text "XYZ:"
+  text "88.5, 4.0, 88.5"
+  text "区块:"
+  text "5, 5"
+  text "FPS:"
+  text "26"
+  text "时间:"
+  text "05:00"
+  text "方向:"
+  text "S"
+  text "选中:"
+  text "-"
+  text "怪物:"
+  text "10"
+  text "视角:"
+  text "第一人称"
+  text "✏️ 新关卡开工！B 打开组件库盖骨架，出题笔右键答题机出题"
+  text "🏗️ 建造模式（按 M 切换为生存）"
+  container
+    container
+      canvas
+      text "1"
+    container
+      text "草方块"
+      text "E 或点击 · 选择物品"
+  canvas
+  container
+    text "✏️ 编辑中"
+    textbox [ref=294, loc=css:input[placeholder="关卡名"]]
+      text "退出保护-no-anchors"
+    button [ref=295]
+      text "🧱 组件库"
+    button [ref=296]
+      text "📝 题目库"
+    button [ref=297]
+      text "💾 存草稿"
+    button [ref=298]
+      text "📤 完成导出"
+    button [ref=299]
+      text "🚪 退出"
+    text "放置中：💡 火把柱（Esc 取消）"
+  button [ref=300]
+    text "🤖"
+  alertdialog "⚠️ 草稿没有保存成功"
+    heading
+      text "⚠️ 草稿没有保存成功"
+    paragraph
+      text "未找到关卡锚点：请先放置旗组、答题机、星辉门或门"
+    paragraph
+      text "当前修改仍保留在编辑世界。可以继续编辑、修正问题后重试；明确放弃会退出并丢弃尚未保存的修改，已保存的草稿保留。"
+    container
+      button [ref=301]
+        text "继续编辑"
+      button [ref=302]
+        text "放弃修改并退出"
+
+{"mainWorldGuard":"PASS","assistantOpenEsc":"PASS","explicitDiscardMouse":"PASS"}
+EDITOR_EXIT_BROWSER_PASS
+

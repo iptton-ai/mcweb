@@ -54,6 +54,18 @@ export function isJevConfigured() {
     return !!(c.enabled && c.apiKey && c.gateway);
 }
 
+// 网关地址规范化：只填域名（无路径）时自动补默认路径 /api/jev——用户不该被要求记住转发路径。
+// 已带路径的地址原样保留（自建网关可能用别的路由路径）。
+export function normalizeGateway(url) {
+    const u = String(url || '').trim().replace(/\/+$/, '');
+    if (!u) return u;
+    try {
+        const parsed = new URL(u);
+        if (parsed.pathname === '' || parsed.pathname === '/') return u + '/api/jev';
+    } catch { /* 非法地址原样返回，让 fetch 失败并在卡片里显示错误 */ }
+    return u;
+}
+
 // 解析多行「Key: Value」文本为请求头对象（空行/无冒号行忽略；同名后者覆盖）
 export function parseHeaders(text) {
     const out = {};
@@ -168,12 +180,30 @@ export function decideRoute(answers, { minConfidence = DEFAULT_JEV_CONFIG.minCon
     return { action: 'none', moduleIds: [] };
 }
 
-// 直答正文：知识库章节原文 + 角标说明（.text 是精简中文条目，直接可读）
-export function formatDirectAnswer(sec, maxLen = 1500) {
-    if (!sec) return '';
-    let body = sec.text;
-    if (body.length > maxLen) body = body.slice(0, maxLen) + '\n…（章节较长已截断，继续问可以展开）';
-    return `⚡ **${sec.title}**（快速回答）\n\n${body}\n\n---\n*来自内置知识库的精确匹配。想深入了解、或要我动手做点什么，直接继续说。*`;
+// 直答正文：支持 1~2 节合并渲染（主节 + 复合问题的伴随节），总输出 ≤maxLen（默认 2000 字符）。
+// 每节可带「来源：」行（sec.sources 是批次 E1 并行补的元数据，没有就跳过该行，不算错误）；
+// 单节超预算照旧截断并提示「继续问可以展开」。
+export function formatDirectAnswer(sec, maxLen = 2000) {
+    const secs = Array.isArray(sec) ? sec.filter(Boolean) : (sec ? [sec] : []);
+    if (!secs.length) return '';
+    const FOOTER = '*来自内置知识库的精确匹配。想深入了解、或要我动手做点什么，直接继续说。*';
+    const SEP = '\n\n---\n';
+    const TRUNC = '\n…（章节较长已截断，继续问可以展开）';
+    // 预算账本：先扣掉全部分隔线与结尾语，剩余按「未渲染节数」均摊（主节排第一吃大头），
+    // 逐节扣减保证总长不超预算（+2 是节标题后的空行）
+    let used = (secs.length + 1) * SEP.length + FOOTER.length;
+    const blocks = [];
+    for (let i = 0; i < secs.length; i++) {
+        const s = secs[i];
+        const head = i === 0 ? `⚡ **${s.title}**（快速回答）` : `📎 **${s.title}**（相关章节）`;
+        const srcLine = Array.isArray(s.sources) && s.sources.length ? `\n来源：${s.sources.join('、')}` : '';
+        const budget = Math.max(120, Math.floor((maxLen - used - head.length - 2 - srcLine.length - TRUNC.length) / (secs.length - i)));
+        let body = String(s.text || '');
+        if (body.length > budget) body = body.slice(0, budget) + TRUNC;
+        used += head.length + 2 + srcLine.length + body.length;
+        blocks.push(`${head}\n\n${body}${srcLine}`);
+    }
+    return blocks.join(SEP) + SEP + FOOTER;
 }
 
 // 预取章节合并：Jev 选中的章节 → 命中的建造系统 → 本地关键词检索，去重保序
@@ -204,7 +234,8 @@ export function buildPrefetchHint(userText, sections, maxTotal = 3000) {
 
 // ---------- 网络（浏览器 / Node 18+ 通用 fetch；任何异常返回 null）----------
 
-// 经 CF Worker 网关调 systemone，返回 answers（或 null）
+// 经 CF Worker 网关调 systemone。成功返回 answers；用户主动停止返回 null；
+// 网络/HTTP 失败抛错（由 jevPreflight 捕获转成 detail.error，会话卡片可见）。
 export async function callJev(request, cfg, signal) {
     const inner = new AbortController();
     const onUserAbort = () => inner.abort(signal?.reason);
@@ -214,18 +245,24 @@ export async function callJev(request, cfg, signal) {
     }
     const timer = setTimeout(() => inner.abort(new Error('jev 路由超时')), cfg.timeoutMs || DEFAULT_JEV_CONFIG.timeoutMs);
     try {
-        const resp = await fetch(cfg.gateway, {
+        const resp = await fetch(normalizeGateway(cfg.gateway), {
             method: 'POST',
             // 自定义头最后展开：用户可覆盖 Authorization 适配自家网关鉴权
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.apiKey, ...parseHeaders(cfg.customHeaders) },
             body: JSON.stringify(request),
             signal: inner.signal,
         });
-        if (!resp.ok) return null; // 401/429/5xx……静默降级走原路径
+        if (!resp.ok) {
+            const body = await resp.text().catch(() => '');
+            throw new Error(`网关返回 ${resp.status}${resp.status === 404 ? '（检查网关地址是否为完整转发路径）' : ''} ${body.slice(0, 120)}`);
+        }
         const json = await resp.json();
         return json?.answers || null;
-    } catch {
-        return null;
+    } catch (e) {
+        if (signal?.aborted) return null; // 用户主动停止不算错误
+        if (e?.name === 'AbortError') throw new Error(`jev 路由超时（${cfg.timeoutMs || DEFAULT_JEV_CONFIG.timeoutMs}ms）`);
+        if (e instanceof TypeError) throw new Error(`网关连接失败（${e.message}）`);
+        throw e;
     } finally {
         clearTimeout(timer);
         if (signal) signal.removeEventListener('abort', onUserAbort);
@@ -233,8 +270,13 @@ export async function callJev(request, cfg, signal) {
 }
 
 /**
- * 助手发送前钩子：一次路由，决定直答或预取。未启用/失败返回 null（调用方走原路径）。
- * @returns {Promise<{action:'direct',answer:string}|{action:'prefetch',hint:string}|null>}
+ * 助手发送前钩子：一次路由，决定直答或预取。
+ * 未启用/未配置/空文本返回 null（调用方走原路径，也不展示卡片）；
+ * 已启用时总是返回结果对象（含 detail），失败也带 detail——供会话里的工具卡片展示。
+ * @returns {Promise<null|{
+ *   action:'direct'|'prefetch'|'none', answer?, hint?, reason?,
+ *   detail:{ok,elapsedMs,error?,intent?,section?,quiz?,modules,sections},
+ * }>}
  */
 export async function jevPreflight(userText, { signal, inLevelRun = false } = {}) {
     const text = String(userText || '').trim();
@@ -242,12 +284,66 @@ export async function jevPreflight(userText, { signal, inLevelRun = false } = {}
     const cfg = getJevConfig();
     if (!cfg.enabled || !cfg.apiKey || !cfg.gateway) return null;
 
-    const answers = await callJev(buildRouteRequest(text, cfg), cfg, signal);
-    const decision = decideRoute(answers, { minConfidence: cfg.minConfidence, inLevelRun });
+    const __t0 = Date.now();
+    let lastErr = null;
+    const attempt = () => callJev(buildRouteRequest(text, cfg), cfg, signal).catch((e) => { lastErr = e; return null; });
+    let answers = await attempt();
+    if (!answers && !signal?.aborted) {
+        // 冷启动 DNS/TLS 抖动很常见：首败重试一次（路由失败反正要降级走慢路径，多等一次值得）
+        lastErr = null;
+        answers = await attempt();
+    }
+    const elapsedMs = Date.now() - __t0;
 
+    // 返回前统一落盘路由统计（E2）：direct/prefetch/none 计数，ok=false 单列 fail——降级率要单独可见。
+    // 统计是旁路数据，任何异常都不能影响路由本身（Node 无 localStorage 时内部静默走内存兜底）。
+    const finishRoute = (result) => {
+        try {
+            const d = result.detail || {};
+            const bump = d.ok === false ? { fail: 1 } : { [result.action]: 1 };
+            bumpJevStats({ ...bump, elapsedMs: d.elapsedMs });
+        } catch { /* 统计失败仅忽略 */ }
+        return result;
+    };
+
+    if (!answers) {
+        return finishRoute({
+            action: 'none',
+            detail: { ok: false, elapsedMs, error: (lastErr && lastErr.message) || '网关请求失败', intent: null, section: null, quiz: null, modules: [], sections: [] },
+        });
+    }
+    const decision = decideRoute(answers, { minConfidence: cfg.minConfidence, inLevelRun });
+    const detail = {
+        ok: true,
+        elapsedMs,
+        intent: answers.intent ? { choice: answers.intent.choice, confidence: answers.intent.confidence } : null,
+        section: answers.section ? { id: answers.section.choice, confidence: answers.section.confidence } : null,
+        quiz: answers.is_quiz_answer?.noul ?? null,
+        modules: decision.moduleIds || [],
+        sections: [],
+    };
+    // 知识缺口自动记录（E2）：FAQ 问到了知识库没有的东西——章节未命中（other/空/低置信）
+    // 且本地检索也零命中 → 记一笔 no_hit，直接当知识库迭代（E1 式）的需求清单；
+    // 守卫拦截（quiz_answer/level_run）与检索有货的情况不算缺口，避免噪声。
+    if (!decision.reason && answers.intent?.choice === 'faq') {
+        const secAns = answers.section || {};
+        const secMiss = !secAns.choice || secAns.choice === 'other' || (secAns.confidence ?? 0) < 0.5;
+        if (secMiss && searchKnowledge(text).length === 0) {
+            logKnowledgeGap({ query: text, section: 'other', reason: 'no_hit' });
+        }
+    }
+    // 复合直答（E2）：命中节之外，再用本地关键词检索取「第一个不同章节」当伴随节——
+    // 复合问题（「红石灯怎么点亮？晚上会不会刷怪？」）一次 ~1.5s 直答全覆盖，零额外网络请求。
+    // 伴随节不存在（检索零命中/只有命中节自己）就不并，行为与单节直答完全一致。
     if (decision.action === 'direct') {
         const sec = KNOWLEDGE_SECTIONS.find((s) => s.id === decision.sectionId);
-        return sec ? { action: 'direct', answer: formatDirectAnswer(sec) } : null;
+        if (sec) {
+            const companion = searchKnowledge(text, 3).find((s) => s.id !== sec.id) || null;
+            const secs = companion ? [sec, companion] : [sec];
+            detail.sections = secs.map((s) => `${s.id} ${s.title}`);
+            return finishRoute({ action: 'direct', answer: formatDirectAnswer(secs), detail });
+        }
+        return finishRoute({ action: 'none', detail });
     }
     if (decision.action === 'prefetch') {
         // Jev 选中的章节 → 命中的建造系统 → 本地关键词检索兜底（去重保序）
@@ -257,7 +353,97 @@ export async function jevPreflight(userText, { signal, inLevelRun = false } = {}
             .filter(Boolean);
         const merged = mergePrefetchSections(sec, modSecs, searchKnowledge(text, 2));
         const hint = buildPrefetchHint(text, merged);
-        return hint ? { action: 'prefetch', hint } : null;
+        detail.sections = merged.map((s) => `${s.id} ${s.title}`);
+        return finishRoute(hint ? { action: 'prefetch', hint, detail } : { action: 'none', detail });
     }
-    return null;
+    return finishRoute({ action: 'none', detail, reason: decision.reason });
+}
+
+// ---------- 路由统计与知识缺口日志（批次 E2：让「提速」可度量、让知识缺口可沉淀）----------
+// 存储契约（见 docs/jev-evidence-loop-plan.md §4）：
+//   mcAssistant.jev.stats.v1 = { direct, prefetch, none, fail, totalElapsedMs, count }
+//   mcAssistant.jev.gaps.v1  = [{ ts, query, section, reason }]，数组 FIFO 上限 200
+// reason 取值：no_hit = FAQ 章节未命中且本地检索零命中（自动）、user_down = 用户点👎（人工）。
+// 读写全部 try/catch：Node 直测/隐私模式无 localStorage 时走内存兜底，绝不抛错。
+
+const JEV_STATS_KEY = 'mcAssistant.jev.stats.v1';
+const JEV_GAPS_KEY = 'mcAssistant.jev.gaps.v1';
+const GAPS_MAX = 200;   // 缺口日志 FIFO 上限：只留最近 200 条，防 localStorage 无限膨胀
+let memoryStats = null; // 无 localStorage（Node 直测/隐私模式）时的内存态
+let memoryGaps = null;
+
+function readStore(key, memoryValue) {
+    let saved = null;
+    try {
+        saved = JSON.parse(localStorage.getItem(key));
+    } catch { /* Node/隐私模式 */ }
+    return saved ?? memoryValue ?? null;
+}
+
+function writeStore(key, value, setMemory) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+        setMemory(value); // localStorage 不可用：至少本次进程内可见（频次低，性能无虞）
+    }
+}
+
+const EMPTY_STATS = { direct: 0, prefetch: 0, none: 0, fail: 0, totalElapsedMs: 0, count: 0 };
+
+// 读路由统计（每次返回全新副本，调用方可随意改不动存储）
+export function getJevStats() {
+    const saved = readStore(JEV_STATS_KEY, memoryStats);
+    return { ...EMPTY_STATS, ...(saved && typeof saved === 'object' ? saved : {}) };
+}
+
+// 统计累加：patch 形如 { direct: 1, elapsedMs: 120 }——动作名 +N，elapsedMs 计入均耗分母 count
+export function bumpJevStats(patch = {}) {
+    const s = getJevStats();
+    for (const k of ['direct', 'prefetch', 'none', 'fail']) {
+        if (patch[k]) s[k] += patch[k];
+    }
+    if (typeof patch.elapsedMs === 'number' && patch.elapsedMs >= 0) {
+        s.totalElapsedMs += Math.round(patch.elapsedMs);
+        s.count += 1;
+    }
+    writeStore(JEV_STATS_KEY, s, (v) => { memoryStats = v; });
+    return s;
+}
+
+// 统计归零（预留：⚙️ 卡以后要「重置统计」直接接）
+export function resetJevStats() {
+    const s = { ...EMPTY_STATS };
+    writeStore(JEV_STATS_KEY, s, (v) => { memoryStats = v; });
+    return s;
+}
+
+// 记一条知识缺口（FIFO ≤200，挤掉最旧）；query 截短防单条过大
+export function logKnowledgeGap(entry = {}) {
+    const saved = readStore(JEV_GAPS_KEY, memoryGaps);
+    const list = Array.isArray(saved) ? saved : [];
+    list.push({
+        ts: typeof entry.ts === 'number' ? entry.ts : Date.now(),
+        query: String(entry.query || '').slice(0, 300),
+        section: String(entry.section || ''),
+        reason: String(entry.reason || ''),
+    });
+    while (list.length > GAPS_MAX) list.shift();
+    writeStore(JEV_GAPS_KEY, list, (v) => { memoryGaps = v; });
+    return list;
+}
+
+export function getKnowledgeGaps() {
+    const saved = readStore(JEV_GAPS_KEY, memoryGaps);
+    return Array.isArray(saved) ? saved : [];
+}
+
+export function clearKnowledgeGaps() {
+    writeStore(JEV_GAPS_KEY, [], (v) => { memoryGaps = v; });
+    return [];
+}
+
+// 导出缺口为带元信息的 JSON 文本（⚙️ 卡「导出缺口」下载用）：可直接当知识库迭代的需求清单
+export function exportKnowledgeGapsJson() {
+    const gaps = getKnowledgeGaps();
+    return JSON.stringify({ exportedAt: new Date().toISOString(), count: gaps.length, gaps }, null, 2);
 }

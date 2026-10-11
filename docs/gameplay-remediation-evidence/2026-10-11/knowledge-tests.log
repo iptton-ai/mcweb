@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: 结构：章节齐全有序，id 唯一，字段非空，单节体量可控（检索结果不爆 token）
+ok 1 - 结构：章节齐全有序，id 唯一，字段非空，单节体量可控（检索结果不爆 token）
+  ---
+  duration_ms: 0.776833
+  type: 'test'
+  ...
+# Subtest: 检索：关键词查询命中正确章节且排在首位
+ok 2 - 检索：关键词查询命中正确章节且排在首位
+  ---
+  duration_ms: 1.847167
+  type: 'test'
+  ...
+# Subtest: 检索：tnt / media 新节命中（关键词「TNT/爆炸/引爆/苦力怕」与「录像/拍摄/镜头/BGM/配乐/音量」）
+ok 3 - 检索：tnt / media 新节命中（关键词「TNT/爆炸/引爆/苦力怕」与「录像/拍摄/镜头/BGM/配乐/音量」）
+  ---
+  duration_ms: 1.199458
+  type: 'test'
+  ...
+# Subtest: 检索：口语长句（含填充词）仍能靠二字滑窗命中
+ok 4 - 检索：口语长句（含填充词）仍能靠二字滑窗命中
+  ---
+  duration_ms: 0.846416
+  type: 'test'
+  ...
+# Subtest: 检索：空查询/纯填充词/乱码 返回空而不抛错
+ok 5 - 检索：空查询/纯填充词/乱码 返回空而不抛错
+  ---
+  duration_ms: 0.208416
+  type: 'test'
+  ...
+# Subtest: 内容防漂移：正文数值来自 config.js 实际导出（抽查关键锚点）
+ok 6 - 内容防漂移：正文数值来自 config.js 实际导出（抽查关键锚点）
+  ---
+  duration_ms: 0.117083
+  type: 'test'
+  ...
+# Subtest: tile 对账：分配表自洽，knowledge.js / docs.js 的图集文案不漂移
+ok 7 - tile 对账：分配表自洽，knowledge.js / docs.js 的图集文案不漂移
+  ---
+  duration_ms: 0.662458
+  type: 'test'
+  ...
+# Subtest: sources：每节带真实 js/ 来源，全部章节覆盖（「带来源的结论」的数据基础）
+ok 8 - sources：每节带真实 js/ 来源，全部章节覆盖（「带来源的结论」的数据基础）
+  ---
+  duration_ms: 0.083459
+  type: 'test'
+  ...
+# Subtest: 目录（注入系统提示词）：覆盖全部章节且每行含 id 与标题
+ok 9 - 目录（注入系统提示词）：覆盖全部章节且每行含 id 与标题
+  ---
+  duration_ms: 0.255
+  type: 'test'
+  ...
+# Subtest: 排序稳定性：多命中时强词（整词命中关键词表）优先于弱词（二字滑窗命中正文）
+ok 10 - 排序稳定性：多命中时强词（整词命中关键词表）优先于弱词（二字滑窗命中正文）
+  ---
+  duration_ms: 0.532875
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 55.563916

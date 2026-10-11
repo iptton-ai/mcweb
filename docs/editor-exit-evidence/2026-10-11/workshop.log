@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: snapshotRegion 按世界内存序快照且 RLE 回环一致
+ok 1 - snapshotRegion 按世界内存序快照且 RLE 回环一致
+  ---
+  duration_ms: 0.9985
+  type: 'test'
+  ...
+# Subtest: computeAutoRegion 旗∪答题机∪星辉门∪门 联合包围盒 +2 边距
+ok 2 - computeAutoRegion 旗∪答题机∪星辉门∪门 联合包围盒 +2 边距
+  ---
+  duration_ms: 16.112292
+  type: 'test'
+  ...
+# Subtest: computeAutoRegion 星辉门与门都是锚点，正方向 +2 吃满
+ok 3 - computeAutoRegion 星辉门与门都是锚点，正方向 +2 吃满
+  ---
+  duration_ms: 8.911292
+  type: 'test'
+  ...
+# Subtest: computeAutoRegion 无锚点返回 null，超 96×64×96 返回 null
+ok 4 - computeAutoRegion 无锚点返回 null，超 96×64×96 返回 null
+  ---
+  duration_ms: 21.827292
+  type: 'test'
+  ...
+# Subtest: buildLevelCard 组卡：region/题目/旗/rules 全字段与局部坐标
+ok 5 - buildLevelCard 组卡：region/题目/旗/rules 全字段与局部坐标
+  ---
+  duration_ms: 25.152084
+  type: 'test'
+  ...
+# Subtest: buildLevelCard：draft 标记 / rules 覆盖 / 缺终点 / 缺名 / 无锚点 / 超上限
+ok 6 - buildLevelCard：draft 标记 / rules 覆盖 / 缺终点 / 缺名 / 无锚点 / 超上限
+  ---
+  duration_ms: 51.67925
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：合法卡零错误零警告
+ok 7 - validateLevelCard：合法卡零错误零警告
+  ---
+  duration_ms: 14.339042
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：choice 选项重复 / 答案越界 / 缺项非空
+ok 8 - validateLevelCard：choice 选项重复 / 答案越界 / 缺项非空
+  ---
+  duration_ms: 9.4475
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：input 答案必须 0..9999 整数
+ok 9 - validateLevelCard：input 答案必须 0..9999 整数
+  ---
+  duration_ms: 14.7005
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：缺起点/缺终点/旗越界 均报错
+ok 10 - validateLevelCard：缺起点/缺终点/旗越界 均报错
+  ---
+  duration_ms: 22.221208
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：未双通过 error，draft 降为 warning
+ok 11 - validateLevelCard：未双通过 error，draft 降为 warning
+  ---
+  duration_ms: 20.27925
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：BFS 不可达 ⇒ warning（ok 不受挫）
+ok 12 - validateLevelCard：BFS 不可达 ⇒ warning（ok 不受挫）
+  ---
+  duration_ms: 13.448542
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：锁坐标越界 / 锁位重复 / stem / subject / 格式字段
+ok 13 - validateLevelCard：锁坐标越界 / 锁位重复 / stem / subject / 格式字段
+  ---
+  duration_ms: 24.783292
+  type: 'test'
+  ...
+# Subtest: validateLevelCard：region 超上限/越界/RLE 长度不符/rules 类型
+ok 14 - validateLevelCard：region 超上限/越界/RLE 长度不符/rules 类型
+  ---
+  duration_ms: 40.929333
+  type: 'test'
+  ...
+# Subtest: cardHash 对内容稳定（JSON 回环不变），内容变更即变
+ok 15 - cardHash 对内容稳定（JSON 回环不变），内容变更即变
+  ---
+  duration_ms: 29.028625
+  type: 'test'
+  ...
+# Subtest: worldToLocal/localToWorld 以嵌入偏移为基准，localKey 出记账字符串
+ok 16 - worldToLocal/localToWorld 以嵌入偏移为基准，localKey 出记账字符串
+  ---
+  duration_ms: 0.173042
+  type: 'test'
+  ...
+# Subtest: isOutOfRunArea：非闯关恒 false；y<1 或水平出 region±2 判掉界
+ok 17 - isOutOfRunArea：非闯关恒 false；y<1 或水平出 region±2 判掉界
+  ---
+  duration_ms: 38.6075
+  type: 'test'
+  ...
+# Subtest: embedLevelToWorld：region 直写世界（+偏移），基岩层不受影响，spawn=起点旗
+ok 18 - embedLevelToWorld：region 直写世界（+偏移），基岩层不受影响，spawn=起点旗
+  ---
+  duration_ms: 34.334791
+  type: 'test'
+  ...
+# Subtest: embedLevelToWorld：跨区块 dirtyChunks 去重覆盖，方块逐格对位
+ok 19 - embedLevelToWorld：跨区块 dirtyChunks 去重覆盖，方块逐格对位
+  ---
+  duration_ms: 3.014417
+  type: 'test'
+  ...
+# Subtest: saveLevelCard/list/get/delete：Node 无 IndexedDB 走会话兜底（W17）
+ok 20 - saveLevelCard/list/get/delete：Node 无 IndexedDB 走会话兜底（W17）
+  ---
+  duration_ms: 42.116166
+  type: 'test'
+  ...
+# Subtest: importLevelCardFromJson：导出→导入逐字段一致；坏文件/坏卡被拒（W06）
+ok 21 - importLevelCardFromJson：导出→导入逐字段一致；坏文件/坏卡被拒（W06）
+  ---
+  duration_ms: 29.370917
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 580.941958

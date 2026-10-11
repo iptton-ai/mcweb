@@ -46,20 +46,23 @@ export function getUIState() {
 // 纯键盘输入模式下永不请求锁定（鼠标指针保持可见，专职操作 UI 浮层）
 function wantLockNow() {
     return state.inputMode !== 'keyboard' && uiState === 'playing' && !assistantVisible
+        && !state.editorExitOpen && !state.levelEdit?.exiting
         && !state.recordingControlsOpen && !state.levelExportOpen && !state.prefabPickerOpen
-        && !state.authorPanelOpen && !state.questionBankOpen;
+        && !state.authorPanelOpen && !state.questionBankOpen && !state.helpDocOpen;
 }
 
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）。
 // 纯键盘模式下恒为 false：鼠标的视角/挖掘/放置输入全部让位给键盘（见 input.js 的键盘路径）
 export function isPlaying() {
-    return uiState === 'playing' && mouseLocked;
+    return uiState === 'playing' && mouseLocked && !state.editorExitOpen && !state.levelEdit?.exiting;
 }
 
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
     return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
-        && !state.prefabPickerOpen && !state.authorPanelOpen && !state.questionBankOpen;
+        && !state.editorExitOpen && !state.levelEdit?.exiting
+        && !state.prefabPickerOpen && !state.authorPanelOpen && !state.questionBankOpen
+        && !state.helpDocOpen;
 }
 
 // 纯键盘模式下的「正在操作游戏」：不要求指针锁定（本来就没锁）。
@@ -210,6 +213,7 @@ function syncOverlays() {
 
 // ==================== 指针锁管理（全游戏仅此处调用） ====================
 export function requestLock() {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     state.recordingControlsOpen = false;
     state.levelExportOpen = false;
     if (mouseLocked || lockPending) return;
@@ -258,7 +262,8 @@ function onPointerLockChange() {
     if (mouseLocked) {
         // 锁定请求异步返回期间可能已按 Tab 打开面板；迟到的成功不能抢回鼠标。
         if (state.recordingControlsOpen || state.levelExportOpen || state.prefabPickerOpen
-            || state.authorPanelOpen || state.questionBankOpen || uiState !== 'playing') {
+            || state.authorPanelOpen || state.questionBankOpen || state.helpDocOpen || state.editorExitOpen
+            || state.levelEdit?.exiting || uiState !== 'playing') {
             exitLock();
             syncOverlays();
             return;
@@ -268,7 +273,7 @@ function onPointerLockChange() {
         hideLockHint();
     } else if (!expectUnlock && uiState === 'playing' && !assistantVisible && !state.recordingControlsOpen
         && !state.levelExportOpen && !state.prefabPickerOpen && !state.authorPanelOpen
-        && !state.questionBankOpen) {
+        && !state.questionBankOpen && !state.helpDocOpen && !state.editorExitOpen && !state.levelEdit?.exiting) {
         // 用户按 Esc（锁定状态下浏览器截获 Esc，页面收不到 keydown）或系统夺走指针 → 暂停菜单
         // （面板开着时指针本就不该被锁定，此时解锁不弹菜单）
         setState('pause');

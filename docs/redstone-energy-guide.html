@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>红石能源系统图解 · 信号源 / 开关 / 脉冲</title>
+<style>
+  :root{
+    --bg:#14171c; --panel:#1d222b; --line:#2c3340; --ink:#e8e6e3; --dim:#9aa3af;
+    --red:#ff4438; --red-dim:#7a2a26; --amber:#ffcf3f; --lamp:#ffd23f;
+    --stone:#8b8f94; --stone-dk:#5c6066; --green:#4ade80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 system-ui,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;margin:.2em 0 .1em}
+  h1 .r{color:var(--red)}
+  .sub{color:var(--dim);margin:0 0 8px}
+  h2{font-size:21px;margin:2.2em 0 .5em;padding-top:.9em;border-top:1px solid var(--line)}
+  h2 .no{color:var(--red);margin-right:.4em;font-family:ui-monospace,monospace}
+  h3{font-size:16px;margin:1.4em 0 .4em;color:#ffd9a0}
+  p{margin:.5em 0}
+  .lead{font-size:17px}
+  code{background:#262c37;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:13px ui-monospace,Monaco,monospace;color:#ffc9c4}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  .grid{display:grid;gap:14px}
+  @media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card h3{margin:.1em 0 .3em}
+  .tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:99px;padding:1px 10px;margin:0 6px 6px 0;color:var(--dim)}
+  .tag.hot{color:#ffb4ae;border-color:#5b2a26;background:#2a1a18}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:.6em 0}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:#232936;color:#cdd6e0}
+  .note{border-left:3px solid var(--amber);background:#241f14;border-radius:0 10px 10px 0;padding:10px 16px;margin:12px 0}
+  .warn{border-left-color:var(--red);background:#2a1a18}
+  .note b{color:#ffd9a0}
+  .warn b{color:#ffb4ae}
+  svg{display:block;width:100%;height:auto}
+  .cap{color:var(--dim);font-size:13px;margin-top:6px}
+  /* ---- SVG 通用件 ---- */
+  .stone{fill:var(--stone);stroke:var(--stone-dk);stroke-width:2}
+  .ground{fill:#3d4a35;stroke:#2c3a28;stroke-width:2}
+  .dust{fill:var(--red-dim);stroke:#4c1d1a;stroke-width:1;transition:all .18s}
+  .on .dust,.dust.on{fill:var(--red);stroke:#ff8b83;filter:drop-shadow(0 0 5px rgba(255,68,56,.9))}
+  .stick{fill:#9a6b39;stroke:#6d4a26;stroke-width:1}
+  .flame{fill:#4a4a4a;transition:all .18s}
+  .on .flame,.flame.on{fill:var(--amber);filter:drop-shadow(0 0 7px rgba(255,207,63,.95))}
+  .lampb{fill:#4e4636;stroke:#2f2a1e;stroke-width:2;transition:all .18s}
+  .on .lampb,.lampb.on{fill:var(--lamp);stroke:#fff0b8;filter:drop-shadow(0 0 9px rgba(255,210,63,.95))}
+  .lever-arm{transition:transform .18s;transform:rotate(0deg);transform-origin:center;transform-box:fill-box}
+  .on .lever-arm{transform:rotate(38deg)}
+  .zone-g{fill:rgba(74,222,128,.13);stroke:rgba(74,222,128,.55);stroke-dasharray:5 4}
+  .zone-x{fill:rgba(255,68,56,.07);stroke:rgba(255,68,56,.4);stroke-dasharray:5 4}
+  .lbl{fill:var(--ink);font:13px system-ui,"PingFang SC",sans-serif}
+  .lbl.dim{fill:var(--dim)} .lbl.red{fill:#ffb4ae} .lbl.amber{fill:#ffd9a0} .lbl.green{fill:#86efac}
+  .arrow{stroke:var(--dim);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  .flow{stroke:#67e8f9;stroke-width:2;fill:none;opacity:.85}
+  /* ---- 时钟动画（实际每 0.1s 翻转一次，此处放慢 10 倍便于观察）---- */
+  @keyframes alt{0%,49.9%{fill:var(--amber);filter:drop-shadow(0 0 7px rgba(255,207,63,.95))}50%,100%{fill:#4a4a4a;filter:none}}
+  .clock1 .flame{animation:alt 1s steps(1) infinite}
+  .clock2 .flame{animation:alt 1s steps(1) infinite;animation-delay:.5s}
+  /* ---- 按钮 / 观察者脉冲态 ---- */
+  .pulse .flame,.pulse .dust{fill:var(--red);filter:drop-shadow(0 0 6px rgba(255,68,56,.9))}
+  /* ---- 反相器（§5）：默认拉杆关=T1 亮+灯亮；拉杆开=粉亮、T1 灭、灯灭 ---- */
+  #inv.on .flame{fill:#4a4a4a;filter:none}
+  #inv.on .lampb{fill:#4e4636;stroke:#2f2a1e;filter:none}
+  /* ---- 火把塔（§7）：拉杆开=粉亮、T1 灭（第一级反相）、T2 亮（第二级反相）、灯亮；D1 永远灭 ---- */
+  #tower.on .dust.dead{fill:var(--red-dim);stroke:#4c1d1a;filter:none}
+  #tower.on .s1 .flame{fill:#4a4a4a;filter:none}
+  #tower.on .s2 .flame{fill:var(--amber);filter:drop-shadow(0 0 7px rgba(255,207,63,.95))}
+  #tower.on .s3{fill:var(--lamp);stroke:#fff0b8;filter:drop-shadow(0 0 9px rgba(255,210,63,.95))}
+  /* ---- 时钟（§6）：输出灯跟随第二级火把闪烁 ---- */
+  @keyframes altLamp{0%,49.9%{fill:var(--lamp);stroke:#fff0b8;filter:drop-shadow(0 0 9px rgba(255,210,63,.95))}50%,100%{fill:#4e4636;stroke:#2f2a1e;filter:none}}
+  .clock2-lamp{animation:altLamp 1s steps(1) infinite;animation-delay:.5s}
+  .btn{background:#2a3346;color:var(--ink);border:1px solid #3d4a63;border-radius:8px;padding:6px 16px;font:14px system-ui,"PingFang SC",sans-serif;cursor:pointer}
+  .btn:hover{background:#33405a}
+  .btn:active{transform:translateY(1px)}
+  .foot{color:var(--dim);font-size:13px;border-top:1px solid var(--line);margin-top:3em;padding-top:1em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>⚡ 红石能源系统<span class="r">图解</span></h1>
+<p class="sub">信号源 · 开关 · 脉冲 —— 对照实现 <code>js/redstone.js</code> / <code>js/piston.js</code> / <code>js/config.js</code>，2026-09-23</p>
+<div>
+  <span class="tag hot">拉杆 = 能源 ✔</span><span class="tag hot">6 类信号源</span><span class="tag">15 级衰减</span><span class="tag">0.1s 火把节拍</span><span class="tag">0.15s 活塞延迟</span><span class="tag">1s 按钮脉冲</span><span class="tag">0.2s 观察者脉冲</span>
+</div>
+
+<div class="panel">
+<p class="lead"><b>一句话模型</b>：任何电路都是 <b style="color:#ffb4ae">信号源</b> → <b style="color:#ffb4ae">红石粉（每格 −1 级，0 级断路）</b> → <b style="color:#ffb4ae">负载</b>。
+源强度固定 <code>RS_MAX_STRENGTH = 15</code>，负载只看「6 邻有没有亮粉或激活源」。</p>
+<svg viewBox="0 0 720 84">
+  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#67e8f9"/></marker></defs>
+  <rect x="20" y="22" width="120" height="40" rx="9" fill="#3b1d1a" stroke="#ff4438"/>
+  <text x="80" y="47" text-anchor="middle" class="lbl" style="font-weight:700">① 信号源 ×6</text>
+  <path class="flow" d="M145,42 L215,42" marker-end="url(#ah)"/>
+  <text x="180" y="30" text-anchor="middle" class="lbl dim">15 级</text>
+  <rect x="220" y="22" width="140" height="40" rx="9" fill="#132c33" stroke="#67e8f9"/>
+  <text x="290" y="40" text-anchor="middle" class="lbl" style="font-weight:700">② 红石粉布线</text>
+  <text x="290" y="56" text-anchor="middle" class="lbl dim">每格 −1 · 可爬坡</text>
+  <path class="flow" d="M365,42 L435,42" marker-end="url(#ah)"/>
+  <text x="400" y="30" text-anchor="middle" class="lbl dim">＞0 级</text>
+  <rect x="440" y="22" width="120" height="40" rx="9" fill="#3a3313" stroke="#ffcf3f"/>
+  <text x="500" y="47" text-anchor="middle" class="lbl" style="font-weight:700">③ 负载 ×N</text>
+  <path class="flow" d="M565,42 L640,42" marker-end="url(#ah)"/>
+  <text x="676" y="47" text-anchor="middle" class="lbl dim" style="font-size:12px">看 6 邻 ✓</text>
+</svg>
+</div>
+
+<h2><span class="no">1</span>六类信号源（能源）</h2>
+<p>激活后都会：<b>给 6 邻红石粉播 15 级</b>、<b>直接点亮 6 邻负载</b>；其中拉杆/按钮/压力板/火把/观察者还会<b>充能特定方块</b>（见 §3）。</p>
+<div class="grid g3">
+
+  <div class="card">
+    <h3>🎚️ 拉杆</h3>
+    <span class="tag hot">常供能</span><span class="tag">右键开 / 关</span>
+    <p style="font-size:13.5px">拨到「开」就一直供电，再点一下断开。最稳定的<b>人工开关</b>。
+    充能范围只有<b>自己贴着的那块方块</b>（这是新手最大误区：拉杆插在火把/石头旁边 ≠ 给它充电）。</p>
+  </div>
+
+  <div class="card">
+    <h3>🔘 按钮</h3>
+    <span class="tag hot">脉冲 1.0s</span><span class="tag">右键按下·自动弹出</span>
+    <svg viewBox="0 0 220 96">
+      <rect x="0" y="80" width="220" height="16" class="ground"/>
+      <rect x="30" y="40" width="40" height="40" class="stone"/>
+      <rect x="78" y="52" width="36" height="28" rx="4" class="stone"/>
+      <g id="btn-demo">
+        <rect x="80" y="40" width="32" height="14" rx="4" fill="#c2413a" stroke="#7e2d28" id="btn-cap" style="transition:transform .1s;transform-box:fill-box"/>
+      </g>
+      <g class="on" id="btn-lamp-group" opacity="0">
+        <rect x="150" y="46" width="34" height="34" class="lampb on"/>
+      </g>
+      <text x="98" y="24" text-anchor="middle" class="lbl dim" id="btn-txt">按我 → 供电 1 秒</text>
+    </svg>
+    <p style="font-size:13.5px">按下瞬间供电，<code>BUTTON_PULSE_SEC = 1.0s</code> 后自动弹出断电。天然<b>单次脉冲源</b>，配活塞可做「点一下走一格」。</p>
+    <p><button class="btn" onclick="pressButtonDemo()">🔘 按一下</button></p>
+  </div>
+
+  <div class="card">
+    <h3>🔴 压力板</h3>
+    <span class="tag hot">踩住供能</span><span class="tag">玩家 / 怪物通吃</span>
+    <svg viewBox="0 0 220 96">
+      <rect x="0" y="80" width="220" height="16" class="ground"/>
+      <rect x="26" y="68" width="44" height="12" rx="3" class="dust on"/>
+      <rect x="96" y="52" width="26" height="28" fill="#7dd3fc" stroke="#38bdf8"/>
+      <text x="109" y="70" text-anchor="middle" class="lbl" style="font-size:11px"> mobs</text>
+      <text x="150" y="30" class="lbl dim" style="font-size:12px">站上去=开，离开=关</text>
+    </svg>
+    <p style="font-size:13.5px">放在实心方块顶面，<b>玩家或怪物</b>站上去就供电，离开即断。自动门、陷阱、称重开关的原料。</p>
+  </div>
+
+  <div class="card">
+    <h3>🔥 红石火把</h3>
+    <span class="tag hot">常供能</span><span class="tag hot">反相器</span><span class="tag">0.1s 节拍</span>
+    <p style="font-size:13.5px">默认亮（能源）；一旦<b>挂靠的方块被充能</b>就熄灭——这就是<b>反相器</b>。翻转走 <code>RTORCH_DELAY = 0.1s</code> 延迟队列，
+    有节拍就能振荡（§6 时钟）。亮火把还会<b>强充能自己正上方的方块</b>——竖直布线全靠它（§7）。</p>
+  </div>
+
+  <div class="card">
+    <h3>👁️ 观察者</h3>
+    <span class="tag hot">脉冲 0.2s</span><span class="tag">背面输出</span>
+    <svg viewBox="0 0 220 96">
+      <rect x="0" y="80" width="220" height="16" class="ground"/>
+      <rect id="obs-front" x="36" y="44" width="34" height="34" fill="#8b8f94" stroke="#5c6066" style="transition:fill .12s"/>
+      <rect x="92" y="44" width="44" height="34" fill="#4c5563" stroke="#2f3742"/>
+      <text x="114" y="66" text-anchor="middle" class="lbl" style="font-size:11px">观察者</text>
+      <rect x="158" y="50" width="40" height="22" class="dust" id="obs-back"/>
+      <text x="53" y="34" text-anchor="middle" class="lbl dim" style="font-size:11px">正面（侦测）</text>
+      <text x="178" y="38" text-anchor="middle" class="lbl dim" style="font-size:11px">背面（输出）</text>
+    </svg>
+    <p style="font-size:13.5px">像方块一样放置。<b>正前方</b>方块增删/变化 → <b>背面</b>输出 <code>OBSERVER_PULSE_SEC = 0.2s</code> 脉冲（原版 0.1s，本作放宽）。
+    活塞时钟、自动门铃的心跳。</p>
+    <p><button class="btn" onclick="pokeObserver()">🔄 变换前方面块</button></p>
+  </div>
+
+  <div class="card">
+    <h3>🔐 答题机 / 星辉门</h3>
+    <span class="tag hot">答对=常供能</span><span class="tag">教学组</span>
+    <p style="font-size:13.5px">答对题目后方块翻转为「已解锁」变体，成为<b>永久信号源</b>：贴着门直接开、接红石粉可远程解锁别的门。
+    教育玩法与红石的接口就在这里（<code>keypadSolved / starlightOpen</code> 进 activeSources）。</p>
+  </div>
+</div>
+
+<h2><span class="no">2</span>拉杆的供能范围解剖（新手最大误区）</h2>
+<div class="panel">
+<svg viewBox="0 0 640 252">
+  <rect x="0" y="210" width="640" height="42" class="ground"/>
+  <!-- 不充能区（左右两块邻居石头） -->
+  <rect x="213" y="133" width="64" height="84" class="zone-x"/>
+  <rect x="363" y="133" width="64" height="84" class="zone-x"/>
+  <!-- 挂靠方块（唯一被强充能） -->
+  <rect x="283" y="133" width="74" height="84" class="zone-g"/>
+  <!-- 方块们 -->
+  <rect x="215" y="140" width="60" height="70" class="stone"/>
+  <rect x="290" y="140" width="60" height="70" class="stone"/>
+  <rect x="365" y="140" width="60" height="70" class="stone"/>
+  <!-- 邻粉（拉杆 6 邻播 15 级） -->
+  <rect x="136" y="192" width="64" height="22" class="zone-g" rx="5"/>
+  <rect x="440" y="192" width="64" height="22" class="zone-g" rx="5"/>
+  <rect x="140" y="196" width="56" height="14" rx="4" class="dust on"/>
+  <rect x="444" y="196" width="56" height="14" rx="4" class="dust on"/>
+  <!-- 拉杆（装在中块顶面：它挂靠的正是这块） -->
+  <g id="lever-zone" class="on">
+    <rect x="313" y="126" width="14" height="14" class="stick"/>
+    <rect x="308" y="94" width="10" height="34" rx="4" class="stick lever-arm" style="fill:#c2413a"/>
+  </g>
+  <text x="320" y="86" text-anchor="middle" class="lbl green">✔ 挂靠方块：被强充能（唯一！）</text>
+  <text x="245" y="122" text-anchor="middle" class="lbl red">✘ 邻居石头：不充能</text>
+  <text x="395" y="122" text-anchor="middle" class="lbl red">✘ 邻居石头：不充能</text>
+  <text x="168" y="180" text-anchor="middle" class="lbl green" style="font-size:12px">✔ 邻粉播 15 级</text>
+  <text x="472" y="180" text-anchor="middle" class="lbl green" style="font-size:12px">✔ 邻粉播 15 级</text>
+  <text x="320" y="246" text-anchor="middle" class="lbl dim">负载（灯/门/TNT/活塞）也是 6 邻直供，图略</text>
+</svg>
+<p class="cap">想点亮一块石头？拉杆做不到，只有两样东西能充能方块：<b>红石粉（脚下+水平四邻）</b>和<b>亮火把（正上方）</b>——以及拉杆/按钮/压力板<b>自己贴着的那一块</b>。推论：两只火把接力反相（双相开关）<b>平铺</b>时，两级方块之间必须垫一格红石粉接力；<b>竖着叠</b>（第二级方块压在第一级火把头顶）才可省粉——「竖着行、平铺不行」不是 bug。</p>
+</div>
+
+<h2><span class="no">3</span>红石粉：衰减与爬坡</h2>
+<div class="grid g2">
+  <div class="card">
+    <h3>15 级衰减尺</h3>
+    <svg viewBox="0 0 460 110">
+      <rect x="0" y="80" width="460" height="30" class="ground"/>
+      <rect x="6" y="42" width="40" height="38" class="stone"/>
+      <text x="26" y="34" text-anchor="middle" class="lbl amber" style="font-size:12px">源 15</text>
+      <g style="font:10px ui-monospace,monospace">
+        <rect x="50"  y="68" width="24" height="12" class="dust on"/><text x="62"  y="60" text-anchor="middle" fill="#ffb4ae">14</text>
+        <rect x="76"  y="68" width="24" height="12" class="dust on"/><text x="88"  y="60" text-anchor="middle" fill="#ffb4ae">13</text>
+        <rect x="102" y="68" width="24" height="12" class="dust on"/><text x="114" y="60" text-anchor="middle" fill="#ffb4ae">12</text>
+        <rect x="128" y="68" width="24" height="12" class="dust on"/><text x="140" y="60" text-anchor="middle" fill="#ffb4ae">11</text>
+        <rect x="154" y="68" width="24" height="12" class="dust on"/><text x="166" y="60" text-anchor="middle" fill="#ffb4ae">10</text>
+        <rect x="180" y="68" width="24" height="12" class="dust on"/><text x="192" y="60" text-anchor="middle" fill="#ffb4ae">9</text>
+        <rect x="206" y="68" width="24" height="12" class="dust on"/><text x="218" y="60" text-anchor="middle" fill="#ffb4ae">8</text>
+        <rect x="232" y="68" width="24" height="12" class="dust on"/><text x="244" y="60" text-anchor="middle" fill="#ffb4ae">7</text>
+        <rect x="258" y="68" width="24" height="12" class="dust on"/><text x="270" y="60" text-anchor="middle" fill="#ffb4ae">6</text>
+        <rect x="284" y="68" width="24" height="12" class="dust on"/><text x="296" y="60" text-anchor="middle" fill="#ffb4ae">5</text>
+        <rect x="310" y="68" width="24" height="12" class="dust on"/><text x="322" y="60" text-anchor="middle" fill="#ffb4ae">4</text>
+        <rect x="336" y="68" width="24" height="12" class="dust on"/><text x="348" y="60" text-anchor="middle" fill="#ffb4ae">3</text>
+        <rect x="362" y="68" width="24" height="12" class="dust on"/><text x="374" y="60" text-anchor="middle" fill="#ffb4ae">2</text>
+        <rect x="388" y="68" width="24" height="12" class="dust on"/><text x="400" y="60" text-anchor="middle" fill="#ffb4ae">1</text>
+        <rect x="414" y="68" width="24" height="12" class="dust"/><text x="426" y="60" text-anchor="middle" fill="#9aa3af">0 ✂</text>
+      </g>
+    </svg>
+    <p style="font-size:13.5px">源 6 邻的粉直接拿 15 级，之后<b>每格 −1</b>，剩 1 级仍亮、降到 0 断路（第 16 格灭）。
+    亮灭只是开关量——但衰减决定你能铺多远：单源最远 <b>15 格</b>，再远要中继（火把重新播 15 级）。</p>
+  </div>
+  <div class="card">
+    <h3>爬坡规则</h3>
+    <svg viewBox="0 0 300 130">
+      <rect x="20" y="96" width="70" height="24" class="stone"/>
+      <rect x="90" y="72" width="70" height="48" class="stone"/>
+      <rect x="160" y="48" width="70" height="72" class="stone"/>
+      <rect x="230" y="24" width="50" height="96" class="stone"/>
+      <rect x="30" y="88" width="50" height="10" class="dust on"/>
+      <rect x="100" y="64" width="50" height="10" class="dust on"/>
+      <rect x="170" y="40" width="50" height="10" class="dust on"/>
+      <rect x="240" y="16" width="30" height="10" class="dust"/>
+      <text x="255" y="8" class="lbl red" style="font-size:11px">✘ 斜下被挡</text>
+      <path class="arrow" d="M60,70 C80,50 100,52 118,52" />
+      <text x="36" y="130" class="lbl green" style="font-size:11px">✔ 斜上随便爬（坐实心即可）</text>
+    </svg>
+    <p style="font-size:13.5px">粉可以<b>斜上一格</b>爬台阶（只要坐在实心方块上）；<b>斜下</b>则要求邻列上方那格不是实心（否则算被挡）——和原版上下台阶走线一致。粉<b>不能垂直叠放</b>，竖直传信号只能靠火把塔（§7）。</p>
+  </div>
+</div>
+
+<h2><span class="no">4</span>充能方块：谁充能、谁能被充、充了有啥用</h2>
+<div class="grid g3">
+  <div class="card">
+    <h3>红石粉（亮）充能</h3>
+    <svg viewBox="0 0 200 120">
+      <rect x="0" y="94" width="200" height="26" class="ground"/>
+      <rect x="68" y="60" width="64" height="34" class="stone"/>
+      <rect x="20" y="80" width="40" height="12" class="dust on"/>
+      <rect x="140" y="80" width="40" height="12" class="dust on"/>
+      <rect x="72" y="80" width="56" height="12" class="dust on"/>
+      <path class="arrow" d="M50,74 L84,66"/><path class="arrow" d="M150,74 L118,66"/><path class="arrow" d="M100,78 L100,70"/>
+    </svg>
+    <p style="font-size:13px">脚下 + 水平四邻的实心方块。<b>不含头顶</b>。</p>
+  </div>
+  <div class="card">
+    <h3>亮火把充能</h3>
+    <svg viewBox="0 0 200 120">
+      <rect x="0" y="94" width="200" height="26" class="ground"/>
+      <rect x="70" y="60" width="60" height="34" class="stone" id="sb"/>
+      <rect x="86" y="34" width="8" height="26" class="stick"/>
+      <rect x="78" y="18" width="24" height="18" rx="6" class="flame on"/>
+      <path class="arrow" d="M96,30 L96,52"/>
+      <text x="132" y="34" class="lbl green" style="font-size:12px">仅正上方</text>
+    </svg>
+    <p style="font-size:13px">亮火把强充能<b>正上方</b>那块方块（火把塔的根基）。挂靠方块<b>不</b>充能——否则自己熄灭自己，永远振荡。</p>
+  </div>
+  <div class="card">
+    <h3>被充能方块的唯一用途</h3>
+    <svg viewBox="0 0 200 120">
+      <rect x="0" y="94" width="200" height="26" class="ground"/>
+      <rect x="70" y="60" width="60" height="34" class="stone"/>
+      <path class="arrow" d="M100,54 L100,80" style="stroke:#ff4438"/>
+      <rect x="86" y="30" width="8" height="26" class="stick"/>
+      <rect x="78" y="12" width="24" height="18" rx="6" class="flame"/>
+      <text x="140" y="30" class="lbl red" style="font-size:12px">充能 → 熄灭</text>
+    </svg>
+    <p style="font-size:13px"><b style="color:#ffb4ae">只影响贴附其上的火把</b>（反相）。⚠️ 与原版差异：被充能方块<b>不</b>点亮邻格红石粉——方块在本作里是「火把的触发器」，不是导线。</p>
+  </div>
+</div>
+
+<h2><span class="no">5</span>反相器交互演示（拉杆 → 粉 → 石块 → 火把 → 灯）</h2>
+<div class="panel">
+  <svg viewBox="0 0 640 190" id="inv" class="circuit">
+    <rect x="0" y="150" width="640" height="40" class="ground"/>
+    <!-- 拉杆（贴地） -->
+    <g id="inv-lever">
+      <rect x="58" y="136" width="14" height="14" class="stick"/>
+      <rect x="53" y="106" width="10" height="32" rx="4" class="stick lever-arm" style="fill:#c2413a"/>
+    </g>
+    <text x="65" y="98" text-anchor="middle" class="lbl">拉杆</text>
+    <!-- 粉 -->
+    <rect x="90" y="162" width="120" height="14" rx="4" class="dust"/>
+    <!-- 石块 B1 -->
+    <rect x="216" y="112" width="70" height="64" class="stone"/>
+    <text x="251" y="105" text-anchor="middle" class="lbl dim" style="font-size:12px">B1（粉充能脚下）</text>
+    <!-- 火把 T1 贴 B1 左面（默认亮：B1 未充能） -->
+    <g>
+      <rect x="196" y="120" width="9" height="34" class="stick"/>
+      <rect x="188" y="102" width="26" height="20" rx="6" class="flame on"/>
+    </g>
+    <text x="201" y="94" text-anchor="middle" class="lbl amber" style="font-size:12px">T1 反相</text>
+    <!-- 灯（T1 的 6 邻；默认跟着 T1 亮） -->
+    <rect x="120" y="112" width="56" height="38" class="lampb on"/>
+    <text x="148" y="104" text-anchor="middle" class="lbl dim" style="font-size:12px">灯（T1 的 6 邻）</text>
+  </svg>
+  <p style="text-align:center;margin:10px 0 0">
+    <button class="btn" onclick="toggleCircuit('inv', this)">🎚️ 扳拉杆（当前：关）</button>
+  </p>
+  <p class="cap">拉杆开 → 粉亮 → 充能脚下 B1 → 贴在 B1 侧面的火把 T1 <b>熄灭</b>（反相）→ 灯灭。再扳回来全链复原。留意灯与拉杆<b>永远反相</b>——要同相就再串一只火把。</p>
+</div>
+
+<h2><span class="no">6</span>脉冲家族与时钟</h2>
+<div class="grid g2">
+  <div class="card">
+    <h3>边沿语义一览</h3>
+    <svg viewBox="0 0 340 150">
+      <text x="10" y="20" class="lbl amber">门</text>
+      <path class="arrow" d="M60,40 L120,40 L120,20 L300,20" style="stroke:#86efac"/>
+      <path class="arrow" d="M300,60 L120,60 L120,80 L60,80" style="stroke:#f0abfc"/>
+      <text x="130" y="18" class="lbl green" style="font-size:12px">上升沿 → 开</text>
+      <text x="130" y="76" class="lbl" style="fill:#f0abfc;font-size:12px">下降沿 → 关（右键手动不受影响）</text>
+      <text x="10" y="106" class="lbl amber">TNT</text>
+      <text x="60" y="106" class="lbl" style="font-size:12px">放置=惰性；上升沿点燃 → 引信 2.5s → 半径 3 爆炸</text>
+      <text x="10" y="132" class="lbl amber">活塞</text>
+      <text x="60" y="132" class="lbl" style="font-size:12px">上升沿伸出 / 下降沿收回，走 0.15s 延迟队列（原版 3 刻）</text>
+    </svg>
+    <p style="font-size:13.5px">「边沿」= 电平<b>变化的那一瞬间</b>。门/TNT/活塞各自记着上一帧的电平，只有「没电→有电」（上升沿）或反之才动作——所以持续供电不会反复触发。</p>
+  </div>
+  <div class="card">
+    <h3>时钟：粉绕回挂靠方块</h3>
+    <svg viewBox="0 0 300 150" class="clock-demo">
+      <rect x="0" y="120" width="300" height="30" class="ground"/>
+      <rect x="120" y="70" width="60" height="50" class="stone"/>
+      <g class="clock1"><rect x="96" y="80" width="9" height="36" class="stick"/><rect x="86" y="60" width="28" height="20" rx="6" class="flame"/></g>
+      <g class="clock2"><rect x="195" y="80" width="9" height="36" class="stick"/><rect x="185" y="60" width="28" height="20" rx="6" class="flame"/></g>
+      <rect x="20" y="88" width="46" height="30" class="lampb clock2-lamp"/>
+      <text x="150" y="46" text-anchor="middle" class="lbl dim" style="font-size:12px">粉从火把输出绕回挂靠方块 → 你充能我、我熄灭你</text>
+    </svg>
+    <p style="font-size:13.5px">火把翻转有 <code>RTORCH_DELAY=0.1s</code> 节拍：两只火把互相反相就永远追不完 → <b>闪烁时钟</b>（上图放慢 10 倍）。驱动闪烁灯、活塞节奏机、观察者心跳都可以。</p>
+  </div>
+</div>
+
+<h2><span class="no">7</span>火把塔：竖直传信号（可点击演示）</h2>
+<div class="panel">
+  <p>粉不能垂直叠放，竖直走线全靠「<b>石块 + 侧面火把</b>」交替叠层：<b>每级反相一次</b>，亮火把给正上方石块强充能、石块再翻转上一级贴附的火把。</p>
+  <svg viewBox="0 0 560 260" id="tower" class="circuit">
+    <rect x="0" y="220" width="560" height="40" class="ground"/>
+    <!-- 拉杆 -->
+    <g id="tower-lever">
+      <rect x="38" y="192" width="14" height="14" class="stick"/>
+      <rect x="33" y="160" width="10" height="32" rx="4" class="stick lever-arm" style="fill:#c2413a"/>
+    </g>
+    <text x="45" y="152" text-anchor="middle" class="lbl">拉杆</text>
+    <!-- D0 -->
+    <rect x="70" y="206" width="70" height="14" rx="4" class="dust"/>
+    <text x="105" y="198" text-anchor="middle" class="lbl dim" style="font-size:11px">D0 粉</text>
+    <!-- B1 -->
+    <rect x="150" y="172" width="64" height="48" class="stone"/>
+    <text x="182" y="200" text-anchor="middle" class="lbl dim" style="font-size:12px">B1</text>
+    <!-- T1 贴 B1 左面（默认亮） -->
+    <g class="s1"><rect x="128" y="180" width="9" height="36" class="stick"/><rect x="118" y="160" width="28" height="20" rx="6" class="flame on"/></g>
+    <text x="132" y="152" text-anchor="middle" class="lbl amber" style="font-size:12px">T1</text>
+    <!-- S1 正上方 -->
+    <rect x="110" y="112" width="64" height="48" class="stone"/>
+    <text x="142" y="140" text-anchor="middle" class="lbl dim" style="font-size:12px">S1</text>
+    <!-- T2 贴 S1 左面（默认灭：S1 被 T1 强充能） -->
+    <g class="s2"><rect x="88" y="120" width="9" height="36" class="stick"/><rect x="78" y="100" width="28" height="20" rx="6" class="flame"/></g>
+    <text x="92" y="92" text-anchor="middle" class="lbl amber" style="font-size:12px">T2</text>
+    <!-- 灯 -->
+    <rect class="s3 lampb" x="16" y="112" width="50" height="40"/>
+    <text x="41" y="104" text-anchor="middle" class="lbl dim" style="font-size:12px">灯</text>
+    <!-- D1 差异锚点（永远灭） -->
+    <rect x="118" y="100" width="48" height="12" class="dust dead"/>
+    <text x="174" y="94" class="lbl red" style="font-size:12px">D1：S1 顶面的粉——本作永不亮（与原版差异，见 §8）</text>
+    <!-- 传播级号 -->
+    <text x="252" y="192" class="lbl green" style="font-size:12px">第0级：D0 亮 → 充能 B1</text>
+    <text x="252" y="152" class="lbl amber" style="font-size:12px">第1级：T1 反相灭 → S1 解除充能</text>
+    <text x="252" y="112" class="lbl green" style="font-size:12px">第2级：T2 反相亮 → 灯亮（与拉杆同相）</text>
+  </svg>
+  <p style="text-align:center;margin:10px 0 0">
+    <button class="btn" onclick="toggleCircuit('tower', this)">🎚️ 扳拉杆（当前：关）</button>
+  </p>
+  <p class="cap">点拉杆观察<b>逐级传播</b>（动画按 0.15s/级放慢）：拉杆开 → D0 亮 → B1 充能 → T1 灭 → S1 解除充能 → T2 亮 → 灯亮。每加一级就多一次反相；想同相就加偶数级。</p>
+</div>
+
+<h2><span class="no">8</span>速查表</h2>
+<h3>谁给谁充能（充能 = 让方块能翻转贴附火把）</h3>
+<table>
+  <tr><th>充能者</th><th>能充能的方块</th><th>不能</th></tr>
+  <tr><td>拉杆 / 按钮 / 压力板</td><td><b>自己贴着的那一块</b></td><td>旁边的其他石头（插在火把/石头旁边 ≠ 充能它）</td></tr>
+  <tr><td>亮红石粉</td><td>脚下 + 水平四邻</td><td>头顶；也别指望它点亮邻粉</td></tr>
+  <tr><td>亮红石火把</td><td><b>正上方</b>那块</td><td>自己的挂靠方块（防自振荡）</td></tr>
+</table>
+<h3>边沿与脉冲参数（以 <code>js/config.js</code> 为准）</h3>
+<table>
+  <tr><th>器件</th><th>行为</th><th>时序</th></tr>
+  <tr><td>门</td><td>上升沿开 / 下降沿关（右键手动不受影响）</td><td>即时</td></tr>
+  <tr><td>TNT</td><td>放置惰性；上升沿点燃</td><td>引信 2.5s</td></tr>
+  <tr><td>活塞 / 粘性活塞</td><td>上升沿伸出（≤12 格）/ 下降沿收回</td><td><code>PISTON_DELAY=0.15s</code> 队列</td></tr>
+  <tr><td>按钮</td><td>按下供电、自动弹出</td><td><code>BUTTON_PULSE_SEC=1.0s</code></td></tr>
+  <tr><td>观察者</td><td>正前方变化 → 背面脉冲</td><td><code>OBSERVER_PULSE_SEC=0.2s</code></td></tr>
+  <tr><td>红石火把</td><td>反相翻转</td><td><code>RTORCH_DELAY=0.1s</code>（时钟节拍）</td></tr>
+  <tr><td>离合器（红石×动力）</td><td>充能=断开传动，断电=接合</td><td>电平回写变体</td></tr>
+  <tr><td>滑轮（红石×电梯）</td><td>充能=卷绳上收，断电=放绳下行</td><td>连续巡航 1.5 格/s</td></tr>
+  <tr><td>答题机 / 星辉门</td><td>答对=永久信号源</td><td>常供能</td></tr>
+</table>
+<div class="note warn">
+<b>与原版的已知差异（别按原版直觉搭）：</b>
+① 被充能方块<b>不</b>点亮邻格红石粉——充能方块唯一作用是翻转贴附火把；
+② 火把自己挂靠的方块永不被自己充能（防自振荡）；
+③ 观察者脉冲 0.2s（原版 0.1s，放宽更顺手）；
+④ 强充能只有「火把正上方」一种。
+</div>
+
+<div class="foot">
+来源：<code>js/redstone.js</code>（updateRedstoneNetwork / updateRedstoneTick / activeSources / poweredBlocks / isCellActive）、
+<code>js/piston.js</code>（0.15s 动作队列）、<code>js/config.js</code>（RS_MAX_STRENGTH=15 · RTORCH_DELAY=0.1 · BUTTON_PULSE_SEC=1.0 · PISTON_DELAY=0.15 · OBSERVER_PULSE_SEC=0.2）。
+行为已由无头自动化测试钉住：<code>tests/gamelogic/redstone-cross.test.mjs</code>（13 用例，含火把塔与差异锚点）。
+本文档为纯静态单文件，双击即可打开。
+</div>
+</div>
+
+<script>
+  // 反相器 / 火把塔：扳拉杆。transition-delay 让塔逐级点亮/熄灭（CSS 里按 .s1/.s2/.s3 分级）
+  function toggleCircuit(id, btn){
+    const el = document.getElementById(id);
+    el.classList.toggle('on');
+    btn.textContent = btn.textContent.replace(/当前：[开关]/, '当前：' + (el.classList.contains('on') ? '开' : '关'));
+  }
+  // 给分级元素注入传播延迟（开/关同序：粉最先、每级火把依次 +0.15s，物理上第一级永远先翻转）
+  document.querySelectorAll('#tower .dust:not(.dead)').forEach(e=>e.style.transitionDelay='0s');
+  document.querySelectorAll('#tower .s1 .flame').forEach(e=>e.style.transitionDelay='.15s');
+  document.querySelectorAll('#tower .s2 .flame').forEach(e=>e.style.transitionDelay='.3s');
+  document.querySelectorAll('#tower .s3').forEach(e=>e.style.transitionDelay='.45s');
+  // 按钮脉冲：亮 1 秒自动灭（真实 BUTTON_PULSE_SEC）
+  let btnTimer = null;
+  function pressButtonDemo(){
+    const cap = document.getElementById('btn-cap'), grp = document.getElementById('btn-lamp-group'), txt = document.getElementById('btn-txt');
+    cap.style.transform = 'translateY(6px)';
+    grp.setAttribute('opacity','1'); txt.textContent = '供电中…';
+    clearTimeout(btnTimer);
+    btnTimer = setTimeout(()=>{
+      cap.style.transform = 'translateY(0)';
+      grp.setAttribute('opacity','0'); txt.textContent = '按我 → 供电 1 秒';
+    }, 1000);
+  }
+  // 观察者脉冲：正前面块变色，背面 0.2s 脉冲（真实 OBSERVER_PULSE_SEC）
+  let obsTimer = null;
+  function pokeObserver(){
+    const front = document.getElementById('obs-front'), back = document.getElementById('obs-back');
+    front.style.fill = front.style.fill === 'lightsteelblue' ? '#8b8f94' : 'lightsteelblue';
+    back.classList.add('on');
+    clearTimeout(obsTimer);
+    obsTimer = setTimeout(()=>back.classList.remove('on'), 200);
+  }
+</script>
+</body>
+</html>

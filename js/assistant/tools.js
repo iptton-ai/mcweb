@@ -9,7 +9,7 @@
 // 建造类工具经 buildQueue 渐进放置（可调速/暂停，便于录制延时摄影），
 // 工具会等施工任务全部应用完才返回结果，LLM 的「放置→校验」流程不受影响。
 
-import { BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, doorId, flagId, HotbarBlocks, keypadId, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { BELT_BASE, BELT_ITEM_ID, BlockInfo, BlockTypes, BUILD_SPEED_LEVELS, CHUNK_SIZE, CLUTCH_BASE, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_ITEM_ID, doorId, flagId, HotbarBlocks, keypadId, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_ITEM_ID, PLATFORM_BASE, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { normalizeBank, sanitizeManifest } from '../eduKeypad.js'; // 题库归一化（纯函数，gen_level_draft 抽题用）
 import { KNOWLEDGE_SECTIONS, searchKnowledge } from './knowledge.js'; // 精简知识库检索
 import { isCreative, isNight, state } from '../state.js';
@@ -250,13 +250,20 @@ async function toolRunBuildScript({ code } = {}) {
     const ops = [];
     let opsCount = 0;
     const OPS_LIMIT = 40000;
-    // 动力组不在 BlockTypes 里（状态编码方块，同红石/活塞组惯例），
-    // 暴露基址 + 各向变体：轴类 +axis(0..2)，机械锯 +facing(0..5)
+    // 有状态方块组不在 BlockTypes 里（状态编码进方块 ID，同红石/活塞组惯例）：
+    // 暴露默认物品（基址变体）+ 基址，变体按知识库 ids 节公式拼写——
+    // 轴类 +axis(0..2)、锯/投料器/活塞组 +facing(0..5)、带 +dir(0..3)、离合器 +axis*2+断开位、
+    // 滑轮 +up*2+powered（PULLEY=垂挂·放绳，顶举=PULLEY_BASE+2）；施工完成自动重算红石+动力
     const BT = {
         ...BlockTypes,
         SHAFT: SHAFT_ITEM_ID, COGWHEEL: COGWHEEL_ITEM_ID, WATERWHEEL: WATERWHEEL_ITEM_ID,
         CRUSHER: CRUSHER_ITEM_ID, SAW: SAW_ITEM_ID,
+        PISTON: PISTON_ITEM_ID, STICKY_PISTON: STICKY_PISTON_ITEM_ID, OBSERVER: OBSERVER_ITEM_ID,
+        BELT: BELT_ITEM_ID, DEPLOYER: DEPLOYER_ITEM_ID, CLUTCH: CLUTCH_ITEM_ID,
+        PULLEY: PULLEY_ITEM_ID, PLATFORM: PLATFORM_ITEM_ID,
         SHAFT_BASE, COGWHEEL_BASE, WATERWHEEL_BASE, CRUSHER_BASE, SAW_BASE,
+        PISTON_BASE, STICKY_PISTON_BASE, OBSERVER_BASE,
+        BELT_BASE, DEPLOYER_BASE, CLUTCH_BASE, PULLEY_BASE, PLATFORM_BASE,
     };
 
     function guard() {
@@ -353,7 +360,7 @@ function toolSearchDocs({ query, id } = {}) {
         if (!sec) {
             return `错误：没有 id 为「${id}」的知识节。可用：${KNOWLEDGE_SECTIONS.map((s) => s.id).join('、')}`;
         }
-        return JSON.stringify({ 命中: [{ id: sec.id, 标题: sec.title, 内容: sec.text }] });
+        return JSON.stringify({ 命中: [{ id: sec.id, 标题: sec.title, 内容: sec.text, ...(sec.sources ? { 来源: sec.sources } : {}) }] });
     }
     if (!query || !String(query).trim()) return '错误：需要 query（空格分隔的关键词）或 id（精确读某节）';
     const hits = searchKnowledge(query, 3);
@@ -365,7 +372,7 @@ function toolSearchDocs({ query, id } = {}) {
         });
     }
     return JSON.stringify({
-        命中: hits.map((s) => ({ id: s.id, 标题: s.title, 内容: s.text })),
+        命中: hits.map((s) => ({ id: s.id, 标题: s.title, 内容: s.text, ...(s.sources ? { 来源: s.sources } : {}) })),
         其余章节: KNOWLEDGE_SECTIONS.filter((s) => !hits.includes(s)).map((s) => `${s.id}｜${s.title}`),
         提示: '需要更多细节可用 id 参数重读某一节',
     });
@@ -906,6 +913,26 @@ export function getToolSchemas() {
         }),
         fn('reload_game', '保存世界快照并热重载页面，使源码修改生效；重载后世界与玩家状态自动恢复、本会话自动继续。', { type: 'object', properties: {} }),
         fn('get_runtime_errors', '读取页面自加载以来的运行时错误（window.onerror/console.error）。热重载后用来检查修改有没有引入错误。', { type: 'object', properties: {} }),
+        fn('plan_conditions', '【复杂建造/改码任务可选】开工前登记 1~6 条可核验条件（每条 text ≤120 字，都要能被 scan_terrain/read_blocks/read_game_file/get_runtime_errors 等工具输出证实或证伪，如「地基区域已清平」「修改仅触及 js/door.js」），让后续证据校验有判据：主要取证完成后自动判定各条件支持度，未达标会提示用哪个工具补证。简单问题不要用。', {
+            type: 'object',
+            properties: {
+                conditions: {
+                    type: 'array',
+                    description: '可核验条件列表，1~6 条',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string', description: '条件短标识，如 flat' },
+                            text: { type: 'string', description: '条件原文，≤120 字' },
+                        },
+                        required: ['id', 'text'],
+                    },
+                    minItems: 1,
+                    maxItems: 6,
+                },
+            },
+            required: ['conditions'],
+        }),
     ];
 }
 
@@ -934,6 +961,19 @@ export async function executeTool(name, args) {
             case 'write_game_file': result = await toolWriteFile(args); break;
             case 'reload_game': result = toolReloadGame(); break;
             case 'get_runtime_errors': result = toolRuntimeErrors(); break;
+            case 'plan_conditions': {
+                // E3 证据回路：条件本体由 agent.js 从 tc.arguments 拦截存入本轮上下文，
+                // 这里只回执确认/纠错文本；闯关中不激活（苏格拉底红线：闯关只服务解题）
+                if (state.levelRun) {
+                    return { result: '闯关中不进行条件登记与证据校验——请先退出关卡再建造/改码', isError: true };
+                }
+                const list = Array.isArray(args.conditions) ? args.conditions : [];
+                if (!list.length || list.length > 6) {
+                    return { result: `错误：conditions 需为 1~6 条 {id, text}（text ≤120 字），收到 ${list.length} 条`, isError: true };
+                }
+                result = `已登记 ${list.length} 条可核验条件（${list.map((c) => (c && c.id) || '?').join('、')}）：完成主要取证后自动做证据校验，未达标的条件会提示补证`;
+                break;
+            }
             default: return { result: `未知工具：${name}`, isError: true };
         }
         return { result: truncateStr(result, 30000), isError: false };

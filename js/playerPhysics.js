@@ -98,7 +98,7 @@ export function updatePlayerPhysics(dt) {
     if (!p.flying) {
         const minX = newX - halfW;
         const maxX = newX + halfW;
-        for (let y = Math.floor(p.y); y < Math.floor(p.y + PLAYER_HEIGHT); y++) {
+        for (let y = Math.floor(p.y); y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
             for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
                 const bx = p.vx > 0 ? Math.floor(maxX) : Math.floor(minX);
                 if (bx < 0 || bx >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH)
@@ -120,43 +120,47 @@ export function updatePlayerPhysics(dt) {
 
     // Y轴碰撞
     if (!p.flying) {
-        const minY = newY;
-        const maxY = newY + PLAYER_HEIGHT;
+        // 按移动方向扫过脚部/头部经过的每一层，而不只检查终点层。
+        // 每层先检查整个脚印，再继续下一层：高速下落/上升时，靠近的薄平台/天花板
+        // 即使只覆盖脚印的一侧，也应先于另一侧更远的方块发生碰撞。
+        const goingUp = p.vy > 0;
+        const firstY = Math.floor(p.y + (goingUp ? PLAYER_HEIGHT : 0));
+        const lastY = Math.floor(newY + (goingUp ? PLAYER_HEIGHT : 0));
+        const stepY = goingUp ? 1 : -1;
         let hitGround = false;
-        let bounced = false; // 粘液块弹跳（电梯 T1）：本帧已反弹，跳过落地归零与 newY 覆盖
-        for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
-            for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
-                const by = p.vy > 0 ? Math.floor(maxY) : Math.floor(minY);
-                if (x < 0 || x >= WORLD_WIDTH || by < 0 || by >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH)
-                    continue;
-                const block = getBlock(x, by, z);
-                if (isSolid(block)) {
-                    if (p.vy > 0) {
-                        p.y = by - PLAYER_HEIGHT - 0.001;
-                    } else if (block === BlockTypes.SLIME && p.vy < -SLIME_BOUNCE_MIN) {
-                        // 落在粘液块上：反弹保留大部分垂直速度（电梯 T1，对齐原版）。
-                        // 不置 hitGround → onGround 保持 false → 摸底这一次摔落结算不触发；
-                        // 同时清 fallStartY（对齐原版 fallDistance 重置，蓝图代码片段的补全）：
-                        // 否则衰减静止后的最终落地会按整段初始落差结算扣血，粘液免摔伤失效，
-                        // 且后续弹跳后落在普通方块应按「弹后高度」重新起算
-                        p.y = by + 1 + 0.001;
-                        p.vy = -p.vy * SLIME_BOUNCE_KEEP;
-                        p.fallStartY = null;
-                        bounced = true;
+        let collided = false;
+        for (let by = firstY; goingUp ? by <= lastY : by >= lastY; by += stepY) {
+            if (by < 0 || by >= WORLD_HEIGHT) continue;
+            for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
+                for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
+                    if (x < 0 || x >= WORLD_WIDTH || z < 0 || z >= WORLD_DEPTH) continue;
+                    const block = getBlock(x, by, z);
+                    if (isSolid(block)) {
+                        collided = true;
+                        if (goingUp) {
+                            p.y = by - PLAYER_HEIGHT - 0.001;
+                            p.vy = 0;
+                        } else if (block === BlockTypes.SLIME && p.vy < -SLIME_BOUNCE_MIN) {
+                            // 落在粘液块上：反弹保留大部分垂直速度（电梯 T1，对齐原版）。
+                            // 不置 hitGround → onGround 保持 false → 摸底这一次摔落结算不触发；
+                            // 同时清 fallStartY，后续弹跳再落在普通方块按「弹后高度」起算。
+                            p.y = by + 1 + 0.001;
+                            p.vy = -p.vy * SLIME_BOUNCE_KEEP;
+                            p.fallStartY = null;
+                        } else {
+                            p.y = by + 1 + 0.001;
+                            p.vy = 0;
+                            hitGround = true;
+                        }
                         break;
-                    } else {
-                        p.y = by + 1 + 0.001;
-                        hitGround = true;
                     }
-                    p.vy = 0;
-                    break;
                 }
+                if (collided) break;
             }
-            if (bounced || p.vy === 0) break;
+            if (collided) break;
         }
-        if (!bounced && p.vy !== 0) p.y = newY;
-        p.onGround = p.vy === 0 && hitGround || p.vy === 0 && !p.flying && Math.abs(p.vy) < 0.01;
-        if (p.vy === 0 && !hitGround) p.onGround = false;
+        if (!collided) p.y = newY;
+        p.onGround = hitGround;
     } else {
         p.y = newY;
     }
@@ -165,7 +169,7 @@ export function updatePlayerPhysics(dt) {
     if (!p.flying) {
         const minZ = newZ - halfW;
         const maxZ = newZ + halfW;
-        for (let y = Math.floor(p.y); y < Math.floor(p.y + PLAYER_HEIGHT); y++) {
+        for (let y = Math.floor(p.y); y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
             for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
                 const bz = p.vz > 0 ? Math.floor(maxZ) : Math.floor(minZ);
                 if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH)

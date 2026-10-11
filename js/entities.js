@@ -22,6 +22,16 @@ import { isLevelRunActive } from './levelRun.js'; // 闯关模式：刷怪 gate�
 // ==================== 玩家模型（第三人称显示） ====================
 export let playerMesh = null;
 
+function meleePathClear(e, p) {
+    const dx = p.x - e.x, dy = p.y - e.y, dz = p.z - e.z;
+    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy, dz) * 20));
+    for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        if (isSolid(getBlock(Math.floor(e.x + dx * t), Math.floor(e.y + 1 + dy * t), Math.floor(e.z + dz * t)))) return false;
+    }
+    return true;
+}
+
 export function createPlayerMesh() {
     const group = new THREE.Group();
     const skin = new THREE.MeshLambertMaterial({ color: 0xd4a373 });
@@ -430,9 +440,9 @@ export function updateEnemies(dt) {
             if (e.hostile) {
                 // 敌对：追踪玩家（僵尸贴脸攻击，苦力怕贴脸引信后站定）
                 const chasing = e.type === 'creeper' && e.fuse > 0 ? 0 : 1;
-                stepX = dx / dist * def.speed * chasing;
-                stepZ = dz / dist * def.speed * chasing;
-                if (e.type === 'zombie' && dist < ENEMY_ATTACK_RANGE && Math.abs(p.y - e.y) < 2) {
+                stepX = dist > 0 ? dx / dist * def.speed * chasing : 0;
+                stepZ = dist > 0 ? dz / dist * def.speed * chasing : 0;
+                if (e.type === 'zombie' && dist < ENEMY_ATTACK_RANGE && Math.abs(p.y - e.y) < 2 && meleePathClear(e, p)) {
                     e.attackTimer -= dt;
                     if (e.attackTimer <= 0) {
                         e.attackTimer = 1.0;

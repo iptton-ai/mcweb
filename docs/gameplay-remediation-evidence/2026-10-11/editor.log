@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: 组件注册表：id 唯一、尺寸为正、anchor 在界内、分类清单覆盖
+ok 1 - 组件注册表：id 唯一、尺寸为正、anchor 在界内、分类清单覆盖
+  ---
+  duration_ms: 0.529042
+  type: 'test'
+  ...
+# Subtest: 组件几何展开：全部格子界内、无重复、ID 合法；未知组件报错
+ok 2 - 组件几何展开：全部格子界内、无重复、ID 合法；未知组件报错
+  ---
+  duration_ms: 1.074041
+  type: 'test'
+  ...
+# Subtest: 答题门（贴门锁）：锁定答题机与关门下半 6 邻；答题机为锁定变体
+ok 3 - 答题门（贴门锁）：锁定答题机与关门下半 6 邻；答题机为锁定变体
+  ---
+  duration_ms: 0.128708
+  type: 'test'
+  ...
+# Subtest: 远程答题门：粉线源到尾 ≤13 级且尾与门 6 邻
+ok 4 - 远程答题门：粉线源到尾 ≤13 级且尾与门 6 邻
+  ---
+  duration_ms: 0.407667
+  type: 'test'
+  ...
+# Subtest: 答题滑轮电梯：粉线到滑轮 6 邻、井道畅通、机头水车水齐全
+ok 5 - 答题滑轮电梯：粉线到滑轮 6 邻、井道畅通、机头水车水齐全
+  ---
+  duration_ms: 0.299458
+  type: 'test'
+  ...
+# Subtest: 星辉门/旗标/弹跳垫：变体正确
+ok 6 - 星辉门/旗标/弹跳垫：变体正确
+  ---
+  duration_ms: 0.063541
+  type: 'test'
+  ...
+# Subtest: prefabOrigin：grounded 嵌地 / props 立于命中面外
+ok 7 - prefabOrigin：grounded 嵌地 / props 立于命中面外
+  ---
+  duration_ms: 0.312083
+  type: 'test'
+  ...
+# Subtest: 模板存取回环：save/list/get/delete（Node 走会话内存兜底）
+ok 8 - 模板存取回环：save/list/get/delete（Node 走会话内存兜底）
+  ---
+  duration_ms: 0.45
+  type: 'test'
+  ...
+# Subtest: buildLevelCard：草稿容忍星辉门，正式导出仍拦截（契约回归）
+ok 9 - buildLevelCard：草稿容忍星辉门，正式导出仍拦截（契约回归）
+  ---
+  duration_ms: 41.637042
+  type: 'test'
+  ...
+# Subtest: buildLevelCard 草稿：无锚点时报错不抛异常
+ok 10 - buildLevelCard 草稿：无锚点时报错不抛异常
+  ---
+  duration_ms: 6.359875
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57.557042

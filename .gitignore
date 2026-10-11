@@ -25,3 +25,8 @@ AGENTS.md
 # 本地 AI 助手配置目录（不入库）
 .agents/
 .claude/
+# assistant-sim 无头模拟环境的 trace 产物不入库
+tests/assistant-sim/out/
+
+# macOS 桌面杂物不入库
+.DS_Store

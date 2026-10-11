@@ -90,6 +90,7 @@ export function spawnItemDrop(x, y, z, itemId, count = 1, opts = {}) {
         vx: opts.vx || 0,
         vz: opts.vz || 0,
         pickupDelay: opts.pickupDelay || 0,
+        toolWear: opts.toolWear || 0,
     });
 }
 
@@ -200,6 +201,10 @@ export function updateItemDrops(dt) {
         const thrown = d.pickupDelay > 0; // 玩家丢弃的实体：冷却内不可拾取，且永不磁吸（捡回需走近 1.5 格）
         if (!p.dead && d.age >= d.pickupDelay && dist < ITEM_PICKUP_DIST) {
             if (!isCreative()) {
+                // 计数背包仅记录当前一把工具磨损；合并时保留较大磨损，避免拾取修复工具。
+                if (BlockInfo[d.itemId]?.maxDurability) {
+                    p.toolWear[d.itemId] = Math.max(p.inventory[d.itemId] ? (p.toolWear[d.itemId] || 0) : 0, d.toolWear || 0);
+                }
                 state.player.inventory[d.itemId] = (state.player.inventory[d.itemId] || 0) + d.count;
                 updateHotbar();
             }

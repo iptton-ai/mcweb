@@ -435,6 +435,7 @@ export async function interactStarlightAt(x, y, z) {
 
 // ---------- 键盘捕获（window 捕获阶段，先于 input.js 的冒泡监听；同 eduKeypad） ----------
 window.addEventListener('keydown', (e) => {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     if (!session) return;
     // 助手聊天框聚焦/非游戏中：收起不拦截（同 eduKeypad）
     if (state.assistantOpen || getUIState() !== 'playing') { closeStarlightPanel(); return; }

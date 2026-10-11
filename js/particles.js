@@ -34,6 +34,13 @@ export function initParticles() {
     scene.add(particleSystem.points);
 }
 
+// 切换世界或恢复快照时移除旧世界粒子，同时清零绘制范围，避免下一帧残影。
+export function clearParticles() {
+    particleSystem.particles.length = 0;
+    particleSystem.geometry?.setDrawRange(0, 0);
+    if (particleSystem.points) particleSystem.points.visible = false;
+}
+
 export function spawnBreakParticles(bx, by, bz, blockType) {
     const color = new THREE.Color(BlockInfo[blockType]?.color || '#888888');
     const blockColor = color.clone();

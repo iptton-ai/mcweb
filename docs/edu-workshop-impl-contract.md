@@ -210,3 +210,13 @@ W01 模式隔离（挖/放/E 全拒+普通存档回归）/ W02 检查点（死�
 
 - 提交链（照仓库惯例中文提交信息）：c1 基线（Edu M1/M2 存量入库）→ c2 docs（G2 裁决+本契约+org-log）→ c3 feat P0 关卡工坊核心 → c4 feat P1 炫耀回路 → c5 feat P2 拉力回流 → c6 feat P3 AI 三角色 → c7 test run_workshop → c8 docs 归档（plan 勾项/AGENTS.md/org-log G3 记录）。共享文件导致 c3~c6 边界按主题就近切分，org-log 如实记录偏差。
 - 债务登记：助手热重载快照不含 levelRun（恢复后强制 levelRun=null 回关卡列表）；IndexedDB 降级成绩孤儿显示「（卡已不在本机）」。
+
+## 9. 编辑器退出保存失败保护（2026-10-11 补充）
+
+- `saveEditorDraft({silent}) -> Promise<card|null>`：返回值兼容；失败原因保存在当前编辑会话 `draftSaveError`，包括无锚点、缺起终点旗、区域超出 `96×64×96` 与存储错误。成功持久保存清空原因；`saveLevelCard` 会话降级仍返回 `{ok:true,id,sessionOnly:true}`，新增可选 `storageError` 提供配额／权限／不可用的具体原因，保留旧持久备份。
+  持久写入成功须等待 IndexedDB 事务 `complete`；请求 `onsuccess` 后发生事务 `abort/error` 仍按失败降级，不删除持久备份或自动退出。
+- `exitLevelEditor({saveDraft=true,toTitle=true}) -> Promise<boolean>`：末稿持久保存成功自动恢复原世界；生成失败、异常或仅会话降级时保留编辑世界，显示 `#editor-exit-dialog` 并等待明确选择。`true` 表示已退出（保存成功或明确放弃）；`false` 表示继续编辑，调用方不得继续换世界或提前宣称已保存。
+- `resolveEditorExitDecision(discard=false) -> boolean`：仅结算当前待决框；`false` 选择继续，`true` 选择“放弃修改并退出”。没有待决框时返回 false，迟到点击不影响新会话。`saveDraft:false` 为程序化明确放弃通道，仍等待在途存稿；生产 UI 不自动调用该通道。
+- 失败状态下 `state.levelEdit`、编辑方块、题目、规则及最后有效草稿保持；不把编辑世界写入玩家存档。重复退出共享保存／选择过程；继续后解除退出锁，自动保存、手动保存和再次退出均可用。
+- 对话框默认为“继续编辑”，Esc/Q 同效；Tab/Shift+Tab 限在两个按钮内，方向键／Enter 走既有 UI 导航。选择期间不抢指针、不挖掘放置、不打开其它浮层，答题捕获键也不得消费退出确认。
+- 新建空白关无旗时也提供明确放弃出口，避免阻断用户离开；上限与卡片 schema 不改变，不生成伪合法卡或自动裁剪。

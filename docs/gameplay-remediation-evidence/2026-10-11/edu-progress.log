@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: weekKeyOf 基础正确性（ISO 8601：周一为一周之始，含首个周四的周为第 1 周）
+ok 1 - weekKeyOf 基础正确性（ISO 8601：周一为一周之始，含首个周四的周为第 1 周）
+  ---
+  duration_ms: 1.320708
+  type: 'test'
+  ...
+# Subtest: weekKeyOf 同一 ISO 周内任意一天得到同一键（周一/周日夹逼）
+ok 2 - weekKeyOf 同一 ISO 周内任意一天得到同一键（周一/周日夹逼）
+  ---
+  duration_ms: 0.128792
+  type: 'test'
+  ...
+# Subtest: unitSequenceFromItems 保序去重（input/choice 混排 + 空 unit 丢弃）
+ok 3 - unitSequenceFromItems 保序去重（input/choice 混排 + 空 unit 丢弃）
+  ---
+  duration_ms: 0.347583
+  type: 'test'
+  ...
+# Subtest: addWrongQuestion 上限 50 条，滚动淘汰最旧、保留最新
+ok 4 - addWrongQuestion 上限 50 条，滚动淘汰最旧、保留最新
+  ---
+  duration_ms: 1.189083
+  type: 'test'
+  ...
+# Subtest: addWrongQuestion 字段归一化与附加字段（options/hint）
+ok 5 - addWrongQuestion 字段归一化与附加字段（options/hint）
+  ---
+  duration_ms: 0.082625
+  type: 'test'
+  ...
+# Subtest: getWeeklyReport 近 4 周聚合：weekPlays/returnEvents/helpRequests/earlyUnlocks
+ok 6 - getWeeklyReport 近 4 周聚合：weekPlays/returnEvents/helpRequests/earlyUnlocks
+  ---
+  duration_ms: 0.205834
+  type: 'test'
+  ...
+# Subtest: recordLevelPlay/recordReturnEvent 写入当周并可被 getWeeklyReport 读回
+ok 7 - recordLevelPlay/recordReturnEvent 写入当周并可被 getWeeklyReport 读回
+  ---
+  duration_ms: 0.094084
+  type: 'test'
+  ...
+# Subtest: getProgress 默认三上第 1 单元；setProgress 落盘并容错
+ok 8 - getProgress 默认三上第 1 单元；setProgress 落盘并容错
+  ---
+  duration_ms: 0.115625
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8.647041

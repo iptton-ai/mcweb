@@ -66,11 +66,14 @@ export const state = {
     buildPaused: false, // 施工暂停（录制时可暂停调整机位）
     // ---- 关卡工坊（批次 W，2026-09-15，见 js/levelRun.js / docs/edu-workshop-impl-contract.md）----
     levelRun: null, // 闯关运行时（非 null = 闯关中：存档被冻结、挖/放/模式切换等被守卫拦截）
+    temporaryWorldTransition: null, // 临时世界异步入口互斥，防快速多次进入覆盖恢复点。
+    editorExitOpen: false, // 编辑器末稿失败后的退出选择框；等待用户明确选择。
     levelResult: null, // 最近一局结算数据（result 态浮层 #result-panel 的填充源，见 uiModal.js）
     levelExportOpen: false, // K 释放鼠标操作导出关卡卡面板（作者流程最后一步），同拍摄面板的非暂停浮层
     prefabPickerOpen: false, // 🧱 组件库浮层（关卡编辑器/建造模式 B 键）：打开时释放鼠标点选组件
     authorPanelOpen: false, // ✏️ 出题面板（手持出题笔右键答题机）：打开即释放鼠标填表，Q/Esc 关面板
     questionBankOpen: false, // 📝 我的题库平铺录题页（首屏关卡列表/编辑器 HUD 进入）：同非暂停浮层指针策略
+    helpDocOpen: false, // 📖 游戏说明文档浮层（首屏/暂停菜单 📖 说明 进入）：iframe 嵌 docs/ 图解，同非暂停浮层指针策略
 };
 
 export function isCreative() {

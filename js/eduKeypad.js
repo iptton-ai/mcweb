@@ -660,6 +660,7 @@ export async function interactKeypadAt(x, y, z) {
 
 // ---------- 键盘捕获（window 捕获阶段，先于 input.js 的冒泡监听） ----------
 window.addEventListener('keydown', (e) => {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return; // 退出选择优先，不能把确认键当成答题。
     // 作者面板（出题模式）优先处理：返回 true = 该分支已独占处理，跳过下面的玩家答题分支
     if (authorSession && handleAuthorKeydown(e)) return;
     if (!session) return;
@@ -821,6 +822,13 @@ export function seedAuthoredLock(x, y, z, question, verifiedPasses) {
 // getExamIntent：考核锁待导出意图（导出方读走、塞进 buildLevelCard 的 rules 覆盖参数，见链路注释）
 export function getExamIntent() {
     return examIntent;
+}
+
+export function setExamIntent(value) {
+    examIntent = !!value;
+    if (state.levelEdit) {
+        state.levelEdit.rules = { ...state.levelEdit.rules, lockAIHelp: !examIntent };
+    }
 }
 
 // ---------- 作者面板样式与 DOM ----------
@@ -1140,6 +1148,7 @@ export function interactKeypadAuthorAt(x, y, z) {
 // ---------- 表单交互（事件委托，挂在 ensureAuthorPanel） ----------
 
 function onAuthorClick(e) {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     if (!authorSession) return;
     const btn = e.target.closest('[data-act]');
     if (!btn || btn.disabled) return;
@@ -1202,6 +1211,7 @@ function onAuthorClick(e) {
 }
 
 function onAuthorFormField(e) {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     const s = authorSession;
     if (!s || s.mode !== 'edit') return;
     const el = e.target;
@@ -1233,7 +1243,7 @@ function onAuthorFormField(e) {
         }
         case 'exam':
             // 只改待导出意图变量；真正的 rules.lockAIHelp 由导出方经 buildLevelCard 落（见链路注释）
-            examIntent = !!el.checked;
+            setExamIntent(el.checked);
             s.msg = examIntent
                 ? '🔒 已标记考核锁：导出时 rules.lockAIHelp=false（整张卡生效，所有锁共享）'
                 : '考核锁已取消（整卡）';

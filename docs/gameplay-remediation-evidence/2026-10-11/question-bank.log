@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: 校验：合法 input 与 choice 通过
+ok 1 - 校验：合法 input 与 choice 通过
+  ---
+  duration_ms: 1.406792
+  type: 'test'
+  ...
+# Subtest: 校验：学科必须是五枚举（自拟不是学科）
+ok 2 - 校验：学科必须是五枚举（自拟不是学科）
+  ---
+  duration_ms: 0.402583
+  type: 'test'
+  ...
+# Subtest: 校验：数字题答案必须 0..9999 整数（含 NaN 挡空串）
+ok 3 - 校验：数字题答案必须 0..9999 整数（含 NaN 挡空串）
+  ---
+  duration_ms: 0.398666
+  type: 'test'
+  ...
+# Subtest: 校验：选择题选项 3~4 条、非空、不重复、正确项索引合法
+ok 4 - 校验：选择题选项 3~4 条、非空、不重复、正确项索引合法
+  ---
+  duration_ms: 0.459291
+  type: 'test'
+  ...
+# Subtest: 校验：题干空 / 未知题型 / hint 非字符串 拒绝
+ok 5 - 校验：题干空 / 未知题型 / hint 非字符串 拒绝
+  ---
+  duration_ms: 0.360875
+  type: 'test'
+  ...
+# Subtest: 新增：生成 id、新题在队首、trim 收敛、落 localStorage
+ok 6 - 新增：生成 id、新题在队首、trim 收敛、落 localStorage
+  ---
+  duration_ms: 1.605416
+  type: 'test'
+  ...
+# Subtest: 更新：按 id 覆盖字段、保留 created、刷新 updated
+ok 7 - 更新：按 id 覆盖字段、保留 created、刷新 updated
+  ---
+  duration_ms: 5.258458
+  type: 'test'
+  ...
+# Subtest: 更新：题型切换不留旧形状的键（choice→input 无 options，input→choice 无残字段）
+ok 8 - 更新：题型切换不留旧形状的键（choice→input 无 options，input→choice 无残字段）
+  ---
+  duration_ms: 1.411375
+  type: 'test'
+  ...
+# Subtest: 更新：id 不存在报错；非法题拒绝且不改动库
+ok 9 - 更新：id 不存在报错；非法题拒绝且不改动库
+  ---
+  duration_ms: 0.675834
+  type: 'test'
+  ...
+# Subtest: 删除：删掉返回 true，再删返回 false
+ok 10 - 删除：删掉返回 true，再删返回 false
+  ---
+  duration_ms: 0.702042
+  type: 'test'
+  ...
+# Subtest: 容量上限：MAX_BANK_QUESTIONS 条后新增被拦
+ok 11 - 容量上限：MAX_BANK_QUESTIONS 条后新增被拦
+  ---
+  duration_ms: 32.342083
+  type: 'test'
+  ...
+# Subtest: 加载容错：localStorage 里的坏条目被丢弃、坏 JSON 当空库
+ok 12 - 加载容错：localStorage 里的坏条目被丢弃、坏 JSON 当空库
+  ---
+  duration_ms: 1.4785
+  type: 'test'
+  ...
+# Subtest: 无 localStorage 环境（Node/隐私模式）：CRUD 降级内存态不抛错
+ok 13 - 无 localStorage 环境（Node/隐私模式）：CRUD 降级内存态不抛错
+  ---
+  duration_ms: 0.407292
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50.121208

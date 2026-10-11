@@ -46,6 +46,7 @@ const STEP_Y_TOLERANCE = 1.5;
 // 模块加载失败（Node 环境 / 并行代理尚未落地）记为 null，调用点全部可选链。
 const MOD_PATHS = {
     levelWorkshop: './levelWorkshop.js', // A1：坐标换算 / 嵌世界 / 卡存取
+    ui: './ui.js',                       // 保存失败提示
     uiModal: './uiModal.js',             // setState / openResultState（B2 落地 result 态）
     saveGame: './saveGame.js',           // saveGame / loadGame（B2 加 levelRun 防线）
     world: './world.js',                 // generateWorld（G3 P2#7：读档失败的干净世界兜底）
@@ -132,7 +133,19 @@ export function getRespawnPos() {
 
 // enterLevel(cardOrId)：卡对象直用；字符串 id 走 levelWorkshop.getLevelCard。
 // 返回运行时对象；失败返回 null（任何模块缺失都不得抛错中断）。
+let levelEntryError = '';
+export function getLevelEntryError() { return levelEntryError; }
+
 export async function enterLevel(cardOrId) {
+    levelEntryError = '';
+    if (state.temporaryWorldTransition) return null;
+    const transition = {};
+    state.temporaryWorldTransition = transition;
+    try { return await enterLevelImpl(cardOrId); }
+    finally { if (state.temporaryWorldTransition === transition) state.temporaryWorldTransition = null; }
+}
+
+async function enterLevelImpl(cardOrId) {
     if (state.levelEdit) return null; // 编辑会话占住临时世界：闯关进入必须先退出编辑（2026-09-16）
     const prevRun = state.levelRun || null;
     const alreadyActive = !!prevRun; // 关卡中重入 = 重试式重嵌（不落盘、沿用 restore 暂存）
@@ -152,7 +165,13 @@ export async function enterLevel(cardOrId) {
     //    「levelRun 激活即拒写」防线（W10 存档防线的唯一机制）。
     if (!alreadyActive) {
         const sg = await modPromise('saveGame');
-        try { sg?.saveGame?.(); } catch { /* 落盘失败不阻塞进关（配额满等） */ }
+        let saved = false;
+        try { saved = sg?.saveGame?.() === true; } catch { }
+        if (!saved) {
+            levelEntryError = '❌ 当前世界保存失败，请释放存储空间后再进入关卡';
+            (await modPromise('ui'))?.showTooltip?.(levelEntryError);
+            return null;
+        }
     }
     {
         const bq = await modPromise('buildQueue');
@@ -321,13 +340,21 @@ export function tickLevelRun(dt) {
     });
 }
 
-// 纯逻辑核心（可导出直测）：计时 → 踩踏（起点/检查点/终点）→ 掉界 → 限时超时。
+// 纯逻辑核心（可导出直测）：计时 → 限时超时 → 踩踏（起点/检查点/终点）→ 掉界。
 // run = 契约 §3.2 的运行时对象（state.levelRun 的同构替身）；hooks 全部可注入：
 //   toWorld(lx,ly,lz)→{x,y,z}  isOOB(x,y,z)→bool  onOOB()  onFinish(result)
 // 浏览器外（Node 自测）不注入 hooks 时按契约冻结偏移换算、跳过掉界检测。
 export function tickRun(run, dt, playerPos, hooks = {}) {
     if (!run || run.finished) return null;
     run.elapsed += dt;
+    // 本帧到达时间上限即失败，终点检测不能抢先把超时判为通关。
+    const limit = run.rules?.timeLimit;
+    if (limit != null && run.elapsed >= limit) {
+        run.finished = true;
+        const result = buildResult(run, { timeout: true });
+        hooks.onFinish?.(result);
+        return result;
+    }
 
     const toWorld = hooks.toWorld || ((x, y, z) => toWorldPos(x, y, z));
     const flags = run.card?.flags;
@@ -362,14 +389,6 @@ export function tickRun(run, dt, playerPos, hooks = {}) {
         hooks.onOOB?.();
     }
 
-    // —— 限时超时：失败结算（stars=0，result 带 timeout:true；不再是通关，无 1 星保底）——
-    const limit = run.rules?.timeLimit;
-    if (limit != null && run.elapsed >= limit) {
-        run.finished = true;
-        const result = buildResult(run, { timeout: true });
-        hooks.onFinish?.(result);
-        return result;
-    }
     return null;
 }
 

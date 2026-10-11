@@ -292,6 +292,7 @@ export async function interactMerchantAt(x, y, z) {
 
 // ---------- 键盘捕获（1/2/3/Esc；先于 input.js 的快捷栏切换） ----------
 window.addEventListener('keydown', (e) => {
+    if (state.editorExitOpen || state.levelEdit?.exiting) return;
     if (!session) return;
     if (state.assistantOpen || getUIState() !== 'playing') { closeTrade(); return; }
     const m = /^(Digit|Numpad)([123])$/.exec(e.code);

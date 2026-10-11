@@ -154,7 +154,7 @@ export function raycastBlocks() {
             const hy = origin.y + direction.y * tHit;
             const hz = origin.z + direction.z * tHit;
             if (Math.hypot(hx - eye.x, hy - eye.y, hz - eye.z) > reach + 0.01) return null;
-            return { x, y, z, block, face: { dx: lastX - x, dy: lastY - y, dz: lastZ - z } };
+            return { x, y, z, block, distance: tHit, face: { dx: lastX - x, dy: lastY - y, dz: lastZ - z } };
         }
         lastX = x;
         lastY = y;
@@ -181,16 +181,20 @@ function rebuildAround(x, z) {
 // 由 mining.js 在按下与按住时调用。
 export function tryAttackEnemy() {
     if (state.enemies.length === 0) return false;
-    const { dir, eye } = getPickRay();
+    const { origin, dir, eye } = getPickRay();
+    const wall = raycastBlocks();
+    // 第三人称从玩家眼睛的射线平面开始选敌：完整身后目标跳过，跨平面的贴脸实体仍可打。
+    const eyeT = Math.max(0, (eye.x - origin.x) * dir.x + (eye.y - origin.y) * dir.y + (eye.z - origin.z) * dir.z);
     let best = null;
-    let bestScore = 0.65;
+    let nearest = Infinity;
     for (const e of state.enemies) {
-        const to = new THREE.Vector3(e.x - eye.x, e.y + 0.6 - eye.y, e.z - eye.z);
-        const dist = to.length();
-        if (dist > 4) continue;
-        to.normalize();
-        const score = to.dot(dir);
-        if (score > bestScore) { bestScore = score; best = e; }
+        const t = rayVsAABB(origin, dir, [e.x - 0.3, e.y, e.z - 0.3],
+            [e.x + 0.3, e.y + 1.8, e.z + 0.3], eyeT, 4 + origin.distanceTo(eye));
+        if (t < 0 || t >= nearest) continue;
+        const hit = origin.clone().addScaledVector(dir, t);
+        if (hit.distanceTo(eye) > 4) continue;
+        if (wall && wall.distance <= t) continue;
+        nearest = t; best = e;
     }
     if (!best) return false;
     if (state.player.attackCooldown <= 0) {
@@ -522,6 +526,7 @@ export function dropHeldItem() {
     const p = state.player;
     const id = HotbarBlocks[p.selectedSlot];
     if (!id) return;
+    const toolWear = !isCreative() && p.inventory[id] === 1 ? (p.toolWear[id] || 0) : 0;
     if (!isCreative()) {
         if ((p.inventory[id] || 0) <= 0) {
             showTooltip('手里没有这个物品');
@@ -532,7 +537,7 @@ export function dropHeldItem() {
     }
     const dir = lookDirection();
     spawnItemDrop(p.x + dir.x * 0.6, p.y + 1.4, p.z + dir.z * 0.6, id, 1,
-        { vx: dir.x * 4.5, vz: dir.z * 4.5, vy: 1.6 + dir.y * 2.5, pickupDelay: 1.2 });
+        { vx: dir.x * 4.5, vz: dir.z * 4.5, vy: 1.6 + dir.y * 2.5, pickupDelay: 1.2, toolWear });
     updateHotbar();
 }
 

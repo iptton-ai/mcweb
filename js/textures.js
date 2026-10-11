@@ -3,6 +3,11 @@
 import * as THREE from 'three';
 import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, PEN_ID, STARLIGHT_BASE, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
+import { TEXTURE_TILES, atlasSize } from './textureTiles.js';
+
+// 向后兼容既有 import 路径（chunk.js/items.js 等仍从 textures.js 取图集尺寸）；
+// 分配表与常量的唯一事实源在 textureTiles.js（纯数据，Node 可 import 供知识库对账）
+export { atlasSize };
 
 // ==================== 纹理生成 ====================
 export const textureCache = new Map();
@@ -25,7 +30,7 @@ export function createTexture(width, height, drawFn) {
 // 2026-09-05 从 8×8 扩到 16×16（256 tile）：生存进度组的矿石/合成站/食物/四档工具
 // 新增 28 个 tile（45..72），8×8 的 64 格已放不下。所有 UV 计算都动态读 atlasSize，
 // 扩容对区块/物品/手部模型零影响；旧 tile 编号 0..44 不变（TILE_OVERRIDES 与存档无涉）。
-export const atlasSize = 16;
+// atlasSize 常量已下沉 textureTiles.js（见文件头 re-export）。
 
 export const tileSize = 16; // tile 像素尺寸（16×16）
 
@@ -136,95 +141,9 @@ function drawTool(ctx, x, y, kind, head, headDark) {
 }
 
 export function generateAllTextures() {
-    const tiles = [
-        { type: BlockTypes.GRASS, top: 0, side: 1, bottom: 2, name: 'grass_top' },
-        { type: BlockTypes.DIRT, top: 2, side: 2, bottom: 2, name: 'dirt' },
-        { type: BlockTypes.STONE, top: 3, side: 3, bottom: 3, name: 'stone' },
-        { type: BlockTypes.WOOD, top: 4, side: 5, bottom: 4, name: 'wood_side' },
-        { type: BlockTypes.LEAVES, top: 6, side: 6, bottom: 6, name: 'leaves' },
-        { type: BlockTypes.SAND, top: 7, side: 7, bottom: 7, name: 'sand' },
-        { type: BlockTypes.WATER, top: 8, side: 8, bottom: 8, name: 'water' },
-        { type: BlockTypes.BEDROCK, top: 9, side: 9, bottom: 9, name: 'bedrock' },
-        { type: BlockTypes.BRICK, top: 10, side: 10, bottom: 10, name: 'brick' },
-        { type: BlockTypes.GLASS, top: 11, side: 11, bottom: 11, name: 'glass' },
-        { type: BlockTypes.PLANKS, top: 12, side: 12, bottom: 12, name: 'planks' },
-        { type: BlockTypes.COBBLESTONE, top: 13, side: 13, bottom: 13, name: 'cobblestone' },
-        { type: BlockTypes.GRAVEL, top: 14, side: 14, bottom: 14, name: 'gravel' },
-        { type: BlockTypes.SNOW, top: 15, side: 15, bottom: 15, name: 'snow' },
-        { type: BlockTypes.LOG, top: 4, side: 5, bottom: 4, name: 'log' },
-        { type: BlockTypes.TORCH, top: 16, side: 16, bottom: 16, name: 'torch' },
-        { type: BlockTypes.FLOWER, top: 17, side: 17, bottom: 17, name: 'flower' },
-        { type: BlockTypes.TNT, top: 19, side: 18, bottom: 19, name: 'tnt' },
-        { type: DOOR_ITEM_ID, top: 20, side: 20, bottom: 20, name: 'door_lower' }, // 门物品图标用下半 tile
-        { type: DUST_ITEM_ID, top: 22, side: 22, bottom: 22, name: 'dust' }, // 红石粉物品图标（实际是贴地粉线道具）
-        { type: RTORCH_ITEM_ID, top: 26, side: 26, bottom: 26, name: 'rtorch' }, // 红石火把（实际是 3D 道具）
-        { type: BUTTON_ITEM_ID, top: 27, side: 27, bottom: 27, name: 'button' }, // 按钮（实际是 3D 道具）
-        { type: PLATE_ITEM_ID, top: 28, side: 28, bottom: 28, name: 'plate' }, // 压力板（实际是 3D 道具）
-        { type: LEVER_ITEM_ID, top: 23, side: 23, bottom: 23, name: 'lever' }, // 拉杆物品图标（实际是 3D 道具）
-        { type: LAMP_BASE, top: 24, side: 24, bottom: 24, name: 'lamp_off' }, // 红石灯（灭）
-        { type: LAMP_BASE + 1, top: 25, side: 25, bottom: 25, name: 'lamp_lit' }, // 红石灯（亮）
-        { type: ToolTypes.PICKAXE, top: 29, side: 29, bottom: 29, name: 'pickaxe' }, // 铁镐图标（物品，非方块）
-        { type: ToolTypes.AXE, top: 30, side: 30, bottom: 30, name: 'axe' },
-        { type: ToolTypes.SHOVEL, top: 31, side: 31, bottom: 31, name: 'shovel' },
-        { type: ToolTypes.SWORD, top: 32, side: 32, bottom: 32, name: 'sword' },
-        { type: BlockTypes.SLIME, top: 33, side: 33, bottom: 33, name: 'slime' }, // 粘液块（普通立方体，活塞组基础组件）
-        { type: PISTON_ITEM_ID, top: 35, side: 34, bottom: 36, name: 'piston' }, // 活塞图标露出正面
-        { type: STICKY_PISTON_ITEM_ID, top: 33, side: 34, bottom: 36, name: 'sticky_piston' }, // 粘性活塞图标露出粘液面
-        { type: OBSERVER_ITEM_ID, top: 38, side: 36, bottom: 36, name: 'observer' }, // 观察者图标露出「眼睛」面
-        { type: SHAFT_ITEM_ID, top: 40, side: 39, bottom: 40, name: 'shaft' }, // 传动轴：端面年轮 + 侧面木纹
-        { type: COGWHEEL_ITEM_ID, top: 41, side: 41, bottom: 41, name: 'cog' }, // 齿轮（实际是 3D 轮盘道具）
-        { type: WATERWHEEL_ITEM_ID, top: 42, side: 42, bottom: 42, name: 'waterwheel' }, // 水车（实际是 3D 大轮盘）
-        { type: CRUSHER_ITEM_ID, top: 43, side: 43, bottom: 43, name: 'crusher' }, // 粉碎轮（实际是 3D 轮盘）
-        { type: SAW_ITEM_ID, top: 44, side: 44, bottom: 44, name: 'saw' }, // 机械锯（实际是 3D 圆锯片）
-        // ---- 生存进度组（2026-09-05）：矿石/合成站/羊毛/物品/四档工具，tile 45..72 ----
-        { type: BlockTypes.COAL_ORE, top: 45, side: 45, bottom: 45, name: 'coal_ore' },
-        { type: BlockTypes.IRON_ORE, top: 46, side: 46, bottom: 46, name: 'iron_ore' },
-        { type: BlockTypes.DIAMOND_ORE, top: 47, side: 47, bottom: 47, name: 'diamond_ore' },
-        { type: BlockTypes.CRAFTING_TABLE, top: 48, side: 49, bottom: 12, name: 'crafting_table' }, // 顶面网格 + 侧面工具痕
-        { type: BlockTypes.FURNACE, top: 51, side: 50, bottom: 51, name: 'furnace' }, // 四面都是炉口（无朝向状态）
-        { type: BlockTypes.WOOL, top: 52, side: 52, bottom: 52, name: 'wool' },
-        { type: ItemTypes.STICK, top: 53, side: 53, bottom: 53, name: 'stick' },
-        { type: ItemTypes.COAL, top: 54, side: 54, bottom: 54, name: 'coal' },
-        { type: ItemTypes.IRON_INGOT, top: 55, side: 55, bottom: 55, name: 'iron_ingot' },
-        { type: ItemTypes.DIAMOND, top: 56, side: 56, bottom: 56, name: 'diamond' },
-        { type: ItemTypes.APPLE, top: 57, side: 57, bottom: 57, name: 'apple' },
-        { type: ItemTypes.RAW_PORK, top: 58, side: 58, bottom: 58, name: 'raw_pork' },
-        { type: ItemTypes.COOKED_PORK, top: 59, side: 59, bottom: 59, name: 'cooked_pork' },
-        { type: ItemTypes.GUNPOWDER, top: 60, side: 60, bottom: 60, name: 'gunpowder' },
-        { type: ToolTypes.WOOD_PICKAXE, top: 61, side: 61, bottom: 61, name: 'wood_pickaxe' },
-        { type: ToolTypes.STONE_PICKAXE, top: 62, side: 62, bottom: 62, name: 'stone_pickaxe' },
-        { type: ToolTypes.DIAMOND_PICKAXE, top: 63, side: 63, bottom: 63, name: 'diamond_pickaxe' },
-        { type: ToolTypes.WOOD_AXE, top: 64, side: 64, bottom: 64, name: 'wood_axe' },
-        { type: ToolTypes.STONE_AXE, top: 65, side: 65, bottom: 65, name: 'stone_axe' },
-        { type: ToolTypes.DIAMOND_AXE, top: 66, side: 66, bottom: 66, name: 'diamond_axe' },
-        { type: ToolTypes.WOOD_SHOVEL, top: 67, side: 67, bottom: 67, name: 'wood_shovel' },
-        { type: ToolTypes.STONE_SHOVEL, top: 68, side: 68, bottom: 68, name: 'stone_shovel' },
-        { type: ToolTypes.DIAMOND_SHOVEL, top: 69, side: 69, bottom: 69, name: 'diamond_shovel' },
-        { type: ToolTypes.WOOD_SWORD, top: 70, side: 70, bottom: 70, name: 'wood_sword' },
-        { type: ToolTypes.STONE_SWORD, top: 71, side: 71, bottom: 71, name: 'stone_sword' },
-        { type: ToolTypes.DIAMOND_SWORD, top: 72, side: 72, bottom: 72, name: 'diamond_sword' },
-        // ---- 物流+控制组（Create-lite L1）：传送带 tile 73..74（顶面箭头 / 带沿侧面）、投料器 tile 75..76（正面投料口 / 机身侧面） ----
-        { type: BELT_ITEM_ID, top: 73, side: 74, bottom: 74, name: 'belt' }, // 传送带（实际是 3D 薄板道具，顶面箭头指北为基准、按 dir 旋转整板）
-        { type: DEPLOYER_ITEM_ID, top: 75, side: 76, bottom: 76, name: 'deployer' }, // 投料器（实际是 3D 方箱+喷嘴道具，正面投料口 tile 75 按朝向旋转）
-        // ---- 电梯组（Create-lite L2）：电梯平台 tile 81（铁框格栅板，普通立方体三面同图；滑轮为 3D 纯色道具照离合器惯例不占 tile） ----
-        { type: PLATFORM_ITEM_ID, top: 81, side: 81, bottom: 81, name: 'platform' },
-        // ---- 教学组（Edu M1）：答题机 tile 77 锁定面（绿屏键盘）/ 78 已解锁面（金屏✓）/ 79 背面顶面（铜盖板） ----
-        { type: KEYPAD_BASE, top: 79, side: 77, bottom: 79, name: 'keypad_locked' },
-        { type: KEYPAD_BASE + 1, top: 79, side: 78, bottom: 79, name: 'keypad_solved' },
-        // ---- 教学组（Edu M2）：英语商人 tile 82 正面（条纹雨棚货摊）/ 识字矿石 tile 83（金纹矿石） ----
-        { type: MERCHANT_ITEM_ID, top: 84, side: 82, bottom: 84, name: 'merchant' },
-        { type: HANZI_ORE_ITEM_ID, top: 83, side: 83, bottom: 83, name: 'hanzi_ore' },
-        // ---- 关卡工坊（2026-09-15 P0）：旗面 tile 85..87（起点绿/检查点蓝黄/终点红白格）、
-        //      星辉门 tile 88..89（锁定紫金暗心 / 开启框内亮星）、出题笔图标 tile 90（紫杆铅笔）。
-        //      旗组与星辉门各变体在 tiles 里各自占一条，blockUVs 由烘焙循环逐 ID 自动生成；
-        //      旗子本体是 3D 道具网格（chunk.js 的旗杆铺 planks / 旗面铺 flag_* tile）
-        { type: FLAG_BASE, top: 85, side: 85, bottom: 85, name: 'flag_start' },
-        { type: FLAG_BASE + 1, top: 86, side: 86, bottom: 86, name: 'flag_checkpoint' },
-        { type: FLAG_BASE + 2, top: 87, side: 87, bottom: 87, name: 'flag_goal' },
-        { type: STARLIGHT_BASE, top: 88, side: 88, bottom: 88, name: 'starlight_locked' },
-        { type: STARLIGHT_BASE + 1, top: 89, side: 89, bottom: 89, name: 'starlight_open' },
-        { type: PEN_ID, top: 90, side: 90, bottom: 90, name: 'pen_item' },
-    ];
+    // tile 分配表已下沉 textureTiles.js（纯数据 Node 可 import，知识库/文档的空闲区间
+    // 文案从那张表动态生成防漂移）：这里只消费，改贴图分配去改那张表
+    const tiles = TEXTURE_TILES;
 
     const drawFunctions = {
         0: (ctx, x, y, s) => { // 草顶部

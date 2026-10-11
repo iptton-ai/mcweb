@@ -9,6 +9,13 @@ import { buildChunkProps, updateChunkMeshes } from '../chunk.js';
 import { updateHotbar } from '../ui.js';
 import { updateHealthUI } from '../playerLife.js';
 import { camera } from '../engine.js';
+import { initRedstone } from '../redstone.js';
+import { initKinetic } from '../kinetic.js';
+import { clearItemDrops } from '../items.js';
+import { clearTntEntities } from '../tnt.js';
+import { clearAllEnemies } from '../entities.js';
+import { clearBuildQueue } from '../buildQueue.js';
+import { clearParticles } from '../particles.js';
 
 const SNAPSHOT_KEY = 'mcAssistant.snapshot';
 
@@ -31,13 +38,13 @@ function base64ToU8(b64) {
 // 热重载前调用：序列化世界方块 + 玩家/模式/时间（RLE 压缩——2026-09-06 世界扩容后
 // raw base64 约 10.7MB 会超 sessionStorage 配额，热重载将丢世界；压缩后约 1~2MB）
 export function saveSnapshotForReload() {
-    // 闯关守卫（G3 P0#1）：state.blocks 此刻是关卡临时世界，绝不能进快照——否则重载后
-    // restoreSnapshotIfAny 会把关卡世界当「真实世界」覆盖回去，而 levelRun 已随页面复位，
+    // 临时世界守卫：闯关或编辑时 state.blocks 绝不能进快照——否则重载后
+    // restoreSnapshotIfAny 会把临时世界当「真实世界」覆盖回去，而运行/编辑会话已随页面复位，
     // saveGame() 的存档闸失效，30s 自动存档就把关卡世界写进玩家存档槽（不可逆）。
     // 只落标记不落方块：重载后 boot 的 loadGame(saveSlot) 已恢复进关前落盘的真实世界。
-    if (state.levelRun) {
+    if (state.levelRun || state.levelEdit) {
         try {
-            sessionStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ v: 3, levelRunWasActive: true, savedAt: Date.now() }));
+            sessionStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ v: 3, temporaryWorldWasActive: true, savedAt: Date.now() }));
         } catch { /* 配额失败也不阻塞重载 */ }
         return true;
     }
@@ -56,7 +63,10 @@ export function saveSnapshotForReload() {
                 flying: p.flying, health: p.health,
                 selectedSlot: p.selectedSlot,
                 inventory: p.inventory,
+                hunger: p.hunger, air: p.air, xp: p.xp,
+                toolWear: p.toolWear,
             },
+            worldSeed: state.worldSeed,
             gameMode: state.gameMode,
             viewMode: state.viewMode,
             time: state.time,
@@ -82,14 +92,20 @@ export function restoreSnapshotIfAny() {
     } catch {
         snap = null;
     }
-    if (!snap || !snap.blocks) return false;
-    if (snap.levelRunWasActive) {
-        // 闯关中的重载：boot 已 loadGame 恢复真实世界，这里放弃快照恢复即等同退关
+    if (!snap) return false;
+    if (snap.levelRunWasActive || snap.temporaryWorldWasActive) {
+        // 闯关/编辑中的重载：boot 已 loadGame 恢复真实世界，这里放弃临时快照。
         return false;
     }
 
+    if (!snap.blocks) return false;
+
     // 覆盖世界数据并重建全部区块网格（快照与当前页面同尺寸，无迁移路径）
-    let u8 = base64ToU8(snap.blocks);
+    let u8;
+    try { u8 = base64ToU8(snap.blocks); } catch {
+        console.error('世界快照编码损坏，放弃恢复');
+        return false;
+    }
     if (snap.v >= 3 && snap.enc === 'rle') {
         u8 = rleDecode(u8, state.blocks ? state.blocks.length : 0);
         if (!u8) {
@@ -125,11 +141,24 @@ export function restoreSnapshotIfAny() {
         health: p.health ?? state.player.health,
         selectedSlot: p.selectedSlot || 0,
         inventory: p.inventory || {},
+        hunger: p.hunger ?? state.player.hunger,
+        air: p.air ?? state.player.air,
+        xp: p.xp ?? state.player.xp,
+        toolWear: p.toolWear || {},
+        dead: false, onGround: false, fallStartY: null, inWater: false,
     });
     if (snap.gameMode) state.gameMode = snap.gameMode;
     if (typeof snap.time === 'number') state.time = snap.time;
     if (snap.spawn) state.spawn = snap.spawn;
     if (typeof snap.viewMode === 'number') state.viewMode = snap.viewMode;
+    if (typeof snap.worldSeed === 'number') state.worldSeed = snap.worldSeed;
+    clearBuildQueue();
+    clearAllEnemies();
+    clearItemDrops();
+    clearTntEntities();
+    clearParticles();
+    initRedstone();
+    initKinetic();
     camera.position.set(state.player.x, state.player.y + PLAYER_EYE_HEIGHT, state.player.z);
 
     updateHotbar();

@@ -1,17 +1,24 @@
 // tools/test_assistant_knowledge.mjs —— 助手知识库单测（node:test）
-// js/assistant/knowledge.js 纯数据+纯函数（数值 import 自 config.js），Node 可直连。
+// js/assistant/knowledge.js 纯数据+纯函数（数值 import 自 config.js/textureTiles.js），Node 可直连。
 // 运行：cd <仓库根> && node --test tools/test_assistant_knowledge.mjs
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { KNOWLEDGE_SECTIONS, searchKnowledge, knowledgeIndexText } from '../js/assistant/knowledge.js';
+import { TEXTURE_TILES, atlasSize, occupiedTiles, freeTileRanges } from '../js/textureTiles.js';
 
 const EXPECTED_IDS = [
     'ids', 'mining', 'world', 'redstone', 'piston', 'kinetic', 'logistics', 'elevator',
-    'survival', 'mobs', 'saves', 'modules', 'recipes', 'keys', 'edu',
+    'survival', 'mobs', 'tnt', 'saves', 'modules', 'recipes', 'keys', 'media', 'edu',
 ];
 
-test('结构：15 节齐全，id 唯一，字段非空，单节体量可控（检索结果不爆 token）', () => {
+// 空闲 tile 区间的渲染口径（与 knowledge.js / docs.js 文案生成保持同一格式）
+const formatTileRanges = (ranges) => ranges.map(([a, b]) => (a === b ? String(a) : `${a}..${b}`)).join('、');
+
+test('结构：章节齐全有序，id 唯一，字段非空，单节体量可控（检索结果不爆 token）', () => {
     assert.equal(KNOWLEDGE_SECTIONS.length, EXPECTED_IDS.length);
     assert.deepEqual(KNOWLEDGE_SECTIONS.map((s) => s.id), EXPECTED_IDS);
     for (const s of KNOWLEDGE_SECTIONS) {
@@ -31,6 +38,16 @@ test('检索：关键词查询命中正确章节且排在首位', () => {
     assert.equal(searchKnowledge('活塞 粘液 推')[0].id, 'piston');
     assert.equal(searchKnowledge('存档 槽位')[0].id, 'saves');
     assert.equal(searchKnowledge('答题机 题库')[0].id, 'edu');
+});
+
+test('检索：tnt / media 新节命中（关键词「TNT/爆炸/引爆/苦力怕」与「录像/拍摄/镜头/BGM/配乐/音量」）', () => {
+    assert.equal(searchKnowledge('TNT 爆炸')[0].id, 'tnt');
+    assert.equal(searchKnowledge('怎么引爆 TNT')[0].id, 'tnt');
+    assert.equal(searchKnowledge('苦力怕 自爆')[0].id, 'tnt');
+    assert.equal(searchKnowledge('TNT 陷阱 压力板')[0].id, 'tnt');
+    assert.equal(searchKnowledge('录像 BGM')[0].id, 'media');
+    assert.equal(searchKnowledge('拍摄 镜头 自动取景')[0].id, 'media');
+    assert.equal(searchKnowledge('音量 配乐')[0].id, 'media');
 });
 
 test('检索：口语长句（含填充词）仍能靠二字滑窗命中', () => {
@@ -59,6 +76,53 @@ test('内容防漂移：正文数值来自 config.js 实际导出（抽查关键
     assert.ok(textOf('kinetic').includes('石头→圆石'), '粉碎配方应由 KINETIC_RECIPES 渲染');
     assert.ok(/苦力怕/.test(textOf('mobs')), '生物表应由 MOB_TYPES 渲染');
     assert.ok(/挖掘|硬度/.test(all) && textOf('mining').includes('0.3s'), '挖掘节奏应来自 BREAK_DELAY');
+    assert.ok(textOf('tnt').includes('2.5s'), 'TNT 引信时长应与 tnt.js spawnTntEntity 一致');
+    assert.ok(textOf('tnt').includes('1.8s') && textOf('tnt').includes('2.8'), '苦力怕引信参数应来自 config.js MOB_TYPES');
+    assert.ok(textOf('media').includes('10 分钟'), '单段录像上限应与 recording.js MAX_SECONDS=600 一致');
+    assert.ok(textOf('media').includes('bgm_'), 'BGM 文件名规则应写明 bgm_<pack>_<mood> 前缀');
+});
+
+test('tile 对账：分配表自洽，knowledge.js / docs.js 的图集文案不漂移', () => {
+    const total = atlasSize * atlasSize;
+    const occupied = occupiedTiles();
+    const ranges = freeTileRanges();
+    // 分配表三面 tile 全部落在图集范围内
+    for (const t of TEXTURE_TILES) {
+        for (const n of [t.top, t.side, t.bottom]) {
+            assert.ok(Number.isInteger(n) && n >= 0 && n < total, `tile ${n} 越出 ${total} 格图集（${t.name}）`);
+        }
+    }
+    // 空闲区间互不重叠、不与占用集相交，且占用 ∪ 空闲 = 整张图集
+    let freeCount = 0;
+    for (const [a, b] of ranges) {
+        assert.ok(a <= b, `空闲区间 ${a}..${b} 起止颠倒`);
+        for (let n = a; n <= b; n++) assert.ok(!occupied.has(n), `tile ${n} 同时出现在占用集与空闲区间`);
+        freeCount += b - a + 1;
+    }
+    assert.equal(freeCount + occupied.size, total, '占用 ∪ 空闲应恰好铺满整张图集');
+    // 关键锚点：45..72 已占用（防旧文案「空闲 45..63」复辟）、孤儿 tile 21/37 计入占用、80 空闲
+    assert.ok([45, 63, 72].every((n) => occupied.has(n)), '生存进度组 tile 45..72 应为已占用');
+    assert.ok(occupied.has(21) && occupied.has(37), '门上半/活塞内面孤儿 tile 应计入占用');
+    assert.ok(!occupied.has(80) && occupied.has(79) && occupied.has(81), 'tile 80 应空闲（79/81 已占用）');
+    // knowledge.js recipes 节的「空闲 tile」文案 = freeTileRanges() 动态渲染，且旧手写区间已删
+    const recipes = KNOWLEDGE_SECTIONS.find((s) => s.id === 'recipes');
+    assert.ok(recipes.text.includes(`空闲 tile ${formatTileRanges(ranges)}`), 'recipes 节空闲 tile 文案应由 textureTiles.freeTileRanges() 生成');
+    assert.ok(!recipes.text.includes('45..63'), 'recipes 节不应再出现手写旧区间 45..63');
+    // docs.js 系统提示词同样动态注入（源码层面核对：不再手写 atlasSize=8 / 45..63）
+    const docsSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'js', 'assistant', 'docs.js'), 'utf8');
+    assert.ok(!docsSrc.includes('atlasSize=8'), 'docs.js 不应再手写 atlasSize=8');
+    assert.ok(!docsSrc.includes('45..63'), 'docs.js 不应再手写空闲区间 45..63');
+    assert.ok(docsSrc.includes('freeTileRanges'), 'docs.js 的空闲 tile 文案应从 textureTiles.js 生成');
+});
+
+test('sources：每节带真实 js/ 来源，全部章节覆盖（「带来源的结论」的数据基础）', () => {
+    for (const s of KNOWLEDGE_SECTIONS) {
+        assert.ok(Array.isArray(s.sources) && s.sources.length >= 1, `${s.id} 缺 sources`);
+        for (const src of s.sources) {
+            assert.ok(src.startsWith('js/'), `${s.id} 的来源 ${src} 不以 js/ 开头`);
+            assert.ok(!src.includes('..'), `${s.id} 的来源 ${src} 不应是相对上跳路径`);
+        }
+    }
 });
 
 test('目录（注入系统提示词）：覆盖全部章节且每行含 id 与标题', () => {

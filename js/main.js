@@ -20,6 +20,7 @@ import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
 import { keys, mouseDown, mouseMoveDelta, setupInput } from './input.js';
 import { getUIState, initUIModal, isKeyboardPlayActive, isPlaying, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
+import { initHelpDocs } from './helpDocs.js'; // 📖 游戏说明浮层（目录 + iframe 嵌 docs/ 图解文档）
 import { updateCameraRig, updateBuildFilming, resetBuildFilming } from './cameraRig.js';
 import { captureRecordingFrame, stopRecording } from './recording.js';
 import { updateDayNightCycle } from './daynight.js';
@@ -249,8 +250,9 @@ function startNewWorld(mode, tip, slot = state.saveSlot) {
     }
     if (state.levelEdit) {
         // 编辑中切世界同理：先退出编辑（草稿自动保存 + 恢复原世界）再让用户重试
-        void exitLevelEditor({ saveDraft: true });
-        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试该操作');
+        void exitLevelEditor({ saveDraft: true }).then(exited => {
+            if (exited) showTooltip('已退出关卡编辑——请从首屏重试该操作');
+        });
         return;
     }
     state.saveSlot = slot;
@@ -275,8 +277,9 @@ function loadSlot(slot) {
         return;
     }
     if (state.levelEdit) {
-        void exitLevelEditor({ saveDraft: true }); // 编辑中切世界：先退编辑（草稿已存）
-        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试切换世界');
+        void exitLevelEditor({ saveDraft: true }).then(exited => {
+            if (exited) showTooltip('已退出关卡编辑——请从首屏重试切换世界');
+        });
         return;
     }
     if (slot === state.saveSlot) {
@@ -371,8 +374,9 @@ function deleteSlotAndRecover(i) {
         return;
     }
     if (state.levelEdit) {
-        void exitLevelEditor({ saveDraft: true }); // 编辑中删档：先退编辑（草稿已存）
-        showTooltip('已退出关卡编辑（草稿已保存）——请从首屏重试删除');
+        void exitLevelEditor({ saveDraft: true }).then(exited => {
+            if (exited) showTooltip('已退出关卡编辑——请从首屏重试删除');
+        });
         return;
     }
     deleteSave(i);
@@ -429,6 +433,7 @@ function init() {
     initUIKeys(); // 浮层键盘导航先注册（document 捕获阶段，先于 input.js 消费方向键/Enter）
     setupInput();
     initBuildWidget();
+    initHelpDocs(); // 📖 游戏说明浮层（首屏/暂停菜单入口按钮在此接线）
     initViewmodel(); // 第一人称手部视图模型（含窗口尺寸同步）
 
     // 关卡列表 UI（关卡工坊批次 W，B4 导出 + B1 的 DOM；未合流时全部静默跳过）

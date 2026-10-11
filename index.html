@@ -193,7 +193,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, 50px);
-            z-index: 15;
+            z-index: 130; /* 保存/导出错误提示须高于首屏与关卡浮层 */
             color: #fff;
             font-size: 16px;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
@@ -1074,6 +1074,7 @@
             <button class="save-btn" id="btn-save">💾 保存进度</button>
             <button class="save-btn" id="btn-settings">⚙️ 设置（音频 / 存档）</button>
             <button class="save-btn" id="btn-levels">🗺 关卡</button>
+            <button class="save-btn" id="btn-help">📖 说明</button>
         </div>
         <div class="controls-info">
             <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃（创造双击 = 飞行）&nbsp;|&nbsp; <kbd>Shift</kbd> 潜行 / 水中下沉 &nbsp;|&nbsp; <kbd>Ctrl</kbd> 疾跑<br>

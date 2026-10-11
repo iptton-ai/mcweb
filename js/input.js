@@ -14,9 +14,10 @@ import { adjustBuildSpeed, speedText, toggleBuildPaused } from './buildQueue.js'
 import { cycleCameraMode, adjustCamSpeed } from './cameraRig.js';
 import { closeExportPanel, closeLevelList, closePrefabPicker, isLevelListOpen, isPrefabPickerOpen, openExportPanel, openItemPicker, openPrefabPicker, showTooltip, teleportToBuildSite, toggleBuildRecording, toggleGameMode, updateHotbar } from './ui.js';
 import { closeQuestionBank, isQuestionBankOpen } from './questionBankUI.js'; // 📝 我的题库平铺录题页（Esc/Q 关闭，同组件库）
+import { closeHelpDocs, isHelpDocsOpen } from './helpDocs.js'; // 📖 游戏说明文档浮层（Esc/Q 关闭，同题库）
 import { closeSettingsState, getUIState, isAssistantVisible, isKeyboardPlayActive, isPlaying, isTypingTarget, mouseLocked, onUIStateChange, releasePointerToPause, requestLock, setRecordingControlsOpen, setState } from './uiModal.js';
 import { exitLevelRun, isLevelRunActive } from './levelRun.js'; // 闯关模式：绕过通道全闭（W11）+ 结算态退出
-import { cancelPlacing, consumePlaceClick, getPlacing } from './levelEditor.js'; // 关卡编辑器：组件放置（2026-09-16）
+import { cancelPlacing, consumePlaceClick, getPlacing, resolveEditorExitDecision } from './levelEditor.js'; // 关卡编辑器：组件放置与失败退出选择
 
 // ==================== 输入状态 ====================
 export const keys = {};
@@ -85,6 +86,12 @@ export function setupInput() {
     onUIStateChange(() => clearKeys());
 
     document.addEventListener('keydown', (e) => {
+        // 退出保存/选择期间，游戏键与其他浮层入口都暂停；Esc/Q 只安全返回编辑。
+        if (state.editorExitOpen || state.levelEdit?.exiting) {
+            if (state.editorExitOpen && (e.code === 'Escape' || e.code === 'KeyQ')) resolveEditorExitDecision(false);
+            e.preventDefault();
+            return;
+        }
         if (isTypingTarget(e)) return; // 在助手聊天/设置等输入框打字时，游戏键全部让路
         if (e.code === 'Tab' && getUIState() !== 'title') {
             e.preventDefault();
@@ -98,7 +105,8 @@ export function setupInput() {
 
         // Esc：指针锁定时浏览器截获 Esc（页面收不到 keydown），这里只处理浮层状态下的 Esc
         if (e.code === 'Escape') {
-            if (isQuestionBankOpen()) closeQuestionBank(); // 题库页可能叠在关卡列表上：先关它
+            if (isHelpDocsOpen()) closeHelpDocs(); // 📖 说明浮层盖在最上层：最先关它
+            else if (isQuestionBankOpen()) closeQuestionBank(); // 题库页可能叠在关卡列表上：先关它
             else if (isPrefabPickerOpen()) closePrefabPicker(); // 组件库浮层：关闭并结束放置态
             else if (state.levelExportOpen) closeExportPanel(); // 导出面板：关面板回游戏
             else if (isLevelListOpen()) closeLevelList(); // 首屏关卡列表浮层：关闭（B1 关闭钮 title 承诺的行为）
@@ -111,7 +119,8 @@ export function setupInput() {
         // Q：Esc 的替代键（推荐在 ZCode 内嵌浏览器里用——Esc 会被宿主截获导致应用退出，Q 不会）：
         // 锁定时释放鼠标并弹暂停菜单；暂停/背包里回游戏；设置浮层里关闭浮层
         if (e.code === 'KeyQ') {
-            if (isQuestionBankOpen()) closeQuestionBank();
+            if (isHelpDocsOpen()) closeHelpDocs(); // 📖 说明浮层最先关
+            else if (isQuestionBankOpen()) closeQuestionBank();
             else if (isPrefabPickerOpen()) closePrefabPicker();
             else if (state.levelExportOpen) closeExportPanel();
             else if (isLevelListOpen()) closeLevelList();
@@ -276,6 +285,7 @@ export function setupInput() {
     });
 
     canvas.addEventListener('mousedown', (e) => {
+        if (state.editorExitOpen || state.levelEdit?.exiting) return;
         if (getUIState() !== 'playing') return; // 浮层（菜单/背包/死亡）状态不响应游戏点击
         if (!isPlaying()) {
             // 未锁定（含助手面板打开时）：点击画面接管鼠标开始操作。
@@ -334,6 +344,7 @@ export function setupInput() {
         // 助手面板/出题面板打开时鼠标归面板，不在此抢锁。
         // 纯键盘模式永不抢锁（鼠标专职 UI）
         if (state.inputMode === 'keyboard') return;
+        if (state.editorExitOpen || state.levelEdit?.exiting) return;
         if (getUIState() === 'playing' && !isAssistantVisible() && !state.recordingControlsOpen
             && !state.levelExportOpen && !state.authorPanelOpen && !isPlaying()) requestLock();
     });

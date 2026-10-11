@@ -1,0 +1,559 @@
+TAP version 13
+# Subtest: 1. 答题机答对→红石常供能开门全链；答错保持锁定无信号
+ok 1 - 1. 答题机答对→红石常供能开门全链；答错保持锁定无信号
+  ---
+  duration_ms: 132.758125
+  type: 'test'
+  ...
+# Subtest: 2. 答题机→红石灯：答对即亮（6 邻直贴无需布线）
+ok 2 - 2. 答题机→红石灯：答对即亮（6 邻直贴无需布线）
+  ---
+  duration_ms: 172.8595
+  type: 'test'
+  ...
+# Subtest: 3. 英语商人：答对发奖励掉落+分模式计数；答错无奖励
+ok 3 - 3. 英语商人：答对发奖励掉落+分模式计数；答错无奖励
+  ---
+  duration_ms: 75.322125
+  type: 'test'
+  ...
+# Subtest: 4. 奖励梯队：streak 8/5/3/0 四档掉落与累计里程碑
+ok 4 - 4. 奖励梯队：streak 8/5/3/0 四档掉落与累计里程碑
+  ---
+  duration_ms: 70.663458
+  type: 'test'
+  ...
+# Subtest: 5. 星辉门：超纲题答对开门供电；答错入错题本
+ok 5 - 5. 星辉门：超纲题答对开门供电；答错入错题本
+  ---
+  duration_ms: 152.998916
+  type: 'test'
+  ...
+# Subtest: 6. 从真实世界建卡→校验→嵌入新世界（区域快照逐格一致）
+ok 6 - 6. 从真实世界建卡→校验→嵌入新世界（区域快照逐格一致）
+  ---
+  duration_ms: 440.726334
+  type: 'test'
+  ...
+# Subtest: 7. reachabilityBFS：通卡全可达；终点旗被实心墙封死→missing
+ok 7 - 7. reachabilityBFS：通卡全可达；终点旗被实心墙封死→missing
+  ---
+  duration_ms: 343.72075
+  type: 'test'
+  ...
+# Subtest: 8. 闯关全链：进关→卡题作答→记账→结算星级→最佳成绩→退出恢复
+ok 8 - 8. 闯关全链：进关→卡题作答→记账→结算星级→最佳成绩→退出恢复
+  ---
+  duration_ms: 565.677334
+  type: 'test'
+  ...
+# Subtest: 9. 闯关中 TNT 保护：锁/旗/门免疫爆炸；非闯关对照全毁
+ok 9 - 9. 闯关中 TNT 保护：锁/旗/门免疫爆炸；非闯关对照全毁
+  ---
+  duration_ms: 902.979416
+  type: 'test'
+  ...
+# Subtest: 10. 我的题库×出题链：数据可达 eduKeypad 作者锁路径，坏数据被挡
+ok 10 - 10. 我的题库×出题链：数据可达 eduKeypad 作者锁路径，坏数据被挡
+  ---
+  duration_ms: 135.539208
+  type: 'test'
+  ...
+# Subtest: 1. 水车=动力源：顶面泡水 → 串联传动轴显示 8 RPM，抽水即停
+ok 11 - 1. 水车=动力源：顶面泡水 → 串联传动轴显示 8 RPM，抽水即停
+  ---
+  duration_ms: 259.876375
+  type: 'test'
+  ...
+# Subtest: 2. 应力容量与过载：两台粉碎轮恰好满载在转，第 3 台 → 整网停转带不运转
+ok 12 - 2. 应力容量与过载：两台粉碎轮恰好满载在转，第 3 台 → 整网停转带不运转
+  ---
+  duration_ms: 284.553666
+  type: 'test'
+  ...
+# Subtest: 3. 齿轮垂直啮合：一次换向的两水车对顶 → 转向冲突整网卡死，消除反向源恢复
+ok 13 - 3. 齿轮垂直啮合：一次换向的两水车对顶 → 转向冲突整网卡死，消除反向源恢复
+  ---
+  duration_ms: 252.273625
+  type: 'test'
+  ...
+# Subtest: 4. 离合器红石通断：充能断开下游停/水车侧照转，断电恢复接合
+ok 14 - 4. 离合器红石通断：充能断开下游停/水车侧照转，断电恢复接合
+  ---
+  duration_ms: 482.137416
+  type: 'test'
+  ...
+# Subtest: 5. 传送带运物：1.5 格/秒沿带向移动、抵墙停留、断电原地停复电续走
+ok 15 - 5. 传送带运物：1.5 格/秒沿带向移动、抵墙停留、断电原地停复电续走
+  ---
+  duration_ms: 400.106167
+  type: 'test'
+  ...
+# Subtest: 6. 传送带需邻动力：孤立带不运转，带上物品原地不动
+ok 16 - 6. 传送带需邻动力：孤立带不运转，带上物品原地不动
+  ---
+  duration_ms: 137.360583
+  type: 'test'
+  ...
+# Subtest: 7. 粉碎轮四级链：石头→圆石→沙砾，产出走真物品实体；非配方方块投不进
+ok 17 - 7. 粉碎轮四级链：石头→圆石→沙砾，产出走真物品实体；非配方方块投不进
+  ---
+  duration_ms: 253.72
+  type: 'test'
+  ...
+# Subtest: 8. 机械锯：锯切朝向格原木 → 变空气产出木板×4
+ok 18 - 8. 机械锯：锯切朝向格原木 → 变空气产出木板×4
+  ---
+  duration_ms: 335.6685
+  type: 'test'
+  ...
+# Subtest: 9. 投料器：捕获格的方块类物品变方块塞进朝向格；材料/食物不投
+ok 19 - 9. 投料器：捕获格的方块类物品变方块塞进朝向格；材料/食物不投
+  ---
+  duration_ms: 219.716167
+  type: 'test'
+  ...
+# Subtest: 10. 滑轮电梯：充能卷绳上升、行程端点停、断电放绳、无动力悬停
+ok 20 - 10. 滑轮电梯：充能卷绳上升、行程端点停、断电放绳、无动力悬停
+  ---
+  duration_ms: 779.427042
+  type: 'test'
+  ...
+# Subtest: 11. 平台载客：卷绳平台升一格，站顶玩家跟着 +1（carryRiders 跨模块）
+ok 21 - 11. 平台载客：卷绳平台升一格，站顶玩家跟着 +1（carryRiders 跨模块）
+  ---
+  duration_ms: 361.985208
+  type: 'test'
+  ...
+# Subtest: 12. 活塞推平台脱绑：推离绳路径卷绳不动，推回绳路径重新绑上可动
+ok 22 - 12. 活塞推平台脱绑：推离绳路径卷绳不动，推回绳路径重新绑上可动
+  ---
+  duration_ms: 926.425917
+  type: 'test'
+  ...
+# Subtest: 1. 信号衰减：拉杆 + 16 格粉线，第 15 格仍亮（剩 1 级）、第 16 格断路、远端灯不亮
+ok 23 - 1. 信号衰减：拉杆 + 16 格粉线，第 15 格仍亮（剩 1 级）、第 16 格断路、远端灯不亮
+  ---
+  duration_ms: 876.5655
+  type: 'test'
+  ...
+# Subtest: 2. 断路与连锁脱落：拆中间一格粉下游全灭；拆支撑方块贴面元件弹落
+ok 24 - 2. 断路与连锁脱落：拆中间一格粉下游全灭；拆支撑方块贴面元件弹落
+  ---
+  duration_ms: 927.661959
+  type: 'test'
+  ...
+# Subtest: 3. 火把反相器：充能方块熄灭侧贴火把，两只串联还原信号（末端粉与拉杆同相）
+ok 25 - 3. 火把反相器：充能方块熄灭侧贴火把，两只串联还原信号（末端粉与拉杆同相）
+  ---
+  duration_ms: 675.93775
+  type: 'test'
+  ...
+# Subtest: 4. 火把时钟：输出粉绕回挂靠方块，持续泵进后火把至少翻转 2 次（振荡）
+ok 26 - 4. 火把时钟：输出粉绕回挂靠方块，持续泵进后火把至少翻转 2 次（振荡）
+  ---
+  duration_ms: 1185.239
+  type: 'test'
+  ...
+# Subtest: 5. 压力板：玩家/怪物踩板 → 板按下门开，离开 → 弹起门关
+ok 27 - 5. 压力板：玩家/怪物踩板 → 板按下门开，离开 → 弹起门关
+  ---
+  duration_ms: 483.341167
+  type: 'test'
+  ...
+# Subtest: 6. 观察者：正前方方块变化 → 背面输出脉冲 0.2s 点亮粉与灯，随后自动熄灭
+ok 28 - 6. 观察者：正前方方块变化 → 背面输出脉冲 0.2s 点亮粉与灯，随后自动熄灭
+  ---
+  duration_ms: 494.536083
+  type: 'test'
+  ...
+# Subtest: 7. TNT 引爆链：拉杆上升沿点燃邻格 TNT，2.5s 引信后爆炸毁格
+ok 29 - 7. TNT 引爆链：拉杆上升沿点燃邻格 TNT，2.5s 引信后爆炸毁格
+  ---
+  duration_ms: 246.29075
+  type: 'test'
+  ...
+# Subtest: 8. TNT×活塞孤儿修复：炸掉活塞头 → 底座自动收回；底座没了 → 孤头被摘除
+ok 30 - 8. TNT×活塞孤儿修复：炸掉活塞头 → 底座自动收回；底座没了 → 孤头被摘除
+  ---
+  duration_ms: 366.164917
+  type: 'test'
+  ...
+# Subtest: 9. 粘液块拖拽：粘性活塞伸出拖走粘着的石头，收回连石头一起拉回
+ok 31 - 9. 粘液块拖拽：粘性活塞伸出拖走粘着的石头，收回连石头一起拉回
+  ---
+  duration_ms: 146.790084
+  type: 'test'
+  ...
+# Subtest: 10. 推动上限：13 格石头推不动（不伸出），12 格恰好成功
+ok 32 - 10. 推动上限：13 格石头推不动（不伸出），12 格恰好成功
+  ---
+  duration_ms: 128.806459
+  type: 'test'
+  ...
+# Subtest: 11. 压碎贴面道具：推动路径上的门/红石粉被压碎，生存模式返还物品进背包
+ok 33 - 11. 压碎贴面道具：推动路径上的门/红石粉被压碎，生存模式返还物品进背包
+  ---
+  duration_ms: 177.089333
+  type: 'test'
+  ...
+# Subtest: 12. 活塞载客：站在被推石头顶上的玩家随方块平移一格
+ok 34 - 12. 活塞载客：站在被推石头顶上的玩家随方块平移一格
+  ---
+  duration_ms: 147.297458
+  type: 'test'
+  ...
+# Subtest: 13. 火把塔竖直传信号：亮火把强充能正上方方块→翻转贴附火把（每级反相）；被充能方块不直接喂粉（本作与原版差异）
+ok 35 - 13. 火把塔竖直传信号：亮火把强充能正上方方块→翻转贴附火把（每级反相）；被充能方块不直接喂粉（本作与原版差异）
+  ---
+  duration_ms: 314.631291
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：拉杆→红石粉点亮→远端灯亮
+ok 36 - 底座冒烟：拉杆→红石粉点亮→远端灯亮
+  ---
+  duration_ms: 411.086
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：红石信号上升沿自动开门、下降沿自动关门
+ok 37 - 底座冒烟：红石信号上升沿自动开门、下降沿自动关门
+  ---
+  duration_ms: 246.309333
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：按钮脉冲 → 活塞 0.15s 延迟伸出
+ok 38 - 底座冒烟：按钮脉冲 → 活塞 0.15s 延迟伸出
+  ---
+  duration_ms: 531.359542
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：竖着放（B2 压 F1 头顶）F2 = NOT F1，两拍级联
+ok 39 - 火把双级反相：竖着放（B2 压 F1 头顶）F2 = NOT F1，两拍级联
+  ---
+  duration_ms: 502.768833
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：平铺（B2 与 F1 水平相邻）F2 不受 F1 影响——火把不充能水平方块
+ok 40 - 火把双级反相：平铺（B2 与 F1 水平相邻）F2 不受 F1 影响——火把不充能水平方块
+  ---
+  duration_ms: 452.232
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：平铺正解——F1 与 B2 之间垫一格红石粉接力充能
+ok 41 - 火把双级反相：平铺正解——F1 与 B2 之间垫一格红石粉接力充能
+  ---
+  duration_ms: 605.054667
+  type: 'test'
+  ...
+# Subtest: 玩家准星近战能命中前方实体，墙挡住后不扣血
+ok 42 - 玩家准星近战能命中前方实体，墙挡住后不扣血
+  ---
+  duration_ms: 92.758209
+  type: 'test'
+  ...
+# Subtest: 玩家近战按实体碰撞盒命中，四格外目标不受伤
+ok 43 - 玩家近战按实体碰撞盒命中，四格外目标不受伤
+  ---
+  duration_ms: 69.104625
+  type: 'test'
+  ...
+# Subtest: 第三人称准星跳过身后实体，仍能攻击前方且受墙遮挡
+ok 44 - 第三人称准星跳过身后实体，仍能攻击前方且受墙遮挡
+  ---
+  duration_ms: 66.131833
+  type: 'test'
+  ...
+# Subtest: 僵尸隔墙近战不扣血，移走墙后同距离可以攻击
+ok 45 - 僵尸隔墙近战不扣血，移走墙后同距离可以攻击
+  ---
+  duration_ms: 86.147666
+  type: 'test'
+  ...
+# Subtest: 第三人称可攻击跨眼睛平面的贴脸目标，完全身后的仍不可攻击
+ok 46 - 第三人称可攻击跨眼睛平面的贴脸目标，完全身后的仍不可攻击
+  ---
+  duration_ms: 77.171
+  type: 'test'
+  ...
+# Subtest: 零距离生物追击与受击不会污染坐标
+ok 47 - 零距离生物追击与受击不会污染坐标
+  ---
+  duration_ms: 84.866208
+  type: 'test'
+  ...
+# Subtest: 合成备用工具保留活动工具磨损，用坏后备用工具满耐久
+ok 48 - 合成备用工具保留活动工具磨损，用坏后备用工具满耐久
+  ---
+  duration_ms: 82.059459
+  type: 'test'
+  ...
+# Subtest: 丢弃并拾回最后一把工具保留磨损，库存清零后新合成工具满耐久
+ok 49 - 丢弃并拾回最后一把工具保留磨损，库存清零后新合成工具满耐久
+  ---
+  duration_ms: 80.086416
+  type: 'test'
+  ...
+# Subtest: 有备用工具时丢弃一把不洗活动工具耐久，拾回旧工具取较大磨损
+ok 50 - 有备用工具时丢弃一把不洗活动工具耐久，拾回旧工具取较大磨损
+  ---
+  duration_ms: 85.201792
+  type: 'test'
+  ...
+# 世界快照编码损坏，放弃恢复
+# Subtest: 读档重置临时压力板/动力注册表与落地摔落状态
+ok 51 - 读档重置临时压力板/动力注册表与落地摔落状态
+  ---
+  duration_ms: 317.835167
+  type: 'test'
+  ...
+# Subtest: 热重载恢复生存/种子与机关，清施工、怪物、掉落、引信和粒子
+ok 52 - 热重载恢复生存/种子与机关，清施工、怪物、掉落、引信和粒子
+  ---
+  duration_ms: 354.338625
+  type: 'test'
+  ...
+# Subtest: 坏 base64 快照失败且不改世界、生存与瞬态
+ok 53 - 坏 base64 快照失败且不改世界、生存与瞬态
+  ---
+  duration_ms: 168.627833
+  type: 'test'
+  ...
+# Subtest: 续编显式零次双通过保持零次，正式导出继续拦
+ok 54 - 续编显式零次双通过保持零次，正式导出继续拦
+  ---
+  duration_ms: 457.355667
+  type: 'test'
+  ...
+# Subtest: 草稿缺 verifiedPasses 续编保持零次，不借旧正式卡兼容绕过验证
+ok 55 - 草稿缺 verifiedPasses 续编保持零次，不借旧正式卡兼容绕过验证
+  ---
+  duration_ms: 350.020917
+  type: 'test'
+  ...
+# Subtest: 草稿作为模板使用创建新稿身份，编辑后保留原草稿
+ok 56 - 草稿作为模板使用创建新稿身份，编辑后保留原草稿
+  ---
+  duration_ms: 316.857584
+  type: 'test'
+  ...
+# Subtest: 持久 put 失败保留旧稿，重复会话降级不积累，恢复持久写后安全替换
+ok 57 - 持久 put 失败保留旧稿，重复会话降级不积累，恢复持久写后安全替换
+  ---
+  duration_ms: 448.485833
+  type: 'test'
+  ...
+# Subtest: 同身份写入降级时显示最新会话内容，持久成功后清除会话标记
+ok 58 - 同身份写入降级时显示最新会话内容，持久成功后清除会话标记
+  ---
+  duration_ms: 119.359042
+  type: 'test'
+  ...
+# Subtest: 同身份降级草稿退出后续编仍保留持久备份，恢复写入才替换
+ok 59 - 同身份降级草稿退出后续编仍保留持久备份，恢复写入才替换
+  ---
+  duration_ms: 548.506
+  type: 'test'
+  ...
+# Subtest: 异步取锁时几何采用同一快照，切世界则拒绝混合卡
+ok 60 - 异步取锁时几何采用同一快照，切世界则拒绝混合卡
+  ---
+  duration_ms: 124.171417
+  type: 'test'
+  ...
+# Subtest: 正式卡改副本保留源卡；普通退出追加末稿且退出后拒收新保存
+ok 61 - 正式卡改副本保留源卡；普通退出追加末稿且退出后拒收新保存
+  ---
+  duration_ms: 338.993625
+  type: 'test'
+  ...
+# Subtest: 草稿串行保存保持单条身份与规则；不补存退出排空在途、并发退出合并
+ok 62 - 草稿串行保存保持单条身份与规则；不补存退出排空在途、并发退出合并
+  ---
+  duration_ms: 305.034709
+  type: 'test'
+  ...
+# Subtest: 到达限时同帧踩终点判超时零星，限时前仍可通关
+ok 63 - 到达限时同帧踩终点判超时零星，限时前仍可通关
+  ---
+  duration_ms: 81.186083
+  type: 'test'
+  ...
+# Subtest: 机关恢复：按下按钮复位并熄灭负载，旧计时不能提前弹出新脉冲
+ok 64 - 机关恢复：按下按钮复位并熄灭负载，旧计时不能提前弹出新脉冲
+  ---
+  duration_ms: 397.778625
+  type: 'test'
+  ...
+# Subtest: 按钮恢复下降沿：此前由按钮打开的门关闭、伸出的活塞延迟收回
+ok 65 - 按钮恢复下降沿：此前由按钮打开的门关闭、伸出的活塞延迟收回
+  ---
+  duration_ms: 637.017
+  type: 'test'
+  ...
+# Subtest: 红石初始化幂等：重复恢复不能丢失待收回活塞，也不能丢失合法伸出动作
+ok 66 - 红石初始化幂等：重复恢复不能丢失待收回活塞，也不能丢失合法伸出动作
+  ---
+  duration_ms: 648.499083
+  type: 'test'
+  ...
+# Subtest: 按钮恢复基线不执行机关：无电手动门保持，按钮旁 TNT 不误点燃，拉杆 TNT 照常点燃
+ok 67 - 按钮恢复基线不执行机关：无电手动门保持，按钮旁 TNT 不误点燃，拉杆 TNT 照常点燃
+  ---
+  duration_ms: 338.419084
+  type: 'test'
+  ...
+# Subtest: 自动投料：石头替换另一条动力线的水车顶水后，水车与带立即停转
+ok 68 - 自动投料：石头替换另一条动力线的水车顶水后，水车与带立即停转
+  ---
+  duration_ms: 437.357625
+  type: 'test'
+  ...
+# Subtest: TNT 点燃守卫：空气不能点燃，同位置重复点燃不复制或重置引信
+ok 69 - TNT 点燃守卫：空气不能点燃，同位置重复点燃不复制或重置引信
+  ---
+  duration_ms: 150.588125
+  type: 'test'
+  ...
+# Subtest: TNT 引信取消：点燃方块被替换后不炸替代块或周围结构
+ok 70 - TNT 引信取消：点燃方块被替换后不炸替代块或周围结构
+  ---
+  duration_ms: 99.035959
+  type: 'test'
+  ...
+# Subtest: TNT 爆心重合：玩家和怪物位置与速度保持有限数值
+ok 71 - TNT 爆心重合：玩家和怪物位置与速度保持有限数值
+  ---
+  duration_ms: 163.964584
+  type: 'test'
+  ...
+# Subtest: 孤立 TNT：引信移除唯一方块后仍刷新爆心区块及相邻区块
+ok 72 - 孤立 TNT：引信移除唯一方块后仍刷新爆心区块及相邻区块
+  ---
+  duration_ms: 168.336083
+  type: 'test'
+  ...
+# Subtest: 部分覆盖头部的高墙阻止 X/Z 方向移动
+ok 73 - 部分覆盖头部的高墙阻止 X/Z 方向移动
+  ---
+  duration_ms: 164.235875
+  type: 'test'
+  ...
+# Subtest: 高速下落扫过薄平台，并在整个脚印中选择最先触及的一层
+ok 74 - 高速下落扫过薄平台，并在整个脚印中选择最先触及的一层
+  ---
+  duration_ms: 86.166791
+  type: 'test'
+  ...
+# Subtest: 高速上升按头部扫掠顺序停在最先触及的薄天花板下
+ok 75 - 高速上升按头部扫掠顺序停在最先触及的薄天花板下
+  ---
+  duration_ms: 80.456125
+  type: 'test'
+  ...
+# Subtest: 扫掠落到粘液薄平台仍反弹、清旧落差且不扣血
+ok 76 - 扫掠落到粘液薄平台仍反弹、清旧落差且不扣血
+  ---
+  duration_ms: 74.285083
+  type: 'test'
+  ...
+# Subtest: 普通平台扫掠落地结算摔伤，落地后不会重复扣血
+ok 77 - 普通平台扫掠落地结算摔伤，落地后不会重复扣血
+  ---
+  duration_ms: 65.056917
+  type: 'test'
+  ...
+# Subtest: 水中落地继续使用游泳阻尼并豁免原摔落伤害
+ok 78 - 水中落地继续使用游泳阻尼并豁免原摔落伤害
+  ---
+  duration_ms: 89.903083
+  type: 'test'
+  ...
+# Subtest: 运转传送带仍载玩家水平移动，垂直扫掠保持脚下支撑
+ok 79 - 运转传送带仍载玩家水平移动，垂直扫掠保持脚下支撑
+  ---
+  duration_ms: 316.13525
+  type: 'test'
+  ...
+# Subtest: 向上活塞载玩家升一格，下一物理帧仍站在被推平台上
+ok 80 - 向上活塞载玩家升一格，下一物理帧仍站在被推平台上
+  ---
+  duration_ms: 196.967
+  type: 'test'
+  ...
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:26:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:209:22)
+#     at enterLevelImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:169:37)
+#     at async enterLevel (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:144:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:28:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:26:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:209:22)
+#     at enterLevelEditorImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:122:37)
+#     at async enterLevelEditor (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:111:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:32:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: 落盘失败在真实进关/编辑入口显示存储原因，退出入口互斥锁
+ok 81 - 落盘失败在真实进关/编辑入口显示存储原因，退出入口互斥锁
+  ---
+  duration_ms: 146.180292
+  type: 'test'
+  ...
+# Subtest: 异步临时世界入口互斥，快速编辑/进关只允许第一请求进入
+ok 82 - 异步临时世界入口互斥，快速编辑/进关只允许第一请求进入
+  ---
+  duration_ms: 327.041042
+  type: 'test'
+  ...
+# Subtest: 正式导出入口保留源卡限时与考核锁，作者修改考核锁仍生效
+ok 83 - 正式导出入口保留源卡限时与考核锁，作者修改考核锁仍生效
+  ---
+  duration_ms: 364.727209
+  type: 'test'
+  ...
+# Subtest: 损坏世界导入保留原槽位与索引
+ok 84 - 损坏世界导入保留原槽位与索引
+  ---
+  duration_ms: 191.454875
+  type: 'test'
+  ...
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:42:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:209:22)
+#     at enterLevelImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:169:37)
+#     at async enterLevel (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:144:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:44:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:42:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:209:22)
+#     at enterLevelEditorImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:122:37)
+#     at async enterLevelEditor (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:111:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:45:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: 落盘失败拒绝进入关卡与编辑器且保留当前世界
+ok 85 - 落盘失败拒绝进入关卡与编辑器且保留当前世界
+  ---
+  duration_ms: 126.8695
+  type: 'test'
+  ...
+# Subtest: 编辑世界热重载不序列化方块、不覆盖启动恢复的原世界
+ok 86 - 编辑世界热重载不序列化方块、不覆盖启动恢复的原世界
+  ---
+  duration_ms: 73.040583
+  type: 'test'
+  ...
+1..86
+# tests 86
+# suites 0
+# pass 86
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6317.897875

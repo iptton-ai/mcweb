@@ -6,7 +6,7 @@
 // v4 起 dims 字段记录世界尺寸；老尺寸存档读入时自动迁移（种子重生成 + 老区域覆盖）。
 // 自动存档：每 SAVE_AUTOSAVE_SEC 秒一次 + 页面隐藏/关闭时兜底，写入当前槽（state.saveSlot）；
 // 手动存档：开始界面（Esc 菜单）的「保存进度」按钮；首屏槽位列表可切换世界/在空槽开新世界。
-// 存档字段对齐 assistant/snapshot.js 的热重载快照（快照不含 enc/槽位；
+// 存档字段对齐 assistant/snapshot.js 的热重载快照（快照也含 enc 压缩字段，但不含槽位；
 // 怪物/掉落物/TNT 属瞬时实体，不保存）。
 
 import {
@@ -24,6 +24,8 @@ import {
 } from './config.js';
 import { state } from './state.js';
 import { generateWorld } from './world.js';
+import { initRedstone } from './redstone.js';
+import { initKinetic } from './kinetic.js';
 import { buildChunkProps, updateChunkMeshes } from './chunk.js';
 import { updateHotbar, showTooltip } from './ui.js';
 import { updateHealthUI } from './playerLife.js';
@@ -40,6 +42,14 @@ const SAVE_VERSION = 4;
 const LOADABLE_VERSIONS = [1, 2, 3, 4];
 // v1..v3 存档没有尺寸字段：那三代固定为 128×128×64（当时唯一用过的尺寸）
 const LEGACY_DIMS = [128, 64, 128];
+
+// 导入保护（2026-10-11 修跨电脑导入竞态）：importSlotJson 把外部存档写入当前槽后、
+// settingsUI 触发 reload 前，内存世界与槽位数据不一致——reload 引发的 pagehide/
+// visibilitychange 兜底存档会把内存里的旧世界写回同一槽位，覆盖刚导入的档
+// （在另一台电脑上表现为「导入成功但地图回到初始状态」）。置位后 saveGame 一律拒写
+// （四条写档通道全经此函数，入口一处闸住，同 levelRun/levelEdit 闸）；
+// loadGame 把世界装回内存（内存与槽位重新一致，含读档失败回退新世界的路径）时解除。
+let importGuard = false;
 
 function u8ToBase64(u8) {
     let s = '';
@@ -174,6 +184,7 @@ export function saveGame() {
     // levelRun.enterLevel / levelEditor.enterLevelEditor 进场前的强制落盘都发生在挂各自
     // state 标志之前（见 levelRun.js 步骤 2/3、levelEditor.js 步骤 1），不受本闸影响。
     if (state.levelRun || state.levelEdit) return false;
+    if (importGuard) return false; // 导入窗口：内存世界不得覆盖刚写入的外部档（见 importGuard 注释）
     try {
         const p = state.player;
         // RLE 压缩；膨胀（不可压缩数据）时回退原始编码
@@ -239,6 +250,7 @@ function clampSlot(slot) {
 // 存档尺寸与当前不符时自动迁移（migrateBlocksToCurrentSize），老档内容完整保留。
 // 读档成功即把当前槽切换为该槽（state.saveSlot）。
 export function loadGame(slot = state.saveSlot) {
+    importGuard = false; // 世界装回内存 = 内存与槽位一致，解除导入保护（放在最前，读档失败回退新世界也照常解除）
     const i = clampSlot(slot);
     let save = null;
     try {
@@ -297,7 +309,7 @@ export function loadGame(slot = state.saveSlot) {
         pitch: p.pitch || 0,
         flying: !!p.flying,
         health: p.health ?? MAX_HEALTH,
-        dead: false,
+        dead: false, onGround: false, fallStartY: null, inWater: false,
         selectedSlot: p.selectedSlot || 0,
         inventory: p.inventory || {},
         hunger: p.hunger ?? MAX_HUNGER,
@@ -311,6 +323,8 @@ export function loadGame(slot = state.saveSlot) {
     if (typeof save.viewMode === 'number') state.viewMode = save.viewMode;
     camera.position.set(state.player.x, state.player.y + PLAYER_EYE_HEIGHT, state.player.z);
 
+    initRedstone();
+    initKinetic();
     state.saveSlot = i;
     updateHotbar();
     updateHealthUI();
@@ -342,6 +356,20 @@ export function importSlotJson(text, slot = state.saveSlot) {
         typeof save.blocks !== 'string' || typeof save.player !== 'object') {
         return '不是有效的本作世界存档';
     }
+    // 覆盖槽位之前完整解码验证；失败不能破坏原存档。
+    const dims = saveDimsOf(save);
+    if (!dims) return '存档世界尺寸无效';
+    const total = dims[0] * dims[1] * dims[2];
+    try {
+        const bytes = base64ToU8(save.blocks);
+        if (save.version >= 3 && save.enc === 'rle') {
+            if (!rleDecode(bytes, total)) return '存档方块压缩数据损坏';
+        } else if (bytes.length !== total) {
+            return '存档方块数据长度与尺寸不符';
+        }
+    } catch {
+        return '存档方块编码无效';
+    }
     const i = clampSlot(slot);
     try {
         localStorage.setItem(SLOT_KEY_PREFIX + i, JSON.stringify(save));
@@ -352,6 +380,7 @@ export function importSlotJson(text, slot = state.saveSlot) {
     idx.slots[i] = { savedAt: save.savedAt || Date.now(), gameMode: save.gameMode || null };
     idx.current = i;
     writeIndex(idx);
+    importGuard = true; // 挡住 reload 触发的 pagehide/visibilitychange 兜底存档（见 importGuard 注释）
     return null;
 }
 
@@ -370,8 +399,8 @@ function notifyAutosaveResult(ok) {
 
 export function initAutoSave() {
     setInterval(() => {
-        // 闯关/编辑中直接跳过（saveGame 入口闸本会拒写）：避免把「拒写」误报成「存档失败」
-        if (state.levelRun || state.levelEdit) return;
+        // 闯关/编辑/导入窗口直接跳过（saveGame 入口闸本会拒写）：避免把「拒写」误报成「存档失败」
+        if (state.levelRun || state.levelEdit || importGuard) return;
         if (state.blocks && !state.player.dead) notifyAutosaveResult(saveGame());
     }, SAVE_AUTOSAVE_SEC * 1000);
 
