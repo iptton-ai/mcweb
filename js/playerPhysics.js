@@ -29,12 +29,14 @@ export function updatePlayerPhysics(dt) {
     p.inWater = !p.flying && (waistBlock === BlockTypes.WATER || eyeBlock === BlockTypes.WATER);
     p.underwater = !p.flying && eyeBlock === BlockTypes.WATER;
 
-    // 潜行（Shift：×0.35，不飞行时）与疾跑（Ctrl+W：×1.5，饥饿消耗 ×2.7 见 playerLife.js）
+    // 潜行（Shift：×0.35，不飞行时）与疾跑（Ctrl+W：×1.5，饥饿消耗 ×2.7 见 playerLife.js）。
+    // 疾跑在飞行时同样生效（只加水平速度、垂直升降仍按 FLY_SPEED；飞行仅创造模式，
+    // 饥饿统计在创造模式不跑，所以无任何生存侧副作用）
     const sneak = !p.flying && !!(k['ShiftLeft'] || k['ShiftRight']);
-    const sprint = !p.flying && !p.inWater && !!(k['ControlLeft'] || k['ControlRight']) && !!k['KeyW'];
+    const sprint = !p.inWater && !!(k['ControlLeft'] || k['ControlRight']) && !!k['KeyW'];
     p.sprinting = sprint;
-    const speed = p.flying ? FLY_SPEED : WALK_SPEED *
-        (sneak ? 0.35 : 1) * (sprint ? 1.5 : 1) * (p.inWater ? 0.6 : 1);
+    const speed = (p.flying ? FLY_SPEED : WALK_SPEED *
+        (sneak ? 0.35 : 1) * (p.inWater ? 0.6 : 1)) * (sprint ? 1.5 : 1);
 
     const forward = new THREE.Vector3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
     const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));

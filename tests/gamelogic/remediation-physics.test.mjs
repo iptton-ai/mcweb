@@ -2,12 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshWorld, pump, state, setB, at } from './kit.mjs';
 import {
-    BELT_ITEM_ID, BELT_SPEED, BlockTypes, GameModes, PISTON_ITEM_ID,
+    BELT_ITEM_ID, BELT_SPEED, BlockTypes, FLY_SPEED, GameModes, PISTON_ITEM_ID,
     PLAYER_HEIGHT, PLAYER_WIDTH, SHAFT_ITEM_ID, SLIME_BOUNCE_KEEP, WATERWHEEL_ITEM_ID,
 } from '../../js/config.js';
 import { updatePlayerPhysics } from '../../js/playerPhysics.js';
 import { isBeltRunningAt, placeKinetic, updateKineticNetwork } from '../../js/kinetic.js';
 import { enqueuePistonAction, placePiston } from '../../js/piston.js';
+import { keys } from '../../js/input.js';
+import { setState, getUIState } from '../../js/uiModal.js';
 
 function physicsWorld(player = {}) {
     freshWorld({ gameMode: GameModes.SURVIVAL });
@@ -132,4 +134,30 @@ test('向上活塞载玩家升一格，下一物理帧仍站在被推平台上',
     assert.equal(p.y, 12.001);
     assert.equal(p.onGround, true);
     assert.equal(p.health, 20);
+});
+
+test('飞行 Ctrl+W 同样疾跑：水平 ×1.5，垂直升降仍按 FLY_SPEED', () => {
+    const p = physicsWorld({ flying: true, y: 40, z: 80 });
+    state.gameMode = GameModes.CREATIVE;
+    state.camMode = 'player'; // 让 updatePlayerPhysics 读取 keys（自由视角下恒为空）
+    if (getUIState() !== 'playing') setState('playing');
+    try {
+        keys['KeyW'] = true;
+        for (let i = 0; i < 40; i++) updatePlayerPhysics(0.05);
+        assert.ok(Math.abs(Math.hypot(p.vx, p.vz) - FLY_SPEED) < 0.3,
+            '无 Ctrl 时飞行水平速度收敛到 FLY_SPEED');
+        keys['ControlLeft'] = true;
+        for (let i = 0; i < 40; i++) updatePlayerPhysics(0.05);
+        assert.equal(p.sprinting, true, 'Ctrl+W 飞行进入疾跑态');
+        assert.ok(Math.abs(Math.hypot(p.vx, p.vz) - FLY_SPEED * 1.5) < 0.3,
+            'Ctrl 飞行水平速度 ×1.5');
+        keys['Space'] = true;
+        updatePlayerPhysics(0.05);
+        assert.equal(p.vy, FLY_SPEED, '疾跑不放大垂直升降速度');
+    } finally {
+        for (const code of ['KeyW', 'ControlLeft', 'Space']) keys[code] = false;
+        p.sprinting = false;
+        state.camMode = 'free';
+        if (getUIState() === 'playing') setState('title');
+    }
 });
