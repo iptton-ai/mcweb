@@ -1,0 +1,50 @@
+{
+  "before": {
+    "logs": 6,
+    "planks": 7,
+    "delivered": 0,
+    "player": {
+      "x": 128.94145433237782,
+      "y": 41.001,
+      "z": 138.9207138677427
+    },
+    "distanceFromOutput": 4.207548401542624
+  },
+  "trace": [
+    {
+      "logs": 5,
+      "planksInBag": 7,
+      "planksInBox": 4,
+      "delivered": 4,
+      "drops": 0
+    },
+    {
+      "logs": 4,
+      "planksInBag": 7,
+      "planksInBox": 8,
+      "delivered": 8,
+      "drops": 0
+    },
+    {
+      "logs": 3,
+      "planksInBag": 7,
+      "planksInBox": 12,
+      "delivered": 12,
+      "drops": 0
+    },
+    {
+      "logs": 2,
+      "planksInBag": 7,
+      "planksInBox": 16,
+      "delivered": 16,
+      "drops": 0
+    },
+    {
+      "logs": 1,
+      "planksInBag": 7,
+      "planksInBox": 20,
+      "delivered": 20,
+      "drops": 0
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-15",
+  "method": "真实游戏逻辑，渲染及浏览器平台使用仓库现有垫片；不是浏览器试玩",
+  "config": {
+    "recipes": 29,
+    "recipeOutputs": [
+      "木板",
+      "木板",
+      "木棍",
+      "工作台",
+      "火把",
+      "木镐",
+      "石镐",
+      "铁镐",
+      "钻石镐",
+      "木斧",
+      "石斧",
+      "铁斧",
+      "钻石斧",
+      "木锹",
+      "石锹",
+      "铁锹",
+      "钻石锹",
+      "木剑",
+      "石剑",
+      "铁剑",
+      "钻石剑",
+      "熔炉",
+      "砖块",
+      "TNT",
+      "玻璃",
+      "铁锭",
+      "熟猪排",
+      "煤炭",
+      "煤炭"
+    ],
+    "doorId": 19,
+    "doorRecipe": false,
+    "hotbarCount": 77,
+    "first9": [
+      "草方块",
+      "泥土",
+      "石头",
+      "原木",
+      "树叶",
+      "沙子",
+      "砖块",
+      "玻璃",
+      "木板"
+    ],
+    "foods": [
+      {
+        "id": 184,
+        "name": "苹果",
+        "food": 4
+      },
+      {
+        "id": 185,
+        "name": "生猪肉",
+        "food": 3
+      },
+      {
+        "id": 186,
+        "name": "熟猪排",
+        "food": 8
+      }
+    ],
+    "registeredMaxId": 233
+  },
+  "terrain": [
+    {
+      "seed": 1,
+      "water": 0,
+      "minHeight": 28,
+      "maxHeight": 49
+    },
+    {
+      "seed": 42,
+      "water": 0,
+      "minHeight": 28,
+      "maxHeight": 46
+    },
+    {
+      "seed": 2026,
+      "water": 0,
+      "minHeight": 28,
+      "maxHeight": 48
+    }
+  ],
+  "pauseBefore": {
+    "ui": "pause",
+    "hunger": 20,
+    "time": 0
+  },
+  "pauseAfter240SimulationSeconds": {
+    "ui": "pause",
+    "hunger": 19,
+    "time": 239.99999999999065
+  },
+  "dayNight": {
+    "fullCycleSeconds": 600,
+    "firstNightAfterNewWorldSeconds": 277.64760955964306,
+    "nightDurationSeconds": 284.70478088071394
+  }
+}

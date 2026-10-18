@@ -672,10 +672,28 @@ export function isPlatformId(id) {
     return id === PLATFORM_BASE;
 }
 
+// 物理 P1：复用已审计的 byte 空洞；现代存档格式保持不变。
+export const CRANK_BASE = 63, CRANK_ITEM_ID = CRANK_BASE;
+export const LARGE_COG_BASE = 66, LARGE_COG_ITEM_ID = LARGE_COG_BASE;
+export const REVERSER_BASE = 69, REVERSER_ITEM_ID = REVERSER_BASE;
+export const CRANK_RPM = 8, CRANK_SU_CAPACITY = 64;
+export const KINETIC_MIN_RPM = 2, KINETIC_MAX_RPM = 32;
+export const crankId = axis => CRANK_BASE + axis;
+export const crankAxis = id => id - CRANK_BASE;
+export const isCrankId = id => id >= CRANK_BASE && id < CRANK_BASE + 3;
+export const largeCogId = axis => LARGE_COG_BASE + axis;
+export const largeCogAxis = id => id - LARGE_COG_BASE;
+export const isLargeCogId = id => id >= LARGE_COG_BASE && id < LARGE_COG_BASE + 3;
+export const reverserId = (axis, powered) => REVERSER_BASE + axis * 2 + (powered ? 1 : 0);
+export const reverserAxis = id => (id - REVERSER_BASE) >> 1;
+export const reverserPowered = id => (id - REVERSER_BASE) & 1;
+export const isReverserId = id => id >= REVERSER_BASE && id < REVERSER_BASE + 6;
+
 // 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组 ∪ 218..222 电梯组，
 // 用常量判段界；动力求解器全图扫描的热路径——三次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
-    return (id >= SHAFT_BASE && id < SAW_BASE + 6) ||
+    return (id >= CRANK_BASE && id < REVERSER_BASE + 6) ||
+        (id >= SHAFT_BASE && id < SAW_BASE + 6) ||
         (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT) ||
         (id >= PULLEY_BASE && id < PULLEY_BASE + PULLEY_COUNT + PLATFORM_COUNT);
 }
@@ -772,10 +790,25 @@ export function starlightOpen(id) {
 }
 
 
+// 安家：床尾/床头 × 北东南西，保留 Uint8 存档格式（234..241）。
+export const BED_BASE = 234;
+export const BED_COUNT = 8;
+export const BED_ITEM_ID = BED_BASE;
+export const BED_HEIGHT = 9 / 16;
+export const FIRST_DAY_SECONDS = 480;
+export const BED_DIRECTIONS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+export function bedId(half, facing) { return BED_BASE + half * 4 + facing; }
+export function isBedId(id) { return id >= BED_BASE && id < BED_BASE + BED_COUNT; }
+export function bedHalf(id) { return ((id - BED_BASE) >> 2) & 1; }
+export function bedFacing(id) { return (id - BED_BASE) & 3; }
+
 // 动力方块的传动轴：轴类方块取编码轴，机械锯/投料器取朝向法线所在轴
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
 export function kineticAxisOf(id) {
+    if (isCrankId(id)) return crankAxis(id);
+    if (isLargeCogId(id)) return largeCogAxis(id);
+    if (isReverserId(id)) return reverserAxis(id);
     if (isBeltId(id)) return null;
     if (isPlatformId(id)) return null; // 电梯平台：被动载荷，无传动轴（neighborsOf 直接 return，L2 plan §3.1）
     if (isSawId(id) || isDeployerId(id)) {
@@ -792,6 +825,9 @@ export function kineticAxisOf(id) {
 
 // 动力组物品（破坏返还/放置路由用）
 export function kineticItemId(id) {
+    if (isCrankId(id)) return CRANK_ITEM_ID;
+    if (isLargeCogId(id)) return LARGE_COG_ITEM_ID;
+    if (isReverserId(id)) return REVERSER_ITEM_ID;
     if (isShaftId(id)) return SHAFT_ITEM_ID;
     if (isCogId(id)) return COGWHEEL_ITEM_ID;
     if (isWaterwheelId(id)) return WATERWHEEL_ITEM_ID;
@@ -821,6 +857,13 @@ export const KINETIC_RECIPES = {
 // needsTool：true = 必须用对应类别工具挖才有掉落（原版石质方块的规则，如石头手挖 7.5s 还不掉落）。
 // drop：生存模式破坏掉落的物品 ID；缺省 = 掉自身；null = 无掉落（玻璃/树叶，原版无精准采集时不掉落）。
 // 破坏耗时 = 硬度 × (可采集 ? 1.5 : 5) ÷ 工具速度，水中/悬空各再 ×5（js/mining.js）。
+// Stable byte IDs: 252..255 remain reserved for exploration ladders.
+export const LifeBlocks = { CHEST:242, FARMLAND:243, WHEAT:244, WHEAT_MATURE:247, SAPLING:248, FENCE:249, GATE:250, GATE_OPEN:251 };
+export const LifeItems = { SEEDS:256, WHEAT:257, BREAD:258, BUCKET:259, WATER_BUCKET:260, HOE:261, SHEARS:262, MEMENTO:263 };
+export const LIFE = { chestSlots:27, stackSize:64, maxObjects:512, maxAnimals:24, cropStageSeconds:40, treeSeconds:150, woolSeconds:120, furnaceSeconds:8, maxInventory:100000, maxToolCount:4096 };
+export const isCropId = id => id >= LifeBlocks.WHEAT && id <= LifeBlocks.WHEAT_MATURE;
+export const isContainerId = id => id === LifeBlocks.CHEST || id === BlockTypes.FURNACE;
+export const isFenceId = id => id === LifeBlocks.FENCE || id === LifeBlocks.GATE;
 export const BlockInfo = {
     [BlockTypes.AIR]: { name: '空气', solid: false, transparent: true, color: '#000000' },
     [BlockTypes.GRASS]: { name: '草方块', solid: true, transparent: false, color: '#5a9e3d', hardness: 0.6, tool: 'shovel', drop: BlockTypes.DIRT }, // 原版：草方块掉泥土
@@ -882,6 +925,17 @@ for (let half = 0; half < 2; half++) {
     }
 }
 
+for (let half = 0; half < 2; half++) {
+    for (let facing = 0; facing < 4; facing++) {
+        BlockInfo[bedId(half, facing)] = {
+            name: '小床', solid: true, transparent: true, customMesh: true,
+            color: '#ce5147', hardness: 0.2, tool: 'axe', drop: BED_ITEM_ID,
+            collisionHeight: BED_HEIGHT, outline: [0, 0, 0, 1, BED_HEIGHT, 1],
+        };
+    }
+}
+export function collisionHeight(id) { return BlockInfo[id]?.solid ? (BlockInfo[id].collisionHeight ?? 1) : 0; }
+
 // ==================== 工具（照搬原版工具分级：木2/石4/铁6/钻8）====================
 // 2026-09-05 起有合成系统（见下方 RECIPES），工具靠「撸树→木板→木棍→工作台」逐级做出来，
 // 铁质一档不再是开局赠送。工具是「物品」不是方块：ID 绝不写进 state.blocks，只出现在
@@ -913,7 +967,7 @@ export const ToolTypes = {
 export const TOOL_EXTRA_BASE = 190; // 木/石/钻石档工具 ID 起点（铁档沿用 100..103）
 
 export function isToolId(id) {
-    return (id >= TOOL_BASE && id <= TOOL_BASE + 3) ||
+    return id === 264 || id === 265 || id === LifeItems.HOE || id === LifeItems.SHEARS || (id >= TOOL_BASE && id <= TOOL_BASE + 3) ||
         (id >= TOOL_EXTRA_BASE && id <= TOOL_EXTRA_BASE + 11);
 }
 
@@ -987,10 +1041,13 @@ export const RECIPES = [
     R('stone_sword', ToolTypes.STONE_SWORD, 1, { [BlockTypes.COBBLESTONE]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
     R('iron_sword', ToolTypes.SWORD, 1, { [ItemTypes.IRON_INGOT]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
     R('diamond_sword', ToolTypes.DIAMOND_SWORD, 1, { [ItemTypes.DIAMOND]: 2, [ItemTypes.STICK]: 1 }, 'crafting'),
+    R('door', DOOR_ITEM_ID, 3, { [BlockTypes.PLANKS]: 6 }, 'crafting'),
+    R('bed', BED_ITEM_ID, 1, { [BlockTypes.WOOL]: 3, [BlockTypes.PLANKS]: 3 }, 'crafting'),
     R('furnace', BlockTypes.FURNACE, 1, { [BlockTypes.COBBLESTONE]: 8 }, 'crafting'),
     R('brick', BlockTypes.BRICK, 4, { [BlockTypes.STONE]: 4 }, 'crafting'),
     R('tnt', BlockTypes.TNT, 1, { [ItemTypes.GUNPOWDER]: 5, [BlockTypes.SAND]: 4 }, 'crafting'),
     // ---- 熔炉烧制（每条含煤炭×1 燃料成本；木炭例外——两根原木自燃出炭，是缺煤时的引子）----
+    R('stone', BlockTypes.STONE, 1, { [BlockTypes.COBBLESTONE]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
     R('glass', BlockTypes.GLASS, 1, { [BlockTypes.SAND]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
     R('iron_ingot', ItemTypes.IRON_INGOT, 1, { [BlockTypes.IRON_ORE]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
     R('cooked_pork', ItemTypes.COOKED_PORK, 1, { [ItemTypes.RAW_PORK]: 1, [ItemTypes.COAL]: 1 }, 'furnace'),
@@ -1106,6 +1163,7 @@ export const HotbarBlocks = [
     FLAG_BASE + FLAG_CHECKPOINT, // 检查点旗
     FLAG_BASE + FLAG_GOAL, // 终点旗
     STARLIGHT_BASE, // 星辉门（锁定变体代表）
+    BED_ITEM_ID, // 小床：两格占地、白天设家、夜晚睡觉
     PEN_ID, // 出题笔
 ];
 
@@ -1476,3 +1534,114 @@ export function outlineUnion(id) {
     }
     return outlineUnionCache.get(id);
 }
+
+// Stable life recipes and timings. Items above 255 are never voxel IDs.
+Object.assign(BlockInfo, {
+    [LifeBlocks.CHEST]: {name:'家园箱子',solid:true,transparent:false,color:'#ae7438',hardness:2,tool:'axe'},
+    [LifeBlocks.FARMLAND]: {name:'耕地',solid:true,transparent:false,color:'#71502c',hardness:0.5,tool:'shovel',drop:BlockTypes.DIRT},
+    [LifeBlocks.SAPLING]: {name:'树苗',solid:false,transparent:true,customMesh:true,color:'#448e37',hardness:0,outline:[0.15,0,0.15,0.85,0.9,0.85]},
+    [LifeBlocks.FENCE]: {name:'围栏',solid:true,transparent:true,customMesh:true,color:'#b38951',hardness:1.5,tool:'axe',collisionHeight:1.5,outline:[0,0,0,1,1.5,1]},
+    [LifeBlocks.GATE]: {name:'围栏门',solid:true,transparent:true,customMesh:true,color:'#aa7338',hardness:1.5,tool:'axe',collisionHeight:1.5,outline:[0,0,0,1,1.5,1]},
+    [LifeBlocks.GATE_OPEN]: {name:'围栏门（开）',solid:false,transparent:true,customMesh:true,color:'#aa7338',hardness:1.5,tool:'axe',drop:LifeBlocks.GATE,outline:[0,0,0,0.2,1.5,1]},
+    [LifeItems.SEEDS]: {item:true,name:'小麦种子',color:'#728f36'},
+    [LifeItems.WHEAT]: {item:true,name:'小麦',color:'#e9c758'},
+    [LifeItems.BREAD]: {item:true,name:'面包',color:'#c79042',food:6},
+    [LifeItems.BUCKET]: {item:true,name:'空水桶',color:'#a6b8bf'},
+    [LifeItems.WATER_BUCKET]: {item:true,name:'水桶',color:'#3e9cd0'},
+    [LifeItems.HOE]: {item:true,name:'木锄',color:'#b28b58',maxDurability:131,tool:{class:'hoe',speed:1,tier:1}},
+    [LifeItems.SHEARS]: {item:true,name:'剪刀',color:'#bcc7cb',maxDurability:238,tool:{class:'shears',speed:1,tier:2}},
+    [LifeItems.MEMENTO]: {item:true,name:'学习纪念章',color:'#bd91e2'},
+});
+for(let stage=0;stage<4;stage++) BlockInfo[LifeBlocks.WHEAT+stage]={name:stage===3?'成熟小麦':`小麦（${stage+1}/4）`,solid:false,transparent:true,customMesh:true,color:stage===3?'#d4b13f':'#5d9b42',hardness:0,drop:null,outline:[0.08,0,0.08,0.92,0.25+stage*0.2,0.92]};
+HotbarBlocks.push(LifeBlocks.CHEST,LifeBlocks.SAPLING,LifeBlocks.FENCE,LifeBlocks.GATE,...Object.values(LifeItems));
+RECIPES.push(
+ R('chest',LifeBlocks.CHEST,1,{[BlockTypes.PLANKS]:8},'crafting'),
+ R('hoe',LifeItems.HOE,1,{[BlockTypes.PLANKS]:2,[ItemTypes.STICK]:2},'crafting'),
+ R('bucket',LifeItems.BUCKET,1,{[ItemTypes.IRON_INGOT]:3},'crafting'),
+ R('shears',LifeItems.SHEARS,1,{[ItemTypes.IRON_INGOT]:2},'crafting'),
+ R('bread',LifeItems.BREAD,1,{[LifeItems.WHEAT]:3}),
+ R('seeds',LifeItems.SEEDS,1,{[BlockTypes.DIRT]:2}),
+ R('sapling',LifeBlocks.SAPLING,1,{[BlockTypes.WOOD]:1,[BlockTypes.DIRT]:1}),
+ R('log_sapling',LifeBlocks.SAPLING,1,{[BlockTypes.LOG]:1,[BlockTypes.DIRT]:1}),
+ R('fence',LifeBlocks.FENCE,4,{[BlockTypes.PLANKS]:4,[ItemTypes.STICK]:2},'crafting'),
+ R('gate',LifeBlocks.GATE,1,{[BlockTypes.PLANKS]:2,[ItemTypes.STICK]:4},'crafting'),
+ R('collect_water',LifeItems.WATER_BUCKET,1,{[LifeItems.BUCKET]:1,[BlockTypes.SAND]:4,[BlockTypes.WOOD]:2},'crafting')
+);
+export const SMELTING_RECIPES = [
+ {id:'stone',input:BlockTypes.COBBLESTONE,out:BlockTypes.STONE},
+ {id:'glass',input:BlockTypes.SAND,out:BlockTypes.GLASS},
+ {id:'iron',input:BlockTypes.IRON_ORE,out:ItemTypes.IRON_INGOT},
+ {id:'pork',input:ItemTypes.RAW_PORK,out:ItemTypes.COOKED_PORK},
+ {id:'charcoal',input:BlockTypes.WOOD,out:ItemTypes.COAL},
+ {id:'charcoal_log',input:BlockTypes.LOG,out:ItemTypes.COAL},
+];
+export const FURNACE_FUELS = {[ItemTypes.COAL]:64,[BlockTypes.WOOD]:16,[BlockTypes.LOG]:16,[BlockTypes.PLANKS]:8};
+
+export function isVoxelId(id) { return Number.isInteger(id) && id>=0 && id<=255 && (id===BlockTypes.AIR || !!BlockInfo[id] && !BlockInfo[id].item && !isToolId(id)); }
+
+// 探索装备属于纯物品；最后四个 byte ID 留给四向可攀爬木梯。
+export const LADDER_BASE = 252;
+export const isLadderId = id => Number.isInteger(id) && id >= LADDER_BASE && id < LADDER_BASE + 4;
+export const AdventureItems = { ARMOR:264, SHIELD:265, SOUVENIR:266 };
+export const ADVENTURE = { armorReduction:0.4, shieldReduction:0.75, repairXp:3, repairFraction:0.25, climbSpeed:3, discoveryXp:4 };
+for (let facing=0; facing<4; facing++) {
+    const t=0.16, outlines=[[0,0,0,1,1,t],[1-t,0,0,1,1,1],[0,0,1-t,1,1,1],[0,0,0,t,1,1]];
+    BlockInfo[LADDER_BASE+facing]={name:'木梯',solid:false,transparent:true,customMesh:true,color:'#b88e54',hardness:0.4,tool:'axe',drop:LADDER_BASE,outline:outlines[facing]};
+}
+BlockInfo[AdventureItems.ARMOR]={item:true,name:'铁护具',color:'#b9ccd3',maxDurability:160,tool:{class:'armor',speed:1,tier:2}};
+BlockInfo[AdventureItems.SHIELD]={item:true,name:'木铁盾',color:'#a98a5e',maxDurability:120,tool:{class:'shield',speed:1,tier:2}};
+BlockInfo[AdventureItems.SOUVENIR]={item:true,name:'探索纪念章',color:'#5cbdb8'};
+HotbarBlocks.push(LADDER_BASE,...Object.values(AdventureItems));
+RECIPES.push(
+ R('ladder',LADDER_BASE,3,{[ItemTypes.STICK]:7},'crafting'),
+ R('armor',AdventureItems.ARMOR,1,{[ItemTypes.IRON_INGOT]:8},'crafting'),
+ R('shield',AdventureItems.SHIELD,1,{[BlockTypes.PLANKS]:6,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('redstone_dust',DUST_ITEM_ID,4,{[ItemTypes.COAL]:1,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('redstone_torch',RTORCH_ITEM_ID,1,{[DUST_ITEM_ID]:1,[ItemTypes.STICK]:1},'crafting'),
+ R('button',BUTTON_ITEM_ID,1,{[BlockTypes.COBBLESTONE]:1},'crafting'),
+ R('plate',PLATE_ITEM_ID,1,{[BlockTypes.PLANKS]:2},'crafting'),
+ R('lever',LEVER_ITEM_ID,1,{[BlockTypes.COBBLESTONE]:1,[ItemTypes.STICK]:1},'crafting'),
+ R('lamp',LAMP_ITEM_ID,1,{[BlockTypes.GLASS]:4,[ItemTypes.COAL]:1,[DUST_ITEM_ID]:2},'crafting'),
+ R('slime',BlockTypes.SLIME,2,{[LifeItems.WHEAT]:2,[BlockTypes.SAND]:2},'crafting'),
+ R('piston',PISTON_ITEM_ID,1,{[BlockTypes.PLANKS]:3,[BlockTypes.COBBLESTONE]:4,[ItemTypes.IRON_INGOT]:1,[DUST_ITEM_ID]:1},'crafting'),
+ R('sticky_piston',STICKY_PISTON_ITEM_ID,1,{[PISTON_ITEM_ID]:1,[BlockTypes.SLIME]:1},'crafting'),
+ R('observer',OBSERVER_ITEM_ID,1,{[BlockTypes.COBBLESTONE]:4,[BlockTypes.GLASS]:1,[DUST_ITEM_ID]:2},'crafting'),
+ R('wheel',WATERWHEEL_ITEM_ID,1,{[BlockTypes.PLANKS]:8,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('shaft',SHAFT_ITEM_ID,4,{[ItemTypes.STICK]:2,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('cog',COGWHEEL_ITEM_ID,2,{[BlockTypes.PLANKS]:4,[SHAFT_ITEM_ID]:1},'crafting'),
+ R('crusher',CRUSHER_ITEM_ID,2,{[BlockTypes.COBBLESTONE]:8,[ItemTypes.IRON_INGOT]:2,[SHAFT_ITEM_ID]:2},'crafting'),
+ R('saw',SAW_ITEM_ID,1,{[ItemTypes.IRON_INGOT]:3,[BlockTypes.PLANKS]:2,[SHAFT_ITEM_ID]:1},'crafting'),
+ R('belt',BELT_ITEM_ID,4,{[BlockTypes.WOOL]:2,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('clutch',CLUTCH_ITEM_ID,1,{[SHAFT_ITEM_ID]:1,[DUST_ITEM_ID]:1,[ItemTypes.IRON_INGOT]:1},'crafting'),
+ R('deployer',DEPLOYER_ITEM_ID,1,{[BlockTypes.PLANKS]:4,[ItemTypes.IRON_INGOT]:2,[DUST_ITEM_ID]:1},'crafting'),
+ R('pulley',PULLEY_ITEM_ID,1,{[BlockTypes.WOOL]:3,[ItemTypes.IRON_INGOT]:2,[COGWHEEL_ITEM_ID]:1},'crafting'),
+ R('platform',PLATFORM_ITEM_ID,4,{[BlockTypes.PLANKS]:4,[ItemTypes.IRON_INGOT]:2},'crafting')
+);
+
+// 只在全部旧目录项之后追加，旧档 selectedSlot 的索引含义保持稳定。
+for (const [base, count, name, color] of [
+    [CRANK_BASE, 3, '手摇动力器', '#c38b47'],
+    [LARGE_COG_BASE, 3, '大齿轮', '#d9ad64'],
+    [REVERSER_BASE, 6, '红石换向器', '#8b7971'],
+]) {
+    for (let offset = 0; offset < count; offset++) {
+        BlockInfo[base + offset] = {name, color, solid:true, transparent:true, customMesh:true,
+            hardness:1, tool:'axe', drop:base, outline:[0,0,0,1,1,1]};
+    }
+}
+HotbarBlocks.push(CRANK_ITEM_ID, LARGE_COG_ITEM_ID, REVERSER_ITEM_ID);
+RECIPES.push(
+    R('hand_crank', CRANK_ITEM_ID, 1, {[BlockTypes.PLANKS]:4,[ItemTypes.STICK]:2,[ItemTypes.IRON_INGOT]:1}, 'crafting'),
+    R('large_cog', LARGE_COG_ITEM_ID, 1, {[BlockTypes.PLANKS]:8,[SHAFT_ITEM_ID]:1}, 'crafting'),
+    R('reverser', REVERSER_ITEM_ID, 1, {[SHAFT_ITEM_ID]:1,[DUST_ITEM_ID]:1,[ItemTypes.IRON_INGOT]:2}, 'crafting'),
+);
+
+for (let axis=0;axis<3;axis++) {
+    const outline=[-0.28,-0.28,-0.28,1.28,1.28,1.28];
+    outline[axis]=0.25; outline[axis+3]=0.75;
+    BlockInfo[largeCogId(axis)].outline=outline;
+}
+
+// 生物水平碰撞与移动平台共用尺寸；未分型的旧实体按人形保守处理。
+export const MOB_HALF_WIDTH = 0.35;
+export const mobCollisionHeight = entity => entity.hostile === false ? 1.1 : 1.8;

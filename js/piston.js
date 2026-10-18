@@ -1,3 +1,6 @@
+import { MOB_HALF_WIDTH, mobCollisionHeight } from './config.js';
+import { isCrankId, isLargeCogId, isReverserId, collisionHeight } from './config.js';
+import { isContainerId } from './config.js';
 // ==================== piston.js ====================
 // 有状态方块「活塞组」（活塞/粘性活塞/活塞头/观察者）的高层逻辑，分层与 door.js /
 // redstone.js 一致：config.js 把状态编码进方块 ID，本模块负责放置（朝向 = 所点击
@@ -35,7 +38,8 @@ import {
     WORLD_HEIGHT,
     WORLD_WIDTH,
     isBeltId,
-    isDoorId,
+    isDoorId, isBedId,
+    isLadderId,
     isObserverId,
     isPistonHeadId,
     isPistonId,
@@ -134,10 +138,12 @@ const PUSH_EMPTY = 0, PUSH_POP = 1, PUSH_MOVE = 2, PUSH_FIXED = 3;
 
 function pushKind(bt) {
     if (bt === BlockTypes.AIR || bt === BlockTypes.WATER) return PUSH_EMPTY;
-    if (bt === BlockTypes.BEDROCK) return PUSH_FIXED;
+    if (bt === BlockTypes.BEDROCK || isBedId(bt) || isContainerId(bt)) return PUSH_FIXED;
     if (isPistonHeadId(bt)) return PUSH_FIXED;
     if (isPistonId(bt)) return pistonExtended(bt) === 1 ? PUSH_FIXED : PUSH_MOVE;
+    if (isCrankId(bt) || isLargeCogId(bt) || isReverserId(bt)) return PUSH_POP;
     if (isBeltId(bt)) return PUSH_POP; // 传送带是贴面薄板（Create-lite L1 链 2，差异 8）：被推=压碎返还
+    if (isLadderId(bt)) return PUSH_POP; // 木梯贴墙，不能被推到无支撑的位置继续攀爬
     if (isDoorId(bt) || isRedstoneId(bt) || bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER) return PUSH_POP;
     return PUSH_MOVE; // 其余实心立方体（石头/木板/TNT/红石灯/粘液块…）
 }
@@ -218,6 +224,55 @@ export function carryRiders(cells, n) {
     if (!state.player.dead) move(state.player, PLAYER_WIDTH / 2, PLAYER_HEIGHT);
     for (const en of state.enemies) move(en, 0.3, 1.8);
     for (const d of state.itemDrops) move(d, 0.125, 0.25); // 物品实体跟随（电梯 T1 防埋，配合 items.js 兜底）
+}
+
+// 滑轮先试算、后提交：障碍扫掠不把同步移动的平台误当成静态墙。
+export function planRiderMove(oldCell, newCell, n, owners = new Map(), owner = '') {
+    const candidates = [];
+    const addCandidate = (e,half,height,offset) => {
+        if (e.x+half<=oldCell.x || e.x-half>=oldCell.x+1 ||
+            e.z+half<=oldCell.z || e.z-half>=oldCell.z+1) return;
+        candidates.push({e,half,height,offset});
+    };
+    if (!state.player.dead) addCandidate(state.player,PLAYER_WIDTH/2,PLAYER_HEIGHT,0);
+    for (const e of state.enemies) addCandidate(e,MOB_HALF_WIDTH,mobCollisionHeight(e),0);
+    for (const e of state.itemDrops) addCandidate(e,0.125,0.25,-0.125);
+    const moves = [], eps = 1e-6;
+    const ignored = (x,y,z) => x===oldCell.x && y===oldCell.y && z===oldCell.z || x===newCell.x && y===newCell.y && z===newCell.z;
+    for (const c of candidates) {
+        const feet = {x:c.e.x, y:c.e.y+c.offset, z:c.e.z};
+        if (!entityHitsCells(feet,c.half,c.height,[oldCell,newCell])) continue;
+        if (owners.has(c.e) && owners.get(c.e) !== owner) return null;
+        const dest = {x:feet.x+n[0],y:feet.y+n[1],z:feet.z+n[2]};
+        const box = [Math.min(feet.x,dest.x)-c.half, Math.min(feet.y,dest.y), Math.min(feet.z,dest.z)-c.half,
+            Math.max(feet.x,dest.x)+c.half, Math.max(feet.y,dest.y)+c.height, Math.max(feet.z,dest.z)+c.half];
+        if (box[0]<0 || box[1]<0 || box[2]<0 || box[3]>WORLD_WIDTH || box[4]>WORLD_HEIGHT || box[5]>WORLD_DEPTH) return null;
+        for (let y=Math.max(0,Math.floor(box[1])-1); y<=Math.floor(box[4]-eps); y++) {
+            for (let z=Math.floor(box[2]+eps); z<=Math.floor(box[5]-eps); z++) {
+                for (let x=Math.floor(box[0]+eps); x<=Math.floor(box[3]-eps); x++) {
+                    if (ignored(x,y,z)) continue;
+                    const height = collisionHeight(getBlock(x,y,z));
+                    if (height && y+height>box[1]+eps && y<box[4]-eps) return null;
+                }
+            }
+        }
+        // 支撑平台只在终点检查；正常站顶恰好接触其上表面。
+        if (dest.x+c.half>newCell.x+eps && dest.x-c.half<newCell.x+1-eps &&
+            dest.z+c.half>newCell.z+eps && dest.z-c.half<newCell.z+1-eps &&
+            dest.y<newCell.y+1-eps && dest.y+c.height>newCell.y+eps) return null;
+        moves.push({entity:c.e,x:c.e.x+n[0],y:c.e.y+n[1],z:c.e.z+n[2]});
+    }
+    return {moves, owners, owner};
+}
+
+export function commitRiderMove(plan) {
+    for (const move of plan.moves) {
+        const e = move.entity;
+        e.x=move.x; e.y=move.y; e.z=move.z;
+        // 物品扫掠的上一帧位置也随平台移动，不能在旧高度重新捕获传送带。
+        if ('py' in e) e.py=e.y;
+        plan.owners.set(e,plan.owner);
+    }
 }
 
 // ==================== 伸出（推动）====================

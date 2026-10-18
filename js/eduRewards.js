@@ -1,3 +1,5 @@
+import { LifeItems } from './config.js';
+import {canUseFreeBuild} from './survivalRules.js';
 // ==================== eduRewards.js（Edu M2，2026-09-08；P2 拉力回流增量 2026-09-15）====================
 // 教学玩法共享：学习进度存取 + 奖励梯队发放 + 识字认领。
 // 被 eduKeypad.js（答题机）与 eduMerchant.js（英语商人）共用；识字矿石的
@@ -295,6 +297,13 @@ function itemName(id) {
 export function grantEduReward(x, y, z, { streak = 0, totalKey = 'solved' }) {
     const p = loadEduProgress();
     const total = p[totalKey] || 0;
+    if(!canUseFreeBuild()) {
+        // Statistics remain untouched; standard survival rewards are collectibles only.
+        p.collectionRewards=(p.collectionRewards||0)+1;
+        saveEduProgress(p);
+        spawnItemDrop(x+.5,y+1.2,z+.5,LifeItems.MEMENTO,1);
+        return '🏅 学习纪念章 ×1（收藏奖励；物资靠采集、种植和制作获得）';
+    }
     const tier = REWARD_TIERS.find((t) => streak >= t.min);
     const drops = [...tier.drops];
     const lines = [`${tier.label}奖励：`];

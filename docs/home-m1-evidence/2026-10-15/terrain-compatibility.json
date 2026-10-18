@@ -1,0 +1,17 @@
+[
+  {
+    "seed": 1,
+    "legacyExact": true,
+    "newWaterBlocks": 49
+  },
+  {
+    "seed": 42,
+    "legacyExact": true,
+    "newWaterBlocks": 49
+  },
+  {
+    "seed": 2026,
+    "legacyExact": true,
+    "newWaterBlocks": 49
+  }
+]

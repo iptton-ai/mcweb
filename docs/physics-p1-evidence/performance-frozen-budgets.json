@@ -1,0 +1,102 @@
+{
+  "schema": "mcweb.physics.perf-budgets.v1",
+  "initialFreeze": {
+    "localTimestamp": "2026-10-18T23:49:32.132606",
+    "harnessSha256": "f7f887dbc13058edba3f5feb776d6d4c7ebe91ca30696a519e2f7868abdfc96c",
+    "before": "first native 32 RPM sample"
+  },
+  "liveSupplementFreeze": {
+    "localTimestamp": "2026-10-19T00:14:28.079721",
+    "harnessSha256": "35bb8acaff01de1d9abf31b23bc66f10015f0b9eb9c8570b7cbe2ab9567b35c7",
+    "before": "final implementation live production samples",
+    "source": "archived original code (8 RPM) and archived G0 minimal prototype (proxy32), median of 3 runs times 1.2",
+    "particleRandomSeed": 20261018
+  },
+  "originalP01": {
+    "shafts/network": [
+      12.174,
+      13.252
+    ],
+    "shafts/tick": [
+      0.001657,
+      0.001872
+    ]
+  },
+  "original8": {
+    "production/allFrames": [
+      8.768625862,
+      0.02805
+    ],
+    "production/completionFrames": [
+      262.94376246,
+      268.7495004
+    ],
+    "lifts/allFrames": [
+      0.005472955,
+      0.0042492
+    ],
+    "lifts/movementFrames": [
+      0.1040858,
+      0.2549508
+    ],
+    "belts/transportFrames": [
+      0.044045301,
+      0.27135
+    ],
+    "belts/fullChestFrames": [
+      0.071707996,
+      0.2985504
+    ]
+  },
+  "original32": {
+    "production/allFrames": [
+      0.028620688,
+      0.1162992
+    ],
+    "production/completionFrames": [
+      0.138885086,
+      0.5270988
+    ],
+    "lifts/allFrames": [
+      0.02163103,
+      0.1296012
+    ],
+    "lifts/movementFrames": [
+      0.11231756,
+      0.1561992
+    ],
+    "belts/transportFrames": [
+      0.165985898,
+      0.1610484
+    ],
+    "belts/fullChestFrames": [
+      0.27483464,
+      1.8841008
+    ]
+  },
+  "fairLiveProduction8": {
+    "production/allFrames": [
+      7.19851544,
+      0.042
+    ],
+    "production/completionFrames": [
+      215.48646996,
+      222.8390496
+    ]
+  },
+  "fairLiveProduction32": {
+    "production/allFrames": [
+      0.069716006,
+      0.136452
+    ],
+    "production/completionFrames": [
+      0.136883096,
+      0.2550516
+    ]
+  },
+  "historicalProductionCaveat": "No particle lifecycle was advanced; preserve original comparisons but do not use them to claim real ongoing production performance.",
+  "metricOrder": [
+    "meanMs",
+    "p95Ms"
+  ]
+}

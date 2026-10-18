@@ -1,0 +1,72 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-18T16:12:46.806Z",
+  "mode": "8",
+  "nativeRpm": 8,
+  "substepsPerMeasuredFrame": 1,
+  "particleMode": "live",
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded; particle lifecycle included",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "536b051a5a27134d98cf55e5d97891eca31c5fcf4fa88d94b6bb072914568b16",
+    "kinetic": "97b717b52b1803e594fc1982a5cd4ca640ed0c75fba40f40fbdb2b9c7465e4b4",
+    "items": "b770c658f36f19099de6216da314d38051fffbccb6dbad087459fb68b6cfc364",
+    "piston": "35c6c67d4d55a5c050b185cdd085c9715b1ffe25782e98d264c8dd0160b5d4e5",
+    "world": "c8360b2b79a149f449230e0661f971b58a61f13efb9a6c11df2eb433acbc1b3b",
+    "particles": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+  },
+  "scenes": {
+    "production": {
+      "machines": 10,
+      "capacityPerLine": 384,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "activeFrames": 600,
+      "simulatedSeconds": 10,
+      "completions": 200,
+      "outputItems": 800,
+      "particlePopulation": {
+        "atSampleStart": 195,
+        "atSampleEnd": 318,
+        "lifecycleAdvanced": true
+      },
+      "allFrames": {
+        "n": 600,
+        "meanMs": 6.036700208333333,
+        "p95Ms": 0.03287499999987631,
+        "maxMs": 198.923542
+      },
+      "completionFrames": {
+        "n": 20,
+        "meanMs": 180.7000563499999,
+        "p95Ms": 184.85562500000015,
+        "maxMs": 198.923542
+      },
+      "diagnostics": null
+    }
+  },
+  "gates": [
+    {
+      "key": "production/allFrames",
+      "meanBudgetMs": 8.768625862,
+      "p95BudgetMs": 0.02805,
+      "pass": null,
+      "valid": false,
+      "reason": "Historical production budget omitted particle lifecycle; like-for-like live baseline pending"
+    },
+    {
+      "key": "production/completionFrames",
+      "meanBudgetMs": 262.94376246,
+      "p95BudgetMs": 268.7495004,
+      "pass": null,
+      "valid": false,
+      "reason": "Historical production budget omitted particle lifecycle; like-for-like live baseline pending"
+    }
+  ],
+  "pass": false
+}

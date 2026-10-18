@@ -1,0 +1,64 @@
+{
+  "saved": {
+    "slot": 1,
+    "generation": 2,
+    "box": {
+      "kind": "chest",
+      "slots": [
+        {
+          "id": 11,
+          "count": 20,
+          "wear": 0
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "sheep": [
+      {
+        "id": 1,
+        "name": "棉花糖",
+        "shorn": false
+      }
+    ],
+    "tree": 4,
+    "armor": true,
+    "shield": true,
+    "wear": 16,
+    "delivered": 20,
+    "planks": 7,
+    "hudPosition": "fixed",
+    "recordingClose": {
+      "recordingControlsOpen": false,
+      "keyboardActive": true
+    }
+  },
+  "runtime": {
+    "errors": [],
+    "fatal": false
+  }
+}

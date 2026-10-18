@@ -223,12 +223,14 @@ function openTrade(x, y, z, mode, item) {
     const q = QUESTION[mode];
     const { texts, answer } = makeOptions(item, q.pool(), q.display, q.key);
     session = { x, y, z, mode, item, texts, answer, wrongShake: false };
-    ensurePanel();
-    panel.style.display = 'block';
-    renderPanel();
+    try {
+        ensurePanel(); panel.style.display = 'block'; renderPanel();
+        state.readingPanels['trade'] = true;
+    } catch (error) { closeTrade(); throw error; }
 }
 
 export function closeTrade() {
+    delete state.readingPanels['trade'];
     session = null;
     if (panel) panel.style.display = 'none';
 }

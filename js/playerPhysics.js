@@ -1,17 +1,19 @@
+import { isLadderId, AdventureItems, HotbarBlocks, ADVENTURE } from './config.js';
+import { adventureData } from './adventureData.js';
 // ==================== playerPhysics.js ====================
 
 import * as THREE from 'three';
-import { BELT_DIRS, BELT_SPEED, BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, SLIME_BOUNCE_KEEP, SLIME_BOUNCE_MIN, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, beltDir, isBeltId } from './config.js';
+import { collisionHeight, BELT_DIRS, BELT_SPEED, BlockTypes, FALL_DAMAGE_MIN, FLY_SPEED, GRAVITY, JUMP_VELOCITY, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, SLIME_BOUNCE_KEEP, SLIME_BOUNCE_MIN, THIRD_PERSON_DIST, WALK_SPEED, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, beltDir, isBeltId } from './config.js';
 import { state } from './state.js';
 import { camera } from './engine.js';
 import { getBlock } from './world.js';
 import { isSolid } from './chunk.js';
 import { playerMesh } from './entities.js';
-import { keys } from './input.js';
+import { keys, mouseDown } from './input.js';
 import { showTooltip } from './ui.js';
 import { isGameActive } from './uiModal.js';
 import { damagePlayer } from './playerLife.js';
-import { isBeltRunningAt } from './kinetic.js';
+import { isBeltRunningAt, beltSpeedAt } from './kinetic.js';
 
 // ==================== 玩家物理 ====================
 export function updatePlayerPhysics(dt) {
@@ -22,11 +24,21 @@ export function updatePlayerPhysics(dt) {
     // AI 助手面板打开不影响——面板开着也能用键盘继续玩，聊天框打字由输入焦点天然隔离）
     const k = (isGameActive() && state.camMode === 'player') ? keys : {};
 
+    p.shieldRaised = !state.levelRun && !state.levelEdit && adventureData().shield && p.inventory[AdventureItems.SHIELD] > 0 &&
+        isGameActive() && !!(k.KeyO || (mouseDown.right && HotbarBlocks[p.selectedSlot] === AdventureItems.SHIELD));
+    let onLadder = false;
+    if (!p.flying) for (let y=Math.floor(p.y);y<=Math.floor(p.y+1.3);y++) {
+        if (isLadderId(getBlock(Math.floor(p.x),y,Math.floor(p.z)))) onLadder = true;
+    }
+    p.onLadder = onLadder;
     // 水体判定（游泳物理与氧气系统，见下方与 playerLife.js）：
-    // inWater = 腰腹泡水（浮力/减速）；underwater = 眼睛没入（氧气倒数 + 挖掘 ×5 惩罚）
+    // inWater = 脚部/腰腹泡水（浮力/减速）；underwater = 眼睛没入（氧气倒数 + 挖掘 ×5 惩罚）
+    // 腰部先出水时双脚仍需浮力，直到脚部贴近水面才能自然跃上同高岸边。
+    // 离水后只保留现有速度并恢复重力，不发放额外跳跃，头顶仍由下方扫掠碰撞限制。
+    const feetBlock = getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
     const waistBlock = getBlock(Math.floor(p.x), Math.floor(p.y + 0.6), Math.floor(p.z));
     const eyeBlock = getBlock(Math.floor(p.x), Math.floor(p.y + PLAYER_EYE_HEIGHT), Math.floor(p.z));
-    p.inWater = !p.flying && (waistBlock === BlockTypes.WATER || eyeBlock === BlockTypes.WATER);
+    p.inWater = !p.flying && (feetBlock === BlockTypes.WATER || waistBlock === BlockTypes.WATER || eyeBlock === BlockTypes.WATER);
     p.underwater = !p.flying && eyeBlock === BlockTypes.WATER;
 
     // 潜行（Shift：×0.35，不飞行时）与疾跑（Ctrl+W：×1.5，饥饿消耗 ×2.7 见 playerLife.js）。
@@ -59,8 +71,8 @@ export function updatePlayerPhysics(dt) {
         const fb = getBlock(fx, fy, fz);
         if (isBeltId(fb) && isBeltRunningAt(fx, fy, fz)) {
             const [ux, , uz] = BELT_DIRS[beltDir(fb)];
-            targetVx += ux * BELT_SPEED;
-            targetVz += uz * BELT_SPEED;
+            targetVx += ux * beltSpeedAt(fx,fy,fz);
+            targetVz += uz * beltSpeedAt(fx,fy,fz);
         }
     }
 
@@ -76,6 +88,9 @@ export function updatePlayerPhysics(dt) {
         if (k['Space']) p.vy = FLY_SPEED;
         if (k['ShiftLeft'] || k['ShiftRight']) p.vy = -FLY_SPEED;
         p.onGround = false;
+    } else if (onLadder) {
+        p.vy = k.ShiftLeft || k.ShiftRight ? -ADVENTURE.climbSpeed : k.Space || k.KeyW ? ADVENTURE.climbSpeed : 0;
+        p.fallStartY = null;
     } else if (p.inWater) {
         // 游泳：空格上浮、松手下沉，指数阻尼（水中不摔伤，fallStartY 清空）
         p.vy += ((k['Space'] ? 16 : -6) * dt);
@@ -100,13 +115,13 @@ export function updatePlayerPhysics(dt) {
     if (!p.flying) {
         const minX = newX - halfW;
         const maxX = newX + halfW;
-        for (let y = Math.floor(p.y); y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
+        for (let y = Math.floor(p.y)-1; y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
             for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
                 const bx = p.vx > 0 ? Math.floor(maxX) : Math.floor(minX);
                 if (bx < 0 || bx >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH)
                     continue;
                 const block = getBlock(bx, y, z);
-                if (isSolid(block)) {
+                if (isSolid(block) && p.y < y + collisionHeight(block) && p.y + PLAYER_HEIGHT > y) {
                     if (p.vx > 0) p.x = bx - halfW - 0.001;
                     else if (p.vx < 0) p.x = bx + 1 + halfW + 0.001;
                     p.vx = 0;
@@ -127,39 +142,40 @@ export function updatePlayerPhysics(dt) {
         // 即使只覆盖脚印的一侧，也应先于另一侧更远的方块发生碰撞。
         const goingUp = p.vy > 0;
         const firstY = Math.floor(p.y + (goingUp ? PLAYER_HEIGHT : 0));
-        const lastY = Math.floor(newY + (goingUp ? PLAYER_HEIGHT : 0));
+        const lastY = Math.floor(newY + (goingUp ? PLAYER_HEIGHT : 0)) - (goingUp ? 0 : 1);
         const stepY = goingUp ? 1 : -1;
         let hitGround = false;
         let collided = false;
         for (let by = firstY; goingUp ? by <= lastY : by >= lastY; by += stepY) {
             if (by < 0 || by >= WORLD_HEIGHT) continue;
+            let contact = null;
             for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
                 for (let z = Math.floor(p.z - halfW); z < Math.floor(p.z + halfW + 1); z++) {
                     if (x < 0 || x >= WORLD_WIDTH || z < 0 || z >= WORLD_DEPTH) continue;
                     const block = getBlock(x, by, z);
-                    if (isSolid(block)) {
-                        collided = true;
-                        if (goingUp) {
-                            p.y = by - PLAYER_HEIGHT - 0.001;
-                            p.vy = 0;
-                        } else if (block === BlockTypes.SLIME && p.vy < -SLIME_BOUNCE_MIN) {
-                            // 落在粘液块上：反弹保留大部分垂直速度（电梯 T1，对齐原版）。
-                            // 不置 hitGround → onGround 保持 false → 摸底这一次摔落结算不触发；
-                            // 同时清 fallStartY，后续弹跳再落在普通方块按「弹后高度」起算。
-                            p.y = by + 1 + 0.001;
-                            p.vy = -p.vy * SLIME_BOUNCE_KEEP;
-                            p.fallStartY = null;
-                        } else {
-                            p.y = by + 1 + 0.001;
-                            p.vy = 0;
-                            hitGround = true;
-                        }
-                        break;
+                    const surface = goingUp ? by : by + collisionHeight(block);
+                    if (!isSolid(block) || (!goingUp && newY > surface)) continue;
+                    if (!contact || (goingUp ? surface < contact.surface : surface > contact.surface)) {
+                        contact = { block, surface };
                     }
                 }
-                if (collided) break;
             }
-            if (collided) break;
+            if (contact) {
+                collided = true;
+                if (goingUp) {
+                    p.y = contact.surface - PLAYER_HEIGHT - 0.001;
+                    p.vy = 0;
+                } else if (contact.block === BlockTypes.SLIME && p.vy < -SLIME_BOUNCE_MIN) {
+                    p.y = contact.surface + 0.001;
+                    p.vy = -p.vy * SLIME_BOUNCE_KEEP;
+                    p.fallStartY = null;
+                } else {
+                    p.y = contact.surface + 0.001;
+                    p.vy = 0;
+                    hitGround = true;
+                }
+                break;
+            }
         }
         if (!collided) p.y = newY;
         p.onGround = hitGround;
@@ -171,13 +187,13 @@ export function updatePlayerPhysics(dt) {
     if (!p.flying) {
         const minZ = newZ - halfW;
         const maxZ = newZ + halfW;
-        for (let y = Math.floor(p.y); y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
+        for (let y = Math.floor(p.y)-1; y < Math.ceil(p.y + PLAYER_HEIGHT); y++) {
             for (let x = Math.floor(p.x - halfW); x < Math.floor(p.x + halfW + 1); x++) {
                 const bz = p.vz > 0 ? Math.floor(maxZ) : Math.floor(minZ);
                 if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH)
                     continue;
                 const block = getBlock(x, y, bz);
-                if (isSolid(block)) {
+                if (isSolid(block) && p.y < y + collisionHeight(block) && p.y + PLAYER_HEIGHT > y) {
                     if (p.vz > 0) p.z = bz - halfW - 0.001;
                     else if (p.vz < 0) p.z = bz + 1 + halfW + 0.001;
                     p.vz = 0;
@@ -198,12 +214,12 @@ export function updatePlayerPhysics(dt) {
 
     // 摔落伤害（对齐参考版：落差 > 3.5 格开始扣血，damage = floor(落差 - 3)；水中/飞行豁免）：
     // 空中持续抬高 fallStartY 记录最高点，落地瞬间结算
-    if (p.flying || p.inWater) {
+    if (p.flying || p.inWater || onLadder) {
         p.fallStartY = null;
     } else if (p.onGround) {
         if (!wasOnGround && p.fallStartY !== null) {
             const drop = p.fallStartY - p.y;
-            if (drop > FALL_DAMAGE_MIN) damagePlayer(Math.floor(drop - 3));
+            if (drop > FALL_DAMAGE_MIN) damagePlayer(Math.floor(drop - 3), 'fall');
         }
         p.fallStartY = p.y;
     } else {

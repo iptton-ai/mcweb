@@ -1,0 +1,111 @@
+{
+  "method": "浏览器真实模块白盒验证；包含20次锯切与实体传送，非自然采集",
+  "checks": [
+    {
+      "name": "配方可真实制作：armor",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "配方可真实制作：shield",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "配方可真实制作：wheel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "配方可真实制作：shaft",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "配方可真实制作：saw",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "配方可真实制作：belt",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "铁护具降低真实近战伤害",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "面向攻击举盾进一步减伤",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "盾不挡背后攻击",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "盾与护具不抵消摔落",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "工作台维修花3经验和1木板",
+      "passed": true,
+      "evidence": "修好了 14 点耐久（花费 3 经验 + 1 木板）"
+    },
+    {
+      "name": "维修只改当前工具，备用磨损保持10",
+      "passed": true,
+      "evidence": [
+        16,
+        10
+      ]
+    },
+    {
+      "name": "路标名字与位置来自当前玩家",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "20原木经真实锯切与传送成为箱中80木板",
+      "passed": true,
+      "evidence": {
+        "box": 80,
+        "drops": 0
+      }
+    },
+    {
+      "name": "玩家背包未代替箱子收货",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "满箱超过物品寿命仍保留4木板",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "腾出4件容量后恰好接收余量",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "产线与路标存档成功",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "产线与路标读取成功",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "读档后箱内物资和路标完整",
+      "passed": true,
+      "evidence": null
+    }
+  ]
+}

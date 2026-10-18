@@ -30,3 +30,6 @@ tests/assistant-sim/out/
 
 # macOS 桌面杂物不入库
 .DS_Store
+
+# ZCode 源码本地参考克隆（315MB，勿入库）
+.ref-zcode/

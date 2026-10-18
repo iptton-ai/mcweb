@@ -537,12 +537,14 @@ function openQuiz(x, y, z, picked, cardCtx = null) {
         lockKey: (cardCtx && cardCtx.lockKey) || null,
         exam: !!(cardCtx && cardCtx.exam),
     };
-    ensurePanel();
-    panel.style.display = 'block';
-    renderPanel();
+    try {
+        ensurePanel(); panel.style.display = 'block'; renderPanel();
+        state.readingPanels['quiz'] = true;
+    } catch (error) { closeQuiz(); throw error; }
 }
 
 export function closeQuiz() {
+    delete state.readingPanels['quiz'];
     session = null;
     if (panel) panel.style.display = 'none';
 }

@@ -1,0 +1,825 @@
+{
+  "snapshot": "/var/folders/58/mctmb5rs4m36zm0x9zdhfy480000gn/T/mcweb-m3-baseline-swsel_rb",
+  "files": [
+    {
+      "path": "index.html",
+      "sha256": "743c5a7f187e53969d18075a136c4b5406863787550319eddb55a42757ba2aea"
+    },
+    {
+      "path": "js/homestead.js",
+      "sha256": "975b1d399b3200d4c72dcab66a9dc58ec405d46613feaabe1dae7b04b42b5a54"
+    },
+    {
+      "path": "js/playerLife.js",
+      "sha256": "4b2bb4a1f337619890d357964c62111f287b25e6d100b06c1d47520c6999f667"
+    },
+    {
+      "path": "js/redstone.js",
+      "sha256": "758a0493493ba047847770cab81aeb6aa7b8eadf2456292200c8af5ca8d87900"
+    },
+    {
+      "path": "js/ui.js",
+      "sha256": "44c82ab3e7b1903714f7b5c602731a2553942d8f394b2ca7dd8515821f69d654"
+    },
+    {
+      "path": "js/eduMerchant.js",
+      "sha256": "5c769776c9888b19c7e3770d5619aa0e030b3a31c2b30791f3b889fc07eb77b0"
+    },
+    {
+      "path": "js/helpDocs.js",
+      "sha256": "4d8469df4c92664c200c973664987073053cc7e37fe3d0e99d89a3e18833cb0e"
+    },
+    {
+      "path": "js/chunk.js",
+      "sha256": "68943e524709d60653cdecc4d105e120f4d2243c878eec46e0e3cdd97bbaa3c5"
+    },
+    {
+      "path": "js/lifeUI.js",
+      "sha256": "cb80a19f264a6b940a74c0665d1dc994390bea4fe5c2daa65b9acd07ebbc2387"
+    },
+    {
+      "path": "js/saveGame.js",
+      "sha256": "6ec553e18aacaea4943a3fcb8ea906541b374f994af6e50a72149e0757a9cb1b"
+    },
+    {
+      "path": "js/bgm.js",
+      "sha256": "779853d3eb180c7832aa74cc2922199a52a21b006ee8bf89d6b6ed09d4df296d"
+    },
+    {
+      "path": "js/tnt.js",
+      "sha256": "78dc3c7adcba2301947134b42c0ddb20f85d994039ef781873e5882398e4da69"
+    },
+    {
+      "path": "js/piston.js",
+      "sha256": "6b93f0bb3402b213a2c896d52ce9372e1c427d1748c60b1f81b4e4cad7bcf14f"
+    },
+    {
+      "path": "js/questionBankUI.js",
+      "sha256": "165b82e934399adead2c6c357c8faf28426974139c789be0b4ff1e1906a3c12e"
+    },
+    {
+      "path": "js/uiKeys.js",
+      "sha256": "4a9a952b8f7b8d4dde0985ab515a9689c5c3aa6c18898b5e292d62943d54d4a7"
+    },
+    {
+      "path": "js/world.js",
+      "sha256": "2e3606d365c46a7c0389490eb626fb86a1ba71348ad5f0cd76257532cd1d87e2"
+    },
+    {
+      "path": "js/eduKeypad.js",
+      "sha256": "5af8ab39a534d884767f10442232dde5ec292f7ccefaf0fe6dbb7d5da842143c"
+    },
+    {
+      "path": "js/playerPhysics.js",
+      "sha256": "e55e8541fb1b594eb7fa05b790cea71c1400fdb9e71d6587db2fd12f9344f8a0"
+    },
+    {
+      "path": "js/recording.js",
+      "sha256": "a34eefd2557436dec65faaaf405d7f86d1ab025d2f285aa9d5c9f272f0169348"
+    },
+    {
+      "path": "js/interaction.js",
+      "sha256": "a41f9a0305d07c225cec69e6468be02f43ceedee7151810d0827a178c3c69392"
+    },
+    {
+      "path": "js/eduStarlight.js",
+      "sha256": "3a98071a3a3681424d30bf36083f76522f34f66a31134e8b0b5aa9ac58000d98"
+    },
+    {
+      "path": "js/mining.js",
+      "sha256": "2b7068fa853dccf8a625c7920e0eead237a72ab8e47c91d2cdf6a807289658ac"
+    },
+    {
+      "path": "js/config.js",
+      "sha256": "488e95b52cb7ac8cb1d8c93be4a4e16b7855852fad68344e617c81e74716ef79"
+    },
+    {
+      "path": "js/buildQueue.js",
+      "sha256": "0f1d35932fad477a2ebe7146b5b3ced813565dbea883357a5e0eff29a1da087f"
+    },
+    {
+      "path": "js/uiModal.js",
+      "sha256": "125c41cf6cd928c414178c39a9ea882e86698070d35f1ef1b31859008b7807f4"
+    },
+    {
+      "path": "js/cameraRig.js",
+      "sha256": "d20ab375aa673e5e392863c6e9daa6a26b8dc59e945c8daa01fda90f0589f3a9"
+    },
+    {
+      "path": "js/levelPrefabs.js",
+      "sha256": "62b3c4691147aed62707f08b0acc8e52c8f54788bc400bd8daeb0a325cf3e30a"
+    },
+    {
+      "path": "js/bed.js",
+      "sha256": "e65eac3bdf8d2ec3df4ab4cd5cc7aa6f13bf7003070f65772ad95667117c4ab8"
+    },
+    {
+      "path": "js/homeSurvival.js",
+      "sha256": "a7d0b421f31a0ef2b64a734102fa2966eecc5f261aad84d1da1407144f40ce35"
+    },
+    {
+      "path": "js/main.js",
+      "sha256": "a1ba7563d1fde3125a205d9b381bc9246bebfcbc84c0d05b1b983afe6c32384a"
+    },
+    {
+      "path": "js/entities.js",
+      "sha256": "39f4976c1095a42f6c30d5f4f68179909e3e86a4daf37250dc32382075c5be7a"
+    },
+    {
+      "path": "js/highlight.js",
+      "sha256": "03c41f98c523d24fd08011b3cec956247b1d745ec6cee04f18f8d61c8164f7cc"
+    },
+    {
+      "path": "js/audio.js",
+      "sha256": "3fb5ae249a5d78e69d3d87f02ca84a7368fb0946982599806f07d0857b596fe3"
+    },
+    {
+      "path": "js/levelEditor.js",
+      "sha256": "559e897d936a8f60baf88b65bac7b10761e172e16bcdb4f1c8fab62fedc87735"
+    },
+    {
+      "path": "js/textureTiles.js",
+      "sha256": "7da6acf27e4b71ac97dfadaaee5f2b548f851f262e9ff1e5e468ee68b924ed92"
+    },
+    {
+      "path": "js/state.js",
+      "sha256": "2451ad64553dc182235cb5e22c72f1a2099d27d21d202eea96814eae2420311c"
+    },
+    {
+      "path": "js/levelWorkshop.js",
+      "sha256": "c9df9a04e04927b1a53d88321db577a9da0450f6c4222093534137ca1c9a914e"
+    },
+    {
+      "path": "js/lifeData.js",
+      "sha256": "4b571bb25ddfdf69d9aa8568b0f94bfcea3cafb5b3017fd0917fb80e76c38e88"
+    },
+    {
+      "path": "js/items.js",
+      "sha256": "7953b9b4443bc37f352605ee2b757239f2bf2ad0eade188f684183bcf7c10e20"
+    },
+    {
+      "path": "js/inventoryStacks.js",
+      "sha256": "482f8549f730061dd66fac47def974e2a1113c774354d637f5db1b8f73ad2f15"
+    },
+    {
+      "path": "js/textures.js",
+      "sha256": "45edc2370b93a90ac2ecfa54e725d9438eea95dc62769710e7daf681fdee546f"
+    },
+    {
+      "path": "js/settingsUI.js",
+      "sha256": "8ba826d85c9a13d5051db82b6913179d9466821eec3ce06047a67b538d96f7f3"
+    },
+    {
+      "path": "js/survivalRules.js",
+      "sha256": "f59f2a84b7250dbd88e59b65c6b4856c8e8c0900d5b49ebda7ea85ad4e503924"
+    },
+    {
+      "path": "js/eduRewards.js",
+      "sha256": "707c98a022f9332b9c9610a6570de3b659740455e2d0fe1e08d8aac6cfb8fcbd"
+    },
+    {
+      "path": "js/engine.js",
+      "sha256": "f9bb89e9e4da579c4cd2d919d445466118477776b38f4bb29ce4dd193c3d1843"
+    },
+    {
+      "path": "js/itemInfo.js",
+      "sha256": "5f68828ab0e2f5f514c4b49e1475fcd4c1bd1c69d093b84017d94badc7e1ff75"
+    },
+    {
+      "path": "js/kinetic.js",
+      "sha256": "3ce1c6f607da2785840cba9f8150710003c6fee6939754a0cc2cdf1b4e39ad1e"
+    },
+    {
+      "path": "js/levelRun.js",
+      "sha256": "f016ce748fa1b9a81eb5f24e6bd834874d5c3972fbeb76ac8bcb53dc93f3a312"
+    },
+    {
+      "path": "js/rle.js",
+      "sha256": "3e6636ea18fc52eb843eab053ed310479bacb59e56d8aa6062fa0b466c6d3e4f"
+    },
+    {
+      "path": "js/particles.js",
+      "sha256": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+    },
+    {
+      "path": "js/viewmodel.js",
+      "sha256": "46b497f6be29fe665ab1cd74b629ea9d8902e536555e804775e19c3958545dc1"
+    },
+    {
+      "path": "js/levelPoster.js",
+      "sha256": "54aaef666bdf535f65b37a6f69f2b15cd8e24807fb8a568cf2b90f602f19736e"
+    },
+    {
+      "path": "js/questionBank.js",
+      "sha256": "901299206debee407bd2045afa9109bde07ff40b64943c33d5bad16afe71d0ad"
+    },
+    {
+      "path": "js/itemSources.js",
+      "sha256": "b4bd51c7c716f33f566a96781a994b7342f0ff7c6b251ca57e97a7cda75d3c8f"
+    },
+    {
+      "path": "js/input.js",
+      "sha256": "fe63fc5e5aeb8b67c68cf82fde93f021d032fd827d389a545f0bfaee74a77253"
+    },
+    {
+      "path": "js/daynight.js",
+      "sha256": "325bc4ccc442e4cccb3e3f331a8a98527859e4a619e05532360672f16e3b3ce4"
+    },
+    {
+      "path": "js/door.js",
+      "sha256": "01463484df24f79897db84c09a6ce571458e2208064c6d3a869ed3a3e2b56b4d"
+    },
+    {
+      "path": "js/assistant/tools.js",
+      "sha256": "5ae8741ad3d935ba96015e403132a8451d94dc15a887f93b92b0439c9b8a13e4"
+    },
+    {
+      "path": "js/assistant/boot.js",
+      "sha256": "5299f24aaf2de0c67e1067da6487645f66d255b32ce1cb37615db99e17bd2c9f"
+    },
+    {
+      "path": "js/assistant/ui.js",
+      "sha256": "78a0d0be5216bae77589f467b86a3c9c26fc393c45f3bc6de6c48a1c2d8aafbc"
+    },
+    {
+      "path": "js/assistant/llm.js",
+      "sha256": "6b54310b3091ec3eec9c007fa98cfa4c49e19b896ef43a5e541218ee218f8c6b"
+    },
+    {
+      "path": "js/assistant/docs.js",
+      "sha256": "7f7627b11fe77a3635694ab729f5d9f89f82be3986227d235013bf7e87458b7d"
+    },
+    {
+      "path": "js/assistant/sessions.js",
+      "sha256": "0167f5a5e94603bec7c99c767880ea2f007b328d9c9553da18d049fa5ea3ad46"
+    },
+    {
+      "path": "js/assistant/jev.js",
+      "sha256": "e2c3d9a5daab46e14491ee434c8aaa16663f4475d68d442fa88f9759f6c3dd77"
+    },
+    {
+      "path": "js/assistant/index.js",
+      "sha256": "821950daca0f7537011b0dcbe8813baa14b22416d9370ae27f205b358497ba68"
+    },
+    {
+      "path": "js/assistant/snapshot.js",
+      "sha256": "fbda848b7070b4329493a3ed8848081dfb96b05901bc9ada2682e6e7a9da0872"
+    },
+    {
+      "path": "js/assistant/knowledge.js",
+      "sha256": "f396b2f8bf6b82e5cedc867c9648e326b01c827d22aa2dea268651de275fa73c"
+    },
+    {
+      "path": "js/assistant/agent.js",
+      "sha256": "57b0d10b11f1dafc4a9cf28579a48624b686dc530b3d2c3c2337ac6c6afa4de6"
+    },
+    {
+      "path": "tests/assistant-sim/run.mjs",
+      "sha256": "0ff1d635afef357718467870f7e1968d8b67b41fa0c4ea5a19de6f938f493dfd"
+    },
+    {
+      "path": "tests/assistant-sim/README.md",
+      "sha256": "def96b85af388cd2cec4055d7127273bf9a3c49a2b9549132045b9abece29ff9"
+    },
+    {
+      "path": "tests/assistant-sim/hooks.mjs",
+      "sha256": "75e028b1e9a6456dc76226532895265e79f87f48c1468079a46d68e885a9c089"
+    },
+    {
+      "path": "tests/assistant-sim/browser-shims.mjs",
+      "sha256": "901034df8dbdadd5697d57a3e4ccc6e3a95aebe246810736b0f2a969bc2972f9"
+    },
+    {
+      "path": "tests/assistant-sim/stubs/textures.mjs",
+      "sha256": "73a480f5c332205f85ab7f0b2b4337491c954037c3f00a1959a0bdc4240bc9dd"
+    },
+    {
+      "path": "tests/assistant-sim/stubs/engine.mjs",
+      "sha256": "1e64ea18f15248cf2861e8abde586629c0151dd58159912f460292dc2278aa4b"
+    },
+    {
+      "path": "tests/assistant-sim/stubs/three.mjs",
+      "sha256": "1d963e997922855c9213700a754f813808ccd606256bdadd27d8bdbb9ef61419"
+    },
+    {
+      "path": "tests/assistant-sim/stubs/universal.mjs",
+      "sha256": "007832c91ff4bf29e9e2e392147607586b69a7390379bf18b3a16981223707cf"
+    },
+    {
+      "path": "tests/assistant-sim/out/1789989774246-帮我建一个电梯-trace.json",
+      "sha256": "e79b30f55bef27ade65bf1a4b9faf7160ffde9e062504f6d48a8c9366c1da619"
+    },
+    {
+      "path": "tests/assistant-sim/out/1789990058620-帮我建一个电梯-jev-trace.json",
+      "sha256": "846fc42989dc7bfe264a7c055cc3c29578b7446f814958cbf4f4e7bf0ad1965a"
+    },
+    {
+      "path": "tests/assistant-sim/out/1789990309882-帮我建一个电梯-jev-trace.json",
+      "sha256": "3fc63cb1004e3d664e8dafad769b3dfe1e21f4a32baac6267544a9593ec06601"
+    },
+    {
+      "path": "tests/assistant-sim/out/1789990109846-帮我建一个电梯-trace.json",
+      "sha256": "d9262a8278f95b183a3ba3c02ba52621158a4f65768d9614e092dc07997c83f6"
+    },
+    {
+      "path": "tests/assistant-sim/out/1789989890027-帮我建一个电梯-jev-trace.json",
+      "sha256": "a9eed23a247a78ce49c33ef53f1b93752b2463eaceffbbdaf2420f53a23d087c"
+    },
+    {
+      "path": "tests/gamelogic/_preload.mjs",
+      "sha256": "3700b6028036adadc12771321373bb2bc69774042c770bb7a193cbf48f412676"
+    },
+    {
+      "path": "tests/gamelogic/survival-m2.test.mjs",
+      "sha256": "dd391945f65c7d78ac8894c1df385da9e3fb0a812c14ce28621741858bec8230"
+    },
+    {
+      "path": "tests/gamelogic/remediation-physics.test.mjs",
+      "sha256": "16b36757071f2ff4e0305073016732a08b0bb531ea7d27eb108c58ffa2566757"
+    },
+    {
+      "path": "tests/gamelogic/kit.mjs",
+      "sha256": "4fbbf08e00e1186f68c361f91d153501cfb36fe09649e45e89fadc0ae1edcf43"
+    },
+    {
+      "path": "tests/gamelogic/savegame-io.test.mjs",
+      "sha256": "599e3b34d39ec71ac71353826e943f4b7f39011665c97491ffa2e0b50c0f704d"
+    },
+    {
+      "path": "tests/gamelogic/redstone-cross.test.mjs",
+      "sha256": "3428fa2b9592ecba9fe9e088d9daee29df82cc01f11959513483d850e52ca6ad"
+    },
+    {
+      "path": "tests/gamelogic/edu-level-cross.test.mjs",
+      "sha256": "de2eed77f5bcea8fafd65b022c228ec1cbdb4a78163e35191ee06a635e47889f"
+    },
+    {
+      "path": "tests/gamelogic/redstone-smoke.test.mjs",
+      "sha256": "5b2d81a5b5f9421b3c8407912068a67645299d5f7b19d301a1cb76705e8b6a73"
+    },
+    {
+      "path": "tests/gamelogic/remediation-mechanisms.test.mjs",
+      "sha256": "24e0ee63aa938b784c8fab1e75acf5708df80d55f927aa89a63af7924bedaf00"
+    },
+    {
+      "path": "tests/gamelogic/remediation.test.mjs",
+      "sha256": "598ecb8c0bd342a5c9170ea2d26dd3b7911f3aaf4c6440d7f718d03ef8287224"
+    },
+    {
+      "path": "tests/gamelogic/home-m1-review.test.mjs",
+      "sha256": "030c5b4818e4974fea611bdf83c93ca1659b49cd69c7068024ac10ec2ddefd69"
+    },
+    {
+      "path": "tests/gamelogic/home-water-exit.test.mjs",
+      "sha256": "a0f729105a5ab969cd35857757448223594c30bf61da99e9a9b7a95c3ed12abc"
+    },
+    {
+      "path": "tests/gamelogic/README.md",
+      "sha256": "545a2fa2a35066dc20e62920396391ebcef6565c983cb07e29fc5e1821b2defa"
+    },
+    {
+      "path": "tests/gamelogic/remediation-combat.test.mjs",
+      "sha256": "36f6553cf9d8873a36ea05ed58853a6003a6a308c85b29481f220bfa9e8ff0cb"
+    },
+    {
+      "path": "tests/gamelogic/remediation-editor-exit.test.mjs",
+      "sha256": "d8d5c27ed0b292184de3c03e74a4af793770502ae045f7a8c277b8d53162148a"
+    },
+    {
+      "path": "tests/gamelogic/hooks.mjs",
+      "sha256": "f0da7ab3c3d1cf018c08332b168dfef5a7cbf20ffdf5ddf05dc96f411ff24d40"
+    },
+    {
+      "path": "tests/gamelogic/remediation-lifecycle.test.mjs",
+      "sha256": "d51c637759ef6db4bd7618a79785e39c89f00510411cd8883823869d5e4bed84"
+    },
+    {
+      "path": "tests/gamelogic/survival-m2-review.test.mjs",
+      "sha256": "b978c36da54ad01431ec662309ed55ada220bdbeff3e5912e245c437a26f7405"
+    },
+    {
+      "path": "tests/gamelogic/redstone-torch-phase.test.mjs",
+      "sha256": "c06672b0ea0abd30d82f8520b12d6bc5007ea51b83d462a3b80104b3943ffb9d"
+    },
+    {
+      "path": "tests/gamelogic/home-m1.test.mjs",
+      "sha256": "84bdb37c68207b6b26e7d3e9126962a93a8ee1e0e72f866b93d08b4a1e4ba37c"
+    },
+    {
+      "path": "tests/gamelogic/remediation-review.test.mjs",
+      "sha256": "08953027bede1d786085e19d2ac366b1f2e4f6708d012933775fbbee843139b3"
+    },
+    {
+      "path": "tests/gamelogic/kinetic-cross.test.mjs",
+      "sha256": "e7fc0ed64bbd12b01b02b399ee2251aa1fbe339a766e3312fea92a00c0391f21"
+    },
+    {
+      "path": "tests/gamelogic/stubs/three-logic.mjs",
+      "sha256": "b1622bbaffb7e0ba9fbae2a24264ec5f6206e60f5838d2fc05877e0440c430c3"
+    },
+    {
+      "path": "tests/e2e/extra_12_aqua.js",
+      "sha256": "f74b1539c1ed51b33116e414ac4bc3e17abd45da9d6be1bf2350ab1b92387478"
+    },
+    {
+      "path": "tests/e2e/run_l1.py",
+      "sha256": "63edec915761929b6b09c1395d3fcd885fd6edd577ab4656a1a00bd5f526d371"
+    },
+    {
+      "path": "tests/e2e/extra_remote_doors.js",
+      "sha256": "2083b82ed2a67f8ee99d51ccbcc1f388cfa31fd7eda939c14004fa55ebc23b8c"
+    },
+    {
+      "path": "tests/e2e/capture_filming.py",
+      "sha256": "e6496f24a627c4c19807371c130d978d1b035d8e2c1f6ec7a84743a35117fb7f"
+    },
+    {
+      "path": "tests/e2e/smoke_level_editor.py",
+      "sha256": "9a23289ebc7e273a3e26cae607be104e8448c62f4e3a8b98fb93a67d2160aca4"
+    },
+    {
+      "path": "tests/e2e/smoke_workshop.py",
+      "sha256": "8e5103842ef9c4a6de4ddf625db08682c4b3616c1d347cf57cefcd657e35bf77"
+    },
+    {
+      "path": "tests/e2e/smoke_assistant_jev.py",
+      "sha256": "11b4264c70c8cf1a4742cd19c7d2624ba93334f6c4de2e60e61cae29122b1bc9"
+    },
+    {
+      "path": "tests/e2e/run_rec.py",
+      "sha256": "84f2e9aecbc07443de6deb3677393c9b31d35a85aade85203b30d473280fb704"
+    },
+    {
+      "path": "tests/e2e/smoke_stairs_walk.py",
+      "sha256": "f993a98650cfadbc8a183e5ec618d22b450d31796078dc3ebf6e5e2cc28fe2a9"
+    },
+    {
+      "path": "tests/e2e/lib.py",
+      "sha256": "8ae2f076c7412856b403b5539224f51441a76a23295b4ff6126b10bb4f60e782"
+    },
+    {
+      "path": "tests/e2e/extra_09_clocktower.js",
+      "sha256": "6765ec56b6c94f78968565fcbbc990a0b85706ba051a493b256a0f28a85f4ebc"
+    },
+    {
+      "path": "tests/e2e/probe_outline.py",
+      "sha256": "efd4cd000e9ade9f7aa49af2a96d2bc9aa67858eb223be2f81930d9da331ee23"
+    },
+    {
+      "path": "tests/e2e/extra_11_liftworks.js",
+      "sha256": "d8defc3e0ea0877231c513fd9a3d4962f6e14e64d3ade02197761787e27fcbcc"
+    },
+    {
+      "path": "tests/e2e/smoke_builtin_levels.py",
+      "sha256": "b78a836b264faf3ca63d91dfc07d9f49eea0ff566f614964640fa7e03c2c3931"
+    },
+    {
+      "path": "tests/e2e/run_workshop.py",
+      "sha256": "4dba9aa35a49d1885c1da3e34637e4882a12ac16637b9fca91fee39e870fcdb0"
+    },
+    {
+      "path": "tests/e2e/run_encoder.py",
+      "sha256": "b64143550efb4924091fd6cc420e17ef5a6a4eb8c8fbb2d031e6a798f9fbf800"
+    },
+    {
+      "path": "tests/e2e/run_regression.py",
+      "sha256": "52beda95475e111e8ace3585d72435ee27e4d4d87c8a9cd903442cd345ce1cb8"
+    },
+    {
+      "path": "tests/e2e/run_keyboard_mode.py",
+      "sha256": "8eda88c5d679274b91a72f607158ceab00aa0c7093ba34d87cfeeb02c9f8cbaa"
+    },
+    {
+      "path": "tests/e2e/shot_outline.py",
+      "sha256": "1e834e486c8858b594e0dc08105c0772377e80e25ddf326ee8bbcae9ebede8a3"
+    },
+    {
+      "path": "tests/e2e/editor_exit_ego.mjs",
+      "sha256": "061fb4fbed257cfa4404ee2aa87a04861c3dd6613bc796da034e4aa0f908609e"
+    },
+    {
+      "path": "tests/e2e/run_outline.py",
+      "sha256": "7826dd456b976f8e2dae26140817c3cbde80e18b045a4a8d2be5c56eb8251359"
+    },
+    {
+      "path": "tests/e2e/home_m1_ego.mjs",
+      "sha256": "1235565dbd473e3ef3fc3d18cbde8479df621fc57e713d65445e1215954765ed"
+    },
+    {
+      "path": "tests/e2e/smoke_question_bank.py",
+      "sha256": "439b11aef479830d5109720593cdf769038bc6769e3a8b2141a98e4611d29f7a"
+    },
+    {
+      "path": "tests/e2e/survival_m23_ego.mjs",
+      "sha256": "0805cabb9fc63c378460e3ea70f68ebb8ce8445e7c481e68a84a1b2f7886661e"
+    },
+    {
+      "path": "tests/e2e/probe.py",
+      "sha256": "5f06da81c54da7d28b9218afb994fa288171bd3c2f59a99bae55cd1b5335a843"
+    },
+    {
+      "path": "tests/e2e/run_filming.py",
+      "sha256": "48310a28931ef18dfae0ed9b65c8a5fe1cb869714838140c051f497aa6c3c9fd"
+    },
+    {
+      "path": "tests/e2e/gameplay_remediation_ego.mjs",
+      "sha256": "dace1e34a5fab8248142b868289a45029d830a450939ea7ffa0cf0a636851071"
+    },
+    {
+      "path": "tests/e2e/run_l2.py",
+      "sha256": "72b6dae7f93e455278ac4ef13f279d10763cbb5fae602df84b4ee5685f202a64"
+    },
+    {
+      "path": "tests/e2e/extra_14_grandtour.js",
+      "sha256": "82b3fcf8cfd22e71c88f2fcb5cac89b590fabe16c8337c9656b01d9c83eb18cd"
+    },
+    {
+      "path": "tests/e2e/run_elevator.py",
+      "sha256": "2e59bf1ee20090ceadc6e23f8853fd2b192769d8f39a31edade82182d94976ed"
+    },
+    {
+      "path": "tests/e2e/run_g0.py",
+      "sha256": "51ff9e49b3b67bdffd3fcda30a3bd064128e1662e5ec15ea60a77a114184b0b2"
+    },
+    {
+      "path": "tests/e2e/run_keyboard_ui.py",
+      "sha256": "1cfdbcf3fe49c41fba1fd2f29a6d1b19c846d00f8203431106d9d873f12af840"
+    },
+    {
+      "path": "tests/e2e/run_migrate.py",
+      "sha256": "8d5e4c52d09480d9e3813aac36f71e1bfee2886f0e80dd12c4d723b3cc1b75b8"
+    },
+    {
+      "path": "tests/e2e/probe_author_pointer.py",
+      "sha256": "adc4e5a721ec334630ba705f14203b64430ebf642df80e948242e2b679e9371e"
+    },
+    {
+      "path": "tests/e2e/smoke_level_generic.py",
+      "sha256": "a6a5450c5d85bf450651684ef3387262575b2c84b2e3dcc98cd5bb0888fada53"
+    },
+    {
+      "path": "tools/test_level_run.mjs",
+      "sha256": "37987493be5f6b6ee84626d10d1896586a309db195f9a5582d64c3bb4b6ba79d"
+    },
+    {
+      "path": "tools/gen_edu_sfx.py",
+      "sha256": "4730f2f03ffb460a1356c4d696eeb19d2f800b2b2b7dcf711db28daafb2cbd56"
+    },
+    {
+      "path": "tools/test_builtin_levels.mjs",
+      "sha256": "60fee3134d2281059689c359fdaed31473a68858de3421324bda7f508b674169"
+    },
+    {
+      "path": "tools/gen_builtin_levels.mjs",
+      "sha256": "64396eb65a2584b6a96fbca92a64a19db0942ca172bd88e130b3384346eec597"
+    },
+    {
+      "path": "tools/test_author_math.mjs",
+      "sha256": "471a8dbe95dcfbbbd806b8896c6948d4aed6f3acbea6397661717cc86f2d0ca7"
+    },
+    {
+      "path": "tools/test_level_editor.mjs",
+      "sha256": "242c666e73caec05267eeae8cb2cfef62493829c0c6c949d1327f56167d1d832"
+    },
+    {
+      "path": "tools/test_assistant_knowledge.mjs",
+      "sha256": "ba0fbe7baa89ae6284cd55601b3fec8a90b07ef33d7d73fe71da9f75fe7771fd"
+    },
+    {
+      "path": "tools/test_question_bank.mjs",
+      "sha256": "ef8f68520c2abff396d35ca525170f1307cfac24bf25ff60166eea3ac501ff94"
+    },
+    {
+      "path": "tools/extract_edu_m2.py",
+      "sha256": "d35cfb437927b3216a2ffd8f569cafc96ea1d5383248d77fb3ce1e3a134ef938"
+    },
+    {
+      "path": "tools/test_assistant_jev.mjs",
+      "sha256": "a7b7a8b342bc680c081884b71f07be07f31f472110d0cd30dc4d854b9ad7f8e4"
+    },
+    {
+      "path": "tools/textbook_extract.py",
+      "sha256": "74c9c154242f71597b6fd1586c7de2bbb93e298a7088d07476a6efdbe059790e"
+    },
+    {
+      "path": "tools/validate_banks.py",
+      "sha256": "c8cdbda8c57bdc3946a4e1728635d15a4e7ab74e20429e452dbefc3fe7ee87dd"
+    },
+    {
+      "path": "tools/test_level_workshop.mjs",
+      "sha256": "f30ba8bb6f150453030615e1cc314b98640c6609067e4c97c2c9b005f2fdbd27"
+    },
+    {
+      "path": "tools/test_gen_draft.mjs",
+      "sha256": "446d04c00aa97551835fe25a7f3f89f8c431e1c6efefe088cd11149581fe32af"
+    },
+    {
+      "path": "tools/test_edu_progress.mjs",
+      "sha256": "7be5ab7941ea766e8d02e8e5d235f0f35e3726d7abae5f687bf4744bac1686b2"
+    },
+    {
+      "path": "tools/gen_math_bank.py",
+      "sha256": "74f0ad06043519b5c6819ff12514a35c4371b3106d89bb1e3e82242c5a281a2a"
+    },
+    {
+      "path": "tools/test_thumbnail.mjs",
+      "sha256": "8667bd9780c8101aeeb317a11ef54eb84a3c58331eaa0e01847cf4bfd93cb7d0"
+    },
+    {
+      "path": "tools/audit_stairs.mjs",
+      "sha256": "d219f92de0603f07d9aee46d21faca2c2e858e88a54dbb35cd39baff69905141"
+    },
+    {
+      "path": "tools/builtin_levels/level_11_liftworks.mjs",
+      "sha256": "b61f998624de00012f555774dc85e319a0b38d644a3de4307d415a800f829b90"
+    },
+    {
+      "path": "tools/builtin_levels/level_08_mine.mjs",
+      "sha256": "f5eb3c702f340e9d32a26e240aee9a11a07d240bda4c206aa54ac41033f65949"
+    },
+    {
+      "path": "tools/builtin_levels/level_10_skybounce.mjs",
+      "sha256": "7855edabb4230a2dc93b8d53ca0e79b863ff922aa399dd2d9b65c4cbc5d48230"
+    },
+    {
+      "path": "tools/builtin_levels/level_05_academy.mjs",
+      "sha256": "c350e36f6673ee8b9429a6d34d4da23823c2321c0a70c94d9b5f5fec7d56a838"
+    },
+    {
+      "path": "tools/builtin_levels/level_13_maze.mjs",
+      "sha256": "60268431b2f50805d31624fb9380baf440db3b9a9a3bf2520ced2042025710dd"
+    },
+    {
+      "path": "tools/builtin_levels/level_09_clocktower.mjs",
+      "sha256": "2a1537db26a21074eb54aac42cf2191ca22fa1b83461fc0625e764e7b26f6c72"
+    },
+    {
+      "path": "tools/builtin_levels/level_06_lab.mjs",
+      "sha256": "42e83caf5c3b6b420870d124a45e86c8fbe36562f6ef94a10dfcd06bc9fd8d9e"
+    },
+    {
+      "path": "tools/builtin_levels/level_14_grandtour.mjs",
+      "sha256": "38dc3ad0e1cecd93ca7fe8c7da0914f31bce1053ca11ddda1ef32a5947b49910"
+    },
+    {
+      "path": "tools/builtin_levels/level_12_aqua.mjs",
+      "sha256": "3eca9976692b4a012cf78eb5b0b0af2033bb14dc7568ebed92b540cd72b435f3"
+    },
+    {
+      "path": "tools/builtin_levels/level_07_rulescity.mjs",
+      "sha256": "00336db3202d5d529357afd3c1121bc8e4368e78e5ec3921d16ae0e228ad85d2"
+    },
+    {
+      "path": "tools/builtin_levels/_lib.mjs",
+      "sha256": "2e1e117f8dc2e3da319a7f5361a2ee3dfa4e07856525e0b556e64d1617f14538"
+    },
+    {
+      "path": "docs/dsh-agentic-process-reanalysis.md",
+      "sha256": "fd21772b9aaf2e86f0761b5f24de1cbcc3c4607f674763abd14a296c9983db1d"
+    },
+    {
+      "path": "docs/article-dsh-discipline.md",
+      "sha256": "da979ba6f5a33bd02fde30873ecfdba2d587e3e06fdb0e944b01c8eb977f9294"
+    },
+    {
+      "path": "docs/create-lite-plan.md",
+      "sha256": "0782ca92e396a47571d3edf5e4467481f572d8c0d750ebee2650fccceb3f3939"
+    },
+    {
+      "path": "docs/l2-elevator-plan.md",
+      "sha256": "bb1ac7aef2a6ad4805929212b11230e02eb81d63abffc5e86346d66954fd8135"
+    },
+    {
+      "path": "docs/survival-playability-plan-grade3-2026-10-15.md",
+      "sha256": "8152d4f8d7d8c4e7ad382528071ac896eacbb921b458df925afaaf6b85b343bd"
+    },
+    {
+      "path": "docs/edu-level-workshop-plan.md",
+      "sha256": "6f2334fa1ff9dba40522894a878dad2ed1067bfed6ae604a524269a167aff981"
+    },
+    {
+      "path": "docs/edu-m2-plan.md",
+      "sha256": "a8757fab9d761dba711705d50db9042952f18120afb1a28096be52fdd1516e56"
+    },
+    {
+      "path": "docs/survival-m23-contract.md",
+      "sha256": "ce4eca263958f620b0598261a4aa9a728cde9f3956784a6afe2249d0178e1a1e"
+    },
+    {
+      "path": "docs/testability-plan.md",
+      "sha256": "18ac5a93cf58689a68b8bca98228d62fc700cf44ae1fcab1465ea2f69baca2c0"
+    },
+    {
+      "path": "docs/recording-ux.md",
+      "sha256": "9f569e1b4f4cb9593660f09fac415cc8df8f27ed36ac5d23ad86192d0bd8aa0f"
+    },
+    {
+      "path": "docs/redstone-energy-guide.html",
+      "sha256": "4894ebc69a26e44ef8ac0d46639f020534f7cf2ccc59c992176b7ea8d7d03268"
+    },
+    {
+      "path": "docs/edu-grade3-plan.md",
+      "sha256": "2b35e61c3c5ed3c167ac53102da8564aa4658d4da09474c0ec361f5cecbe6c39"
+    },
+    {
+      "path": "docs/editor-exit-verification-2026-10-11.md",
+      "sha256": "f56980e1dafd8355aa564b716d5b2cee5db814ed140281d2e4345f11fe35d231"
+    },
+    {
+      "path": "docs/home-survival-guide.html",
+      "sha256": "cdea8e4e7e5f3320b8e65cd20ae0d78781e75991f817e612b4ca21fc3956dcaa"
+    },
+    {
+      "path": "docs/elevator-plan.md",
+      "sha256": "55efc2ab97982e0cf4a0d090974ee7dbc5bb739daf8aa6301784ea452fda56f9"
+    },
+    {
+      "path": "docs/create-lite-org-plan.md",
+      "sha256": "66ea4f2338b0011688376f14e4cc19b6700c46185c665bbd479854ad06fc0301"
+    },
+    {
+      "path": "docs/life-survival-guide.html",
+      "sha256": "627f46bf6f52f5f48260852faa4cac47bf765a2dcaffdcf5163c2d575ac33081"
+    },
+    {
+      "path": "docs/edu-quiz-banks-contract.md",
+      "sha256": "d6017e5f7570cb0022bcb5de201e9a61bb88049333fc004570ef9df52c52f5c6"
+    },
+    {
+      "path": "docs/gameplay-remediation-handoff.md",
+      "sha256": "41dfd28a5beefdcb455472c6e42b316e23718d5a91257d7857e3608dfd89c775"
+    },
+    {
+      "path": "docs/life-m23-progress.md",
+      "sha256": "6ceb342bb618b93822ae0f4d48ffe90b45a45d7e4f76459c80e75bddc32f6dfe"
+    },
+    {
+      "path": "docs/edu-m1-keypad-plan.md",
+      "sha256": "9257b434eec3be65d1b80aefdc67a04672a652e45620f347edb5bd4645415d0f"
+    },
+    {
+      "path": "docs/home-m1-verification-2026-10-15.md",
+      "sha256": "1eef2729d1b1606c7dc19b2843ce8fd50fecc58e1c94a02ce19797d94f5906ce"
+    },
+    {
+      "path": "docs/life-m3-recon.md",
+      "sha256": "0997f7f43d8ccb9d1c7670f7639c86c1a7ce5ff5821aabf539c5bff51f65be4f"
+    },
+    {
+      "path": "docs/eggy-party-research.md",
+      "sha256": "e6be6eccc0d1332c12d92499595aac0f0edcdda05d74f2868bfeaa07cbd57f68"
+    },
+    {
+      "path": "docs/gameplay-remediation-verification-2026-10-11.md",
+      "sha256": "fc7acd232221b8c999a2814c2469aecf37766412fc881bcc38ce5ac4c962f46d"
+    },
+    {
+      "path": "docs/l1-logistics-plan.md",
+      "sha256": "014c5f627e43f31962a291075ac3f8d945d8324e2e68f11693bc954be7f7cf3d"
+    },
+    {
+      "path": "docs/survival-m23-verification-2026-10-18.md",
+      "sha256": "2aee26e946f27e4e3e644dce6b04d7ed32940bfa8be35e726e37f85d11034d69"
+    },
+    {
+      "path": "docs/create-lite-org-log.md",
+      "sha256": "318c1d32371bdc6864a642264812eecf13a14dd4ee04844b25c87c6a6874606e"
+    },
+    {
+      "path": "docs/assistant-sim-elevator-findings.md",
+      "sha256": "87770a6dcc3b52273a1bd77823903f9c1157fc798cedc47d413e22600043addc"
+    },
+    {
+      "path": "docs/edu-workshop-impl-contract.md",
+      "sha256": "e57dbea13cb61f4243221cbbc0b70aaa9bfe1ca6d208b8c9e6a1c51a93bf82b1"
+    },
+    {
+      "path": "docs/dsh-analysis/_scratch-user-perspective.md",
+      "sha256": "f363da9e2f7beff09b6eac279bc4edfaa31fe2b99c08b39ba26e683d6f8a83f7"
+    },
+    {
+      "path": "docs/dsh-analysis/_scratch-dsh-governance.md",
+      "sha256": "c95434074f08da71c59fb146397274fe42a4916475bbf4a8c9f24bb768ef5348"
+    },
+    {
+      "path": "docs/dsh-analysis/_zcode-governance.md",
+      "sha256": "cc293e957bad5d10ed689becf3e7933bbcb032715df903540383ba6ac9a47c9c"
+    },
+    {
+      "path": "docs/dsh-analysis/comparison-dsh-vs-zcode.md",
+      "sha256": "b80f3d2b81f0d936dcd8b2a2f7a2f3d897b75d406a8355d955b66b0e3270f460"
+    },
+    {
+      "path": "docs/dsh-analysis/_zcode-architecture.md",
+      "sha256": "1e91cac23441433b0ec487919e49982f22f30026383002ff428caffc7f0f4c91"
+    },
+    {
+      "path": "docs/dsh-analysis/_scratch-dev-perspective.md",
+      "sha256": "6242a7fe2859456494a9a3dfefc70849a2c6b6223f3e93ab6854941be2b3e99c"
+    },
+    {
+      "path": "docs/dsh-analysis/_scratch-dsh-architecture.md",
+      "sha256": "9a7f2fedeafcc04d1fe057672ba0e6ca822dbad7a9119ac8defbae249054e174"
+    }
+  ]
+}

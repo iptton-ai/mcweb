@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-18T15:57:38.790Z",
+  "space": 161,
+  "page": "p2",
+  "origin": "http://127.0.0.1:18437/",
+  "results": [
+    {
+      "name": "X hold/release and no repeated placement",
+      "ok": true
+    },
+    {
+      "name": "inventory opening clears use; closing does not resume",
+      "ok": true
+    },
+    {
+      "name": "aiming away with arrow input cancels use until a new press",
+      "ok": true
+    },
+    {
+      "name": "walking out of reach cancels held use",
+      "ok": true
+    },
+    {
+      "name": "camera-view key cancels use",
+      "ok": true
+    },
+    {
+      "name": "death cancels use",
+      "ok": true
+    },
+    {
+      "name": "world identity change cancels use",
+      "ok": true
+    },
+    {
+      "name": "same-cell removal/replacement cannot inherit held use",
+      "ok": true
+    },
+    {
+      "name": "Shift+X places against crank instead of operating it",
+      "ok": true
+    },
+    {
+      "name": "level-run mode refuses manual crank power",
+      "ok": true
+    },
+    {
+      "name": "save/load clears active manual power without changing component IDs",
+      "ok": true
+    },
+    {
+      "name": "creative inventory contains all three new component names",
+      "ok": true
+    },
+    {
+      "name": "survival crafting UI consumes exact recipe materials for three components",
+      "ok": true
+    },
+    {
+      "name": "all three components place on X/Y/Z faces through keyboard X",
+      "ok": true
+    },
+    {
+      "name": "real tab blur cancels a held operation",
+      "ok": true
+    },
+    {
+      "name": "mouse right hold/release uses the real pointer-lock input path",
+      "ok": false,
+      "classification": "environment-blocked",
+      "error": "Error: POINTER_LOCK_ENVIRONMENT: {\"name\":\"WrongDocumentError\",\"message\":\"The root document of this element is not valid for pointer lock.\"}"
+    },
+    {
+      "name": "trusted right-button input works under an explicitly simulated pointer-lock precondition",
+      "ok": true
+    }
+  ]
+}

@@ -1,6 +1,11 @@
+import { invalidateKineticCell } from './kinetic.js';
+import { isLadderId, LADDER_BASE } from './config.js';
+import { generateLandmarks } from './landmarks.js';
+import { resetAdventureData, adventureData } from './adventureData.js';
+import { onLifeBlockChanged, resetLifeData, queuePlantRefund, plantHasSupport } from './lifeData.js';
 // ==================== world.js ====================
 
-import { BlockTypes, HANZI_ORE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { isToolId, BlockInfo, BED_DIRECTIONS, bedFacing, bedHalf, bedId, isBedId, BlockTypes, HANZI_ORE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
 import { state } from './state.js';
 
 export function hash2D(x, y, seed = 0) {
@@ -105,7 +110,49 @@ export function getBlock(x, y, z) {
 
 export function setBlockSafe(x, y, z, type) {
     if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH) return;
+    if (!Number.isInteger(type) || type<0 || type>255 || !BlockInfo[type] && type!==BlockTypes.AIR || BlockInfo[type]?.item || isToolId(type) || ![x,y,z].every(Number.isInteger)) return [];
+    const previous = getBlock(x, y, z);
+    if (previous === type) return [];
+    invalidateKineticCell(x,y,z,previous);
+    for (const field of ['handCrankIntent','handCrankPower']) {
+        const use=state[field];
+        if (use && use.x===x && use.y===y && use.z===z) state[field]=null;
+    }
+    onLifeBlockChanged(x,y,z,previous,type);
+    const removed = [];
+    const clearBed = (bx, by, bz) => {
+        const id = getBlock(bx, by, bz);
+        if (!isBedId(id)) return;
+        const f = bedFacing(id), half = bedHalf(id), [dx, dz] = BED_DIRECTIONS[f];
+        const ox = bx + dx * (half ? -1 : 1), oz = bz + dz * (half ? -1 : 1);
+        const cells = [{x:bx,y:by,z:bz,id}];
+        if (getBlock(ox, by, oz) === bedId(1-half, f)) cells.push({x:ox,y:by,z:oz,id:bedId(1-half,f)});
+        for (const c of cells) {
+            state.blocks[getBlockIndex(c.x,c.y,c.z)] = BlockTypes.AIR;
+            removed.push(c);
+            state.bedDirtyCells.push(c);
+        }
+    };
+    if (isBedId(previous)) clearBed(x,y,z);
     state.blocks[getBlockIndex(x, y, z)] = type;
+    if (!BlockInfo[type]?.solid || BlockInfo[type]?.customMesh) clearBed(x,y+1,z);
+    const above=getBlock(x,y+1,z);
+    if(!plantHasSupport(above,type)) {
+        queuePlantRefund(x,y+1,z,above);
+        setBlockSafe(x,y+1,z,BlockTypes.AIR);
+        removed.push({x,y:y+1,z,id:above});
+    }
+    // 木梯背面贴墙：任意支撑移除路径都只清一次挂件并排入持久掉落。
+    if (!BlockInfo[type]?.solid || BlockInfo[type]?.customMesh) {
+        for (const [dx,dz,f] of [[0,1,0],[-1,0,1],[0,-1,2],[1,0,3]]) {
+            const lx=x+dx,lz=z+dz,id=getBlock(lx,y,lz);
+            if(id!==LADDER_BASE+f)continue;
+            state.blocks[getBlockIndex(lx,y,lz)]=BlockTypes.AIR;
+            const cell={x:lx,y,z:lz,id};removed.push(cell);state.bedDirtyCells.push(cell);
+            if(!state.levelRun && !state.levelEdit) state.lifePendingDrops.push({x:lx+.5,y:y+.5,z:lz+.5,stack:{id:LADDER_BASE,count:1}});
+        }
+    }
+    return removed;
 }
 
 // ---- 矿脉（2026-09-05 对齐参考版）：对 2×2×2 采样子格取一次哈希，命中即整格成矿 ----
@@ -121,6 +168,8 @@ function oreAt(x, y, z) {
 }
 
 export function generateWorld() {
+    resetLifeData();
+    resetAdventureData();
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     const s = seedBase();
     const treePositions = [];
@@ -170,6 +219,21 @@ export function generateWorld() {
             }
         }
     }
+    // v2 浅池：靠近出生区域，水深一格，宽缓台阶岸边；v1 完全不走这里。
+    if (state.generationVersion >= 2) {
+        const cx = Math.floor(WORLD_WIDTH / 2) + 14 + Math.floor(hash2D(3, 7, s) * 6);
+        const cz = Math.floor(WORLD_DEPTH / 2) + 8;
+        const level = generateTerrainHeight(cx, cz);
+        for (let dx = -7; dx <= 7; dx++) for (let dz = -7; dz <= 7; dz++) {
+            const r = Math.max(Math.abs(dx), Math.abs(dz));
+            const x = cx + dx, z = cz + dz;
+            const original = generateTerrainHeight(x,z);
+            const top = r <= 4 ? level : level + Math.sign(original-level) * Math.min(r-4,Math.abs(original-level));
+            for (let y = Math.min(original,top)-2; y <= Math.max(original,top)+1; y++) {
+                setBlockSafe(x,y,z, y > top ? BlockTypes.AIR : y === top ? (r <= 3 ? BlockTypes.WATER : BlockTypes.GRASS) : y === top-1 ? BlockTypes.SAND : BlockTypes.DIRT);
+            }
+        }
+    }
     // 生成树木（沙漠不长树：只在草方块/沙上长是旧规则，收紧为草方块——沙漠贴湖的沙面不再长树）
     for (const t of treePositions) {
         if (getBlock(t.x, t.y, t.z) === BlockTypes.GRASS) {
@@ -178,4 +242,5 @@ export function generateWorld() {
             }
         }
     }
+    if (state.generationVersion >= 3) adventureData().sites = generateLandmarks(generateTerrainHeight, setBlockSafe);
 }

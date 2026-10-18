@@ -1,3 +1,4 @@
+import { CRANK_BASE, LARGE_COG_BASE, REVERSER_BASE } from '../config.js';
 // ==================== assistant/docs.js ====================
 // 系统提示词构建：游戏档案 + 实时状态 + 方块调色板 + 工具工作流 + 源码修改指南
 // 方块表与玩家状态在每次请求时动态生成，保证热重载新增方块后提示词自动同步。
@@ -53,6 +54,9 @@ function blockPalette() {
     // 工具（P2：物品而非方块，ID 100..103，不在 BlockTypes 里，不能用于建造放置）
     parts.push(`工具（物品非方块，不可放置/建造）：100=铁镐（玩家挖掘用；石头需镐才有掉落） 101=铁斧 102=铁锹 103=铁剑（攻击 6 伤害）`);
     // 动力组折叠：轴类 ID=基址+axis(0=东西X 1=上下Y 2=南北Z)，机械锯 ID=基址+facing(0上1下2北3东4南5西)
+    parts.push(`${CRANK_BASE}..${CRANK_BASE+2}=手摇动力器（ID=基址+axis；按住右键/X供8RPM、64SU，松手停；闯关不可操作）`);
+    parts.push(`${LARGE_COG_BASE}..${LARGE_COG_BASE+2}=大齿轮（ID=基址+axis；大→小啮合-2倍、小→大-0.5倍；范围2..32RPM，真实带速/加工/升降随速）`);
+    parts.push(`${REVERSER_BASE}..${REVERSER_BASE+5}=红石换向器（ID=基址+axis*2+powered；通电正轴端反转，黄标为正轴端；不改变带箭头或滑轮红石上下行）`);
     parts.push(`${SHAFT_BASE}..${SHAFT_BASE + SHAFT_COUNT - 1}=传动轴（ID=基址+axis；同轴相邻 1:1 传速，转轴自动旋转）`);
     parts.push(`${COGWHEEL_BASE}..${COGWHEEL_BASE + COGWHEEL_COUNT - 1}=齿轮（ID=基址+axis；与垂直轴的相邻齿轮啮合=换向反转，平行并排不连接）`);
     parts.push(`${WATERWHEEL_BASE}..${WATERWHEEL_BASE + WATERWHEEL_COUNT - 1}=水车（ID=基址+axis；顶面接触水（${BlockTypes.WATER}）=动力源，8 RPM + 64 SU 应力容量/台）`);

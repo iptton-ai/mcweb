@@ -1,8 +1,12 @@
+import { setCrankActive } from './kinetic.js';
+import { openAdventurePanel, closeAdventurePanel } from './adventureUI.js';
 // ==================== input.js ====================
 // 键鼠输入。门控原则：游戏键只问「UI 状态机是否 playing」（uiModal.js）与
 // 「焦点是否在输入框」，不再看指针是否锁定；施工控制键（[ ] P G R）在除首屏外的
 // 任何状态都可用，便于 AI 施工时在暂停菜单/背包/助手面板/死亡界面里控制建造。
 
+import { selectQuickbar, normalizeQuickbar } from './homeSurvival.js';
+import { isWorldPaused } from './uiModal.js';
 import { BlockInfo, HotbarBlocks } from './config.js';
 import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
@@ -25,7 +29,7 @@ export const keys = {};
 let lastSpaceAt = -Infinity; // 上次空格按下时间（创造模式双击 = 切换飞行）
 
 // F2 截图：画布转 PNG 下载（纯净画面，不含 DOM 界面）
-function takeScreenshot() {
+export function takeScreenshot() {
     try {
         const a = document.createElement('a');
         const d = new Date();
@@ -48,13 +52,17 @@ export function clearKeys() {
     for (const k in keys) keys[k] = false;
     mouseDown.left = false;
     mouseDown.right = false;
+    state.handCrankIntent = null;
+    state.handCrankPower = null;
+    setCrankActive(0,0,0,false);
+    state.player.shieldRaised = false;
     mouseMoveDelta.x = mouseMoveDelta.y = 0;
 }
 
 // ==================== 左右键共享触发点（鼠标 mousedown 与纯键盘模式 Enter/X 同源） ====================
 // 走同一入口 = 编辑器组件盖章 / 闯关禁挖禁放等守卫全部自动继承，不存在「键盘绕过」通道
 function primaryActionPress() {
-    if (getUIState() !== 'playing' || state.camMode !== 'player') return;
+    if (isWorldPaused() || getUIState() !== 'playing' || state.camMode !== 'player') return;
     // 组件放置态：左键 = 盖章（吞掉这次按压，不进入挖掘/攻击）
     if (consumePlaceClick()) return;
     mouseDown.left = true;
@@ -68,8 +76,13 @@ function primaryActionRelease() {
 }
 
 // 右键链：食物→工作台/熔炉→门→TNT→按钮/拉杆→答题机→放置（优先级见 js/interaction.js placeBlock）
+function releaseSecondaryAction() {
+    mouseDown.right=false;
+    state.handCrankIntent=null;
+    setCrankActive(0,0,0,false);
+}
 function secondaryAction() {
-    if (getUIState() !== 'playing' || state.camMode !== 'player') return;
+    if (isWorldPaused() || getUIState() !== 'playing' || state.camMode !== 'player') return;
     // 组件放置态：右键 = 结束放置（不放方块，防误盖一手持块）
     if (getPlacing()) {
         cancelPlacing();
@@ -112,7 +125,7 @@ export function setupInput() {
             else if (isLevelListOpen()) closeLevelList(); // 首屏关卡列表浮层：关闭（B1 关闭钮 title 承诺的行为）
             else if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
             else if (st === 'result') exitLevelRun({ toTitle: true }); // 结算浮层：退出关卡回首屏
-            else if (st === 'pause' || st === 'inventory') setState('playing'); // 再按 Esc 回到游戏
+            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure') setState('playing'); // 再按 Esc 回到游戏
             else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁定，Esc 能到达页面 = 暂停
             return;
         }
@@ -126,11 +139,12 @@ export function setupInput() {
             else if (isLevelListOpen()) closeLevelList();
             else if (st === 'settings') closeSettingsState();
             else if (st === 'result') exitLevelRun({ toTitle: true });
-            else if (st === 'pause' || st === 'inventory') setState('playing');
+            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure') setState('playing');
             else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁可放，直接弹暂停
             else if (st === 'playing' && mouseLocked) releasePointerToPause();
             return;
         }
+        if (st === 'playing' && isWorldPaused()) { keys[e.code]=false; return; }
         // B：组件库（关卡编辑器/建造模式）——点选预设组件后准星瞄准左键盖章
         if (e.code === 'KeyB' && st === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen) {
             if (isPrefabPickerOpen()) closePrefabPicker();
@@ -148,6 +162,8 @@ export function setupInput() {
         // E：打开物品选择网格（openItemPicker 负责构建网格再进入 inventory 态）；
         // 背包开着时按 E 收起（点选物品也会自动收起，无需再按）。
         // 闯关模式禁开背包（W11）——物品栏能摸到全部方块与工具，等于作弊入口
+        if(e.code==='KeyJ' && !e.repeat && (st==='playing'||st==='adventure')){if(st==='adventure')closeAdventurePanel();else openAdventurePanel();return;}
+        if(e.code==='KeyE' && st==='container'){setState('playing');return;}
         if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
             if (st === 'playing') {
                 if (isLevelRunActive()) {
@@ -263,7 +279,7 @@ export function setupInput() {
         if (e.code.startsWith('Digit')) {
             const num = parseInt(e.code.replace('Digit', ''));
             if (num >= 1 && num <= 9) {
-                state.player.selectedSlot = num - 1;
+                selectQuickbar(num - 1);
                 updateHotbar();
             }
         }
@@ -274,7 +290,7 @@ export function setupInput() {
         // 纯键盘模式：松开键 = 松开左/右键（蓄力中断、连放结束）
         if (state.inputMode === 'keyboard') {
             if (e.code === 'Enter') primaryActionRelease();
-            if (e.code === 'KeyX') mouseDown.right = false;
+            if (e.code === 'KeyX') releaseSecondaryAction();
         }
     });
 
@@ -314,7 +330,7 @@ export function setupInput() {
 
     canvas.addEventListener('mouseup', (e) => {
         if (e.button === 0) mouseDown.left = false;
-        if (e.button === 2) mouseDown.right = false;
+        if (e.button === 2) releaseSecondaryAction();
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -327,8 +343,9 @@ export function setupInput() {
             return;
         }
         const delta = e.deltaY > 0 ? 1 : -1;
-        state.player.selectedSlot = (state.player.selectedSlot + delta + HotbarBlocks.length) % HotbarBlocks
-            .length;
+        const bar=normalizeQuickbar(state.player.quickbar);
+        const current=bar.indexOf(HotbarBlocks[state.player.selectedSlot]);
+        selectQuickbar((Math.max(0,current)+delta+9)%9);
         updateHotbar();
         showTooltip(BlockInfo[HotbarBlocks[state.player.selectedSlot]]?.name || '未知');
     });

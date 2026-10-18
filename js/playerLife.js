@@ -1,3 +1,4 @@
+import { protectedDamage } from './adventure.js';
 // ==================== playerLife.js ====================
 // 生命 + 生存进度组（2026-09-05 对齐参考版）：
 //   饥饿：移动消耗（疾跑 ×2.7、站立 ×0.2），每 45 秒掉 1 点；≥17 每 5 秒回 1 血，=0 饿到只剩 1 血
@@ -8,6 +9,8 @@
 import { BlockInfo, HUNGER_DRAIN_SEC, HUNGER_REGEN_MIN, HUNGER_REGEN_SEC, MAX_AIR, MAX_HEALTH, MAX_HUNGER } from './config.js';
 import { isCreative, state } from './state.js';
 import { scene } from './engine.js';
+import { getHomeRespawn } from './bed.js';
+import { showTooltip } from './ui.js';
 import { playHitSound } from './audio.js';
 import { notifyPlayerHit } from './bgm.js';
 import { killEnemySilent } from './entities.js';
@@ -17,10 +20,12 @@ import { resetCamMode } from './cameraRig.js';
 import { getRespawnPos, isLevelRunActive, onPlayerDeath } from './levelRun.js'; // 闯关模式：死亡记账与检查点重生（批次 W）
 
 // ==================== 玩家伤害与重生 ====================
-export function damagePlayer(dmg) {
+export function damagePlayer(dmg, source = 'environment', origin = null) {
     const p = state.player;
-    if (isCreative() || p.dead || p.invulnTimer > 0) return;
-    p.health -= dmg;
+    if (!Number.isFinite(dmg) || dmg <= 0 || isCreative() || p.dead || p.invulnTimer > 0) return;
+    dmg = protectedDamage(dmg, source, origin);
+    // 先归零再刷新 HUD，致命伤害不能画出超过十颗空心。
+    p.health = Math.max(0, p.health - dmg);
     p.invulnTimer = 0.5;
     updateHealthUI();
     playHitSound();
@@ -59,9 +64,9 @@ export function respawn() {
         p.y = rp.y + 1;
         p.z = rp.z + 0.5;
     } else {
-        p.x = state.spawn.x;
-        p.y = state.spawn.y;
-        p.z = state.spawn.z;
+        const home = getHomeRespawn();
+        Object.assign(p,home.position);
+        if(home.reason) showTooltip(home.reason);
     }
     p.vx = p.vy = p.vz = 0;
     // 死亡不再清背包（2026-09-05 起工具有合成成本，清空惩罚过重；对齐参考版「在出生点重生」）
@@ -69,7 +74,7 @@ export function respawn() {
     updateHealthUI();
     updateHotbar();
     // 清掉所有怪物
-    for (let i = state.enemies.length - 1; i >= 0; i--) killEnemySilent(state.enemies[i]);
+    for (let i = state.enemies.length - 1; i >= 0; i--) if(!state.enemies[i].owned) killEnemySilent(state.enemies[i]);
     setState('playing'); // 状态机负责重新锁定指针（失败时显示「点击继续」并自动重试）
 }
 
@@ -119,7 +124,7 @@ export function updateSurvivalStats(dt) {
         if (p.air < 0) {
             p.air = 1.5; // 扣一次血后再给 1.5 秒（对齐参考版节奏）
             p.invulnTimer = 0; // 溺水无视无敌帧，否则和怪物伤害互相顶掉
-            damagePlayer(2);
+            damagePlayer(2, 'drowning');
         }
         updateAirUI();
     } else if (p.air < MAX_AIR) {
@@ -137,7 +142,7 @@ export function updateSurvivalStats(dt) {
             updateHealthUI();
         } else if (p.hunger <= 0 && p.health > 1) {
             p.invulnTimer = 0;
-            damagePlayer(1);
+            damagePlayer(1, 'hunger');
             showHungerWarn();
         }
     }

@@ -1,3 +1,5 @@
+import { resetAdventureData } from './adventureData.js';
+import {resetLifeData} from './lifeData.js';
 // ==================== levelRun.js ====================
 // 关卡运行时（关卡工坊批次 W / A2 独占文件，2026-09-15）。
 // 接口契约：docs/edu-workshop-impl-contract.md §3.2（唯一接口事实源）；
@@ -202,6 +204,8 @@ async function enterLevelImpl(cardOrId) {
 
     // 4) 临时世界：整体清零 + 铺 y=0 基岩层（四周空气、底部基岩平台，plan §2.3），
     //    再由 levelWorkshop.embedLevelToWorld 只写 region 区（固定偏移 +80,+4,+80）
+    resetLifeData();
+    resetAdventureData();
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     for (let x = 0; x < WORLD_WIDTH; x++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {

@@ -1,7 +1,10 @@
+import { AdventureItems, LADDER_BASE } from './config.js';
+import { CRANK_BASE, CRANK_ITEM_ID, LARGE_COG_BASE, LARGE_COG_ITEM_ID, REVERSER_BASE, REVERSER_ITEM_ID } from './config.js';
+import {LifeBlocks,LifeItems,isCropId} from './config.js';
 // ==================== textures.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, PEN_ID, STARLIGHT_BASE, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
+import { BED_BASE, BlockInfo, BlockTypes, BUTTON_BASE, ItemTypes, BUTTON_COUNT, BUTTON_ITEM_ID, BELT_BASE, BELT_COUNT, BELT_ITEM_ID, FLAG_BASE, FLAG_COUNT, KEYPAD_BASE, KEYPAD_ITEM_ID, MERCHANT_ITEM_ID, HANZI_ORE_ITEM_ID, PEN_ID, STARLIGHT_BASE, CLUTCH_BASE, CLUTCH_COUNT, CLUTCH_ITEM_ID, COGWHEEL_BASE, COGWHEEL_ITEM_ID, CRUSHER_BASE, CRUSHER_ITEM_ID, DEPLOYER_BASE, DEPLOYER_COUNT, DEPLOYER_ITEM_ID, DUST_BASE, DUST_COUNT, DUST_ITEM_ID, DOOR_BASE, DOOR_COUNT, DOOR_ITEM_ID, LAMP_BASE, LEVER_BASE, LEVER_COUNT, LEVER_ITEM_ID, OBSERVER_BASE, OBSERVER_ITEM_ID, PISTON_BASE, PISTON_HEAD_BASE, PISTON_ITEM_ID, PLATE_BASE, PLATE_COUNT, PLATE_ITEM_ID, RTORCH_BASE, RTORCH_COUNT, RTORCH_ITEM_ID, SAW_BASE, SAW_ITEM_ID, SHAFT_BASE, SHAFT_ITEM_ID, STICKY_PISTON_BASE, STICKY_PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_BASE, PULLEY_COUNT, ToolTypes, WATERWHEEL_BASE, WATERWHEEL_ITEM_ID } from './config.js';
 import { hash2D } from './world.js';
 import { TEXTURE_TILES, atlasSize } from './textureTiles.js';
 
@@ -146,6 +149,8 @@ export function generateAllTextures() {
     const tiles = TEXTURE_TILES;
 
     const drawFunctions = {
+        91: (ctx,x,y,s) => { ctx.fillStyle='#9a632f';ctx.fillRect(x,y,s,s);ctx.fillStyle='#c84944';ctx.fillRect(x+1,y+1,s-2,s-4);ctx.fillStyle='#ef8176';ctx.fillRect(x+2,y+2,s-4,2); },
+        92: (ctx,x,y,s) => { ctx.fillStyle='#c84944';ctx.fillRect(x,y,s,s);ctx.fillStyle='#f2ead8';ctx.fillRect(x+1,y+1,s-2,6);ctx.fillStyle='#9a632f';ctx.fillRect(x,y+s-2,s,2); },
         0: (ctx, x, y, s) => { // 草顶部
             ctx.fillStyle = '#5a9e3d';
             ctx.fillRect(x, y, s, s);
@@ -1198,6 +1203,85 @@ export function generateAllTextures() {
         },
     };
 
+    for(const tile of tiles.filter(t=>t.name.startsWith('life_'))) drawFunctions[tile.top]=(ctx,x,y,s)=>{
+        const id=tile.type;
+        ctx.fillStyle=BlockInfo[id].color;ctx.fillRect(x,y,s,s);
+        ctx.fillStyle='#00000033';for(let n=3;n<s;n+=4)ctx.fillRect(x,y+n,s,1);
+        if(id===LifeBlocks.CHEST){ctx.fillStyle='#563a22';ctx.fillRect(x,y+5,s,2);ctx.fillRect(x+1,y+1,2,s-2);ctx.fillRect(x+13,y+1,2,s-2);ctx.fillStyle='#f3d785';ctx.fillRect(x+7,y+5,3,5);}
+        if(id===LifeBlocks.FARMLAND){ctx.fillStyle='#49351f';for(let n=1;n<s;n+=3)ctx.fillRect(x+n,y,1,s);}
+        if(id===LifeItems.SEEDS||id===LifeItems.WHEAT||isCropId(id)){ctx.clearRect(x,y,s,s);ctx.fillStyle=id===LifeItems.SEEDS?'#829d44':id===LifeItems.WHEAT||id===247?'#e5c04c':'#559d3a';for(let n=3;n<14;n+=4){ctx.fillRect(x+n,y+3,2,12);ctx.fillRect(x+n-1,y+4,4,2);ctx.fillRect(x+n-1,y+8,4,2);}}
+        if(id===LifeItems.BUCKET||id===LifeItems.WATER_BUCKET){ctx.clearRect(x,y,s,s);ctx.fillStyle='#bac6ca';ctx.fillRect(x+3,y+5,10,9);ctx.fillRect(x+4,y+2,8,2);ctx.fillStyle=id===LifeItems.WATER_BUCKET?'#388ee1':'#40545d';ctx.fillRect(x+5,y+6,6,5);}
+        if(id===LifeItems.HOE){ctx.clearRect(x,y,s,s);drawTool(ctx,x,y,'pickaxe','#aa824c','#694823');}
+        if(id===LifeItems.SHEARS){ctx.clearRect(x,y,s,s);ctx.fillStyle='#cad5d8';for(let n=3;n<13;n++){ctx.fillRect(x+n,y+n,2,2);ctx.fillRect(x+15-n,y+n,2,2);}}
+        if(id===LifeItems.BREAD){ctx.clearRect(x,y,s,s);ctx.fillStyle='#be843b';ctx.fillRect(x+2,y+5,12,7);ctx.fillStyle='#f0cf85';for(let n=4;n<12;n+=3)ctx.fillRect(x+n,y+5,1,4);}
+        if(id===LifeItems.MEMENTO){ctx.fillStyle='#f1d06b';ctx.fillRect(x+4,y+4,8,8);ctx.fillStyle='#fff6b7';ctx.fillRect(x+7,y+5,2,6);}
+    };
+    drawFunctions[111] = (ctx,x,y,s) => {
+        ctx.clearRect(x,y,s,s); ctx.fillStyle='#b78b4f';
+        ctx.fillRect(x+3,y,2,s); ctx.fillRect(x+11,y,2,s);
+        for(let n=2;n<s;n+=4) ctx.fillRect(x+3,y+n,10,2);
+    };
+    drawFunctions[112] = (ctx,x,y,s) => {
+        ctx.clearRect(x,y,s,s); ctx.fillStyle='#c6d7dd';
+        ctx.fillRect(x+2,y+2,12,5);ctx.fillRect(x+4,y+5,8,10);
+        ctx.clearRect(x+6,y+2,4,3);ctx.fillStyle='#667d8a';ctx.fillRect(x+7,y+6,2,8);
+    };
+    drawFunctions[113] = (ctx,x,y,s) => {
+        ctx.clearRect(x,y,s,s);ctx.fillStyle='#bfd0d7';ctx.fillRect(x+2,y+1,12,11);ctx.fillRect(x+4,y+12,8,2);ctx.fillRect(x+6,y+14,4,1);
+        ctx.fillStyle='#9b723d';ctx.fillRect(x+4,y+3,8,8);ctx.fillStyle='#d6e6ed';ctx.fillRect(x+7,y+4,2,7);
+    };
+    drawFunctions[114] = (ctx,x,y,s) => {
+        ctx.clearRect(x,y,s,s);ctx.fillStyle='#5cbdb8';ctx.fillRect(x+3,y+3,10,10);ctx.fillStyle='#f9e099';ctx.fillRect(x+7,y+1,2,14);ctx.fillRect(x+1,y+7,14,2);
+    };
+    // 物理组件 P1：独立轮廓和配色，16 像素下也能分清手柄、大齿轮与红石换向箱。
+    drawFunctions[115] = (ctx, x, y, s) => {
+        ctx.clearRect(x, y, s, s);
+        ctx.fillStyle = '#394c54';
+        ctx.fillRect(x + 2, y + 6, 5, 7);
+        ctx.fillStyle = '#a4b8bd';
+        ctx.fillRect(x + 3, y + 7, 9, 3);
+        ctx.fillStyle = '#e1af50';
+        ctx.fillRect(x + 9, y + 3, 3, 7);
+        ctx.fillRect(x + 10, y + 2, 4, 3);
+        ctx.fillStyle = '#7c4f2f';
+        ctx.fillRect(x + 12, y + 1, 3, 5);
+        ctx.fillStyle = '#f5d38b';
+        ctx.fillRect(x + 9, y + 3, 1, 5);
+        ctx.fillStyle = '#e7f2ee';
+        ctx.fillRect(x + 3, y + 7, 2, 2);
+    };
+    drawFunctions[116] = (ctx, x, y, s) => {
+        ctx.clearRect(x, y, s, s);
+        ctx.fillStyle = '#9c692c';
+        ctx.fillRect(x + 3, y + 3, 10, 10);
+        for (const [px, py, w, h] of [[6,0,4,3],[6,13,4,3],[0,6,3,4],[13,6,3,4],
+            [2,2,3,3],[11,2,3,3],[2,11,3,3],[11,11,3,3]]) ctx.fillRect(x + px, y + py, w, h);
+        ctx.fillStyle = '#e8bc66';
+        ctx.fillRect(x + 4, y + 4, 8, 8);
+        ctx.fillStyle = '#76502c';
+        ctx.fillRect(x + 5, y + 5, 6, 6);
+        ctx.fillStyle = '#dbe6dc';
+        ctx.fillRect(x + 6, y + 6, 4, 4);
+        ctx.fillStyle = '#4f696d';
+        ctx.fillRect(x + 7, y + 7, 2, 2);
+    };
+    drawFunctions[117] = (ctx, x, y, s) => {
+        ctx.clearRect(x, y, s, s);
+        ctx.fillStyle = '#9eb1b9';
+        ctx.fillRect(x, y + 6, s, 4);
+        ctx.fillStyle = '#45505e';
+        ctx.fillRect(x + 3, y + 2, 10, 12);
+        ctx.fillStyle = '#677987';
+        ctx.fillRect(x + 4, y + 3, 8, 10);
+        ctx.fillStyle = '#ef6262';
+        ctx.fillRect(x + 5, y + 4, 6, 2);
+        ctx.fillRect(x + 9, y + 3, 2, 4);
+        ctx.fillStyle = '#f4ca68';
+        ctx.fillRect(x + 5, y + 10, 6, 2);
+        ctx.fillRect(x + 5, y + 9, 2, 4);
+        ctx.fillStyle = '#ffdc79'; // 正轴端固定黄标，旋转时仍可认出换向端。
+        ctx.fillRect(x + 12, y + 5, 2, 6);
+    };
     for (const tile of tiles) {
         const tx = (tile.top % atlasSize) * tileSize;
         const ty = Math.floor(tile.top / atlasSize) * tileSize;
@@ -1241,6 +1325,10 @@ export function generateAllTextures() {
         };
     }
 
+    for(let facing=0;facing<4;facing++) {
+        blockUVs[BED_BASE+facing]=blockUVs[BED_BASE];
+        blockUVs[BED_BASE+4+facing]=blockUVs[BED_BASE+4];
+    }
     // 水单独处理为透明
     if (!tileMap['water']) {
         const wx = 8 % atlasSize;
@@ -1276,12 +1364,15 @@ export function generateAllTextures() {
 
     // 动力组全部变体共享物品图标 tile（实际是 3D 轮盘/杆件网格，手模型/物品栏/掉落物走这里的 UV）
     for (let i = 0; i < 3; i++) {
+        blockUVs[CRANK_BASE + i] = blockUVs[CRANK_ITEM_ID];
+        blockUVs[LARGE_COG_BASE + i] = blockUVs[LARGE_COG_ITEM_ID];
         blockUVs[SHAFT_BASE + i] = blockUVs[SHAFT_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
         blockUVs[COGWHEEL_BASE + i] = blockUVs[COGWHEEL_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
         blockUVs[WATERWHEEL_BASE + i] = blockUVs[WATERWHEEL_ITEM_ID] || blockUVs[BlockTypes.PLANKS];
         blockUVs[CRUSHER_BASE + i] = blockUVs[CRUSHER_ITEM_ID] || blockUVs[BlockTypes.STONE];
     }
     for (let i = 0; i < 6; i++) blockUVs[SAW_BASE + i] = blockUVs[SAW_ITEM_ID] || blockUVs[BlockTypes.STONE];
+    for (let i = 0; i < 6; i++) blockUVs[REVERSER_BASE + i] = blockUVs[REVERSER_ITEM_ID];
 
     // 离合器（Create-lite L1）全部变体共享物品图标 tile：暂复用传动轴木纹——本体是 3D 网格
     // 不走图集，这里的 UV 只喂手模型像素板/物品栏图标/掉落物（专用 tile 由链 2/3 统一补画）

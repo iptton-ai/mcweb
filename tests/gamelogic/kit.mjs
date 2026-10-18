@@ -1,3 +1,5 @@
+import {resetLifeData} from '../../js/lifeData.js';
+import {tickHomestead,flushLifeDrops} from '../../js/homestead.js';
 // ==================== gamelogic 测试工具箱 ====================
 // 无头逻辑测试的公共底座：
 //   freshWorld()  手搓平地世界（跳过地形生成，快且确定性）+ 初始化红石/动力基线
@@ -9,6 +11,7 @@
 //    Node v22 的 --test 目录形式会当 ES 模块导入报 ERR_UNSUPPORTED_DIR_IMPORT，必须用 glob）：
 //   node --test --import ./tests/gamelogic/_preload.mjs tests/gamelogic/*.test.mjs
 import './_preload.mjs';
+import { restoreHomeState } from '../../js/homeSurvival.js';
 import { state } from '../../js/state.js';
 import { WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH, BlockTypes, GameModes } from '../../js/config.js';
 import { getBlock, setBlockSafe, getBlockIndex } from '../../js/world.js';
@@ -23,7 +26,7 @@ import { initParticles } from '../../js/particles.js';
 // 那条异常会连带触发 levelRun.exitLevelRun 的 generateWorld 兜底（恢复失效），必须垫平
 import { blockUVs } from '../../js/textures.js';
 
-for (let id = 0; id < 256; id++) blockUVs[id] ??= { top: { x: 0, y: 0 } };
+for (let id = 0; id < 300; id++) blockUVs[id] ??= { top: { x: 0, y: 0 } };
 
 export { state, getBlock, setBlockSafe };
 export { dispatchKey, __listeners } from './_preload.mjs';
@@ -36,6 +39,9 @@ export function freshWorld({ seed = 20260923, floorY = 8, gameMode = GameModes.C
     if (!globalThis.__mcwebGameLogicPreloaded) {
         throw new Error('gamelogic: 未检测到 _preload 预载。请用 node --test --import ./tests/gamelogic/_preload.mjs 运行');
     }
+    restoreHomeState({});
+    resetLifeData();state.survivalRules='standard';state.player.toolWear={};state.player.toolReserveWear={};
+    state.windowUnfocused=false;
     state.worldSeed = seed;
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     for (let x = 0; x < WORLD_WIDTH; x++) {
@@ -74,6 +80,7 @@ export function pump(dt = 0.05, frames = 1) {
         updateTnt(dt);
         updateRedstoneTick(dt);
         updateKineticTick(dt);
+        tickHomestead(dt);flushLifeDrops();
         updateItemDrops(dt);
         state.time += dt;
     }

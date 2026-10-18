@@ -1,3 +1,6 @@
+import { CRANK_BASE, CRANK_ITEM_ID, LARGE_COG_BASE, LARGE_COG_ITEM_ID, REVERSER_BASE, REVERSER_ITEM_ID } from '../config.js';
+import {isVoxelId} from '../config.js';
+import {canUseFreeBuild,FREE_BUILD_REASON} from '../survivalRules.js';
 // ==================== assistant/tools.js ====================
 // AI 助手工具集：
 //   世界类：get_game_context / scan_terrain / place_blocks / clear_area / read_blocks / run_build_script / set_build_speed
@@ -172,7 +175,7 @@ async function toolPlaceBlocks({ blocks } = {}) {
         const [bx, by, bz, bt] = item.map(Number);
         if (![bx, by, bz, bt].every(Number.isInteger)) { skipped.push('非整数:' + JSON.stringify(item)); continue; }
         if (bx < 0 || bx >= WORLD_WIDTH || by < 1 || by >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH) { skipped.push(`越界或 y=0(基岩层):${bx},${by},${bz}`); continue; }
-        if (BlockInfo[bt] === undefined) { skipped.push(`未知方块ID:${bt}`); continue; }
+        if (!isVoxelId(bt)) { skipped.push(`未知方块ID:${bt}`); continue; }
         // 与玩家重叠的格子由施工队列在逐格应用时再判（渐进施工期间玩家可能移动）
         ops.push([bx, by, bz, bt]);
     }
@@ -245,6 +248,7 @@ function toolReadBlocks(args = {}) {
 }
 
 async function toolRunBuildScript({ code } = {}) {
+    if(!canUseFreeBuild())return FREE_BUILD_REASON;
     if (typeof code !== 'string' || !code.trim()) return '错误：需要 code 参数（JS 代码）';
     const logs = [];
     const ops = [];
@@ -256,6 +260,8 @@ async function toolRunBuildScript({ code } = {}) {
     // 滑轮 +up*2+powered（PULLEY=垂挂·放绳，顶举=PULLEY_BASE+2）；施工完成自动重算红石+动力
     const BT = {
         ...BlockTypes,
+        CRANK: CRANK_ITEM_ID, LARGE_COG: LARGE_COG_ITEM_ID, REVERSER: REVERSER_ITEM_ID,
+        CRANK_BASE, LARGE_COG_BASE, REVERSER_BASE,
         SHAFT: SHAFT_ITEM_ID, COGWHEEL: COGWHEEL_ITEM_ID, WATERWHEEL: WATERWHEEL_ITEM_ID,
         CRUSHER: CRUSHER_ITEM_ID, SAW: SAW_ITEM_ID,
         PISTON: PISTON_ITEM_ID, STICKY_PISTON: STICKY_PISTON_ITEM_ID, OBSERVER: OBSERVER_ITEM_ID,
@@ -280,7 +286,7 @@ async function toolRunBuildScript({ code } = {}) {
             guard();
             x = Math.round(x); y = Math.round(y); z = Math.round(z);
             if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH) return;
-            if (BlockInfo[t] === undefined) throw new Error(`未知方块 ID：${t}`);
+            if (!isVoxelId(t)) throw new Error(`未知方块 ID：${t}`);
             ops.push([x, y, z, t]);
         },
         fill(x1, y1, z1, x2, y2, z2, t) {
@@ -406,6 +412,7 @@ async function toolReadFile({ path } = {}) {
 }
 
 async function toolWriteFile({ path, content } = {}) {
+    if(!canUseFreeBuild())return FREE_BUILD_REASON;
     if (!fileApiOnline) return fileApiHint();
     if (!path || typeof content !== 'string') return '错误：需要 path 与 content 参数';
     const data = await fileApiFetch('/api/file', {
@@ -938,6 +945,7 @@ export function getToolSchemas() {
 
 // 执行入口：返回 {result, isError}
 export async function executeTool(name, args) {
+    if(['place_blocks','clear_area','run_build_script','gen_level_draft','write_game_file'].includes(name)&&!canUseFreeBuild())return {result:FREE_BUILD_REASON,isError:true};
     try {
         let result;
         // 闯关模式守卫（G3 P1#2）：世界改造类工具会架桥绕锁/拆锁，一律拒绝（check_level 只读放行；

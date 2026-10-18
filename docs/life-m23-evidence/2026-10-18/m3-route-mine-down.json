@@ -1,0 +1,92 @@
+[
+  {
+    "target": {
+      "x": 128.5,
+      "z": 74.5
+    },
+    "position": {
+      "x": 128.3699815578027,
+      "y": 36.001,
+      "z": 74.51397403201157,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 128.5,
+      "z": 68.5
+    },
+    "position": {
+      "x": 128.37225450989658,
+      "y": 36.08295567999999,
+      "z": 68.45694205238719,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 128.5,
+      "z": 62.5
+    },
+    "position": {
+      "x": 128.46396399813796,
+      "y": 32.48045408000004,
+      "z": 62.62981213430216,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 128.5,
+      "z": 56.5
+    },
+    "position": {
+      "x": 128.5033840454721,
+      "y": 30.555308440000005,
+      "z": 56.48706383405211,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 134.5,
+      "z": 56.5
+    },
+    "position": {
+      "x": 134.5110893696262,
+      "y": 28.401059519999936,
+      "z": 56.50419573771831,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 137.5,
+      "z": 56.5
+    },
+    "position": {
+      "x": 137.43689359231405,
+      "y": 29.156175879999978,
+      "z": 56.51621983159708,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  }
+]

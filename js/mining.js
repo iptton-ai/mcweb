@@ -1,3 +1,4 @@
+import { damageInventoryTool } from './inventoryStacks.js';
 // ==================== mining.js ====================
 // 挖掘系统（照搬原版 Minecraft 机制，防误触的核心）：
 //   · 生存模式按住左键「蓄力」挖掘：方块有硬度，进度走完才破坏；松手或准星移开即恢复（裂纹消失）
@@ -55,14 +56,7 @@ export function damageHeldTool() {
     const id = HotbarBlocks[state.player.selectedSlot];
     const max = BlockInfo[id]?.maxDurability;
     if (!max || (state.player.inventory[id] || 0) <= 0) return; // 空手/无库存不磨损
-    const wear = (state.player.toolWear[id] || 0) + 1;
-    if (wear >= max) {
-        delete state.player.toolWear[id];
-        state.player.inventory[id] = Math.max(0, (state.player.inventory[id] || 0) - 1);
-        showTooltip(`⚠️ ${BlockInfo[id].name}已经损坏`);
-    } else {
-        state.player.toolWear[id] = wear;
-    }
+    if(damageInventoryTool(id)) showTooltip(`⚠️ ${BlockInfo[id].name}已经损坏`);
     updateHotbar();
 }
 

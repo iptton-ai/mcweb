@@ -1,3 +1,5 @@
+import { resetAdventureData } from './adventureData.js';
+import {resetLifeData} from './lifeData.js';
 // ==================== levelEditor.js ====================
 // 关卡编辑器（2026-09-16「界面化建关」批次）：独立编辑会话 + 预设组件放置。
 // 需求来源：此前自建关卡只能「在自家世界里摆 + 导入卡」——现在首屏「🗺 关卡」可
@@ -171,6 +173,8 @@ async function enterLevelEditorImpl(card = null, { name, templateName } = {}) {
     ek?.setExamIntent?.(card?.rules ? card.rules.lockAIHelp === false : false);
 
     // 4) 临时编辑世界：整体清零 + 地基层（闯关世界同款清零路径）
+    resetLifeData();
+    resetAdventureData();
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     for (let x = 0; x < WORLD_WIDTH; x++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {

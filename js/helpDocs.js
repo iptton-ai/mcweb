@@ -15,6 +15,10 @@ import { isLevelRunActive } from './levelRun.js'; // 闯关态隔离：与题库
 
 // 文档目录：新增图解只需在此加一行（src 相对仓库根，server.py / 静态托管都直读 docs/）
 const DOCS = [
+    { emoji:'🏠', title:'我有自己的家', desc:'常用栏 · 做门和床 · 安全暂停 · 睡觉与回家', src:'docs/home-survival-guide.html' },
+    { emoji:'🧭', title:'出门探险，完成自己的作品', desc:'三条探索路线 · 地图路标 · 防护维修 · 机器入箱', src:'docs/adventure-survival-guide.html' },
+    { emoji:'🌾', title:'让家每天都有收获', desc:'箱子收纳 · 熔炉烧制 · 种麦做面包 · 种树养羊', src:'docs/life-survival-guide.html' },
+    { emoji:'⚙️', title:'让机关转起来', desc:'手摇动力 · 大小齿轮 · 红石换向 · 快慢与负载实验', src:'docs/physics-components-guide.html' },
     {
         emoji: '⚡',
         title: '红石能源系统图解',

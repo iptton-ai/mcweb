@@ -1,3 +1,5 @@
+import {isVoxelId} from './config.js';
+import {canUseFreeBuild,FREE_BUILD_REASON} from './survivalRules.js';
 // ==================== buildQueue.js ====================
 // 施工队列：把 AI 助手的大批量方块操作拆成逐帧渐进应用。
 // 一来建造过程可见、可调速度/暂停，方便录制延时摄影；
@@ -6,7 +8,7 @@
 // 游戏主循环每帧调用 updateBuild(dt)。速度/暂停状态挂在 state 上（HUD 与 [ ] P 键共用）。
 
 import {
-    BUILD_REBUILDS_PER_FRAME,
+    BUILD_REBUILDS_PER_FRAME, isBedId,
     BUILD_SPEED_LEVELS,
     CHUNK_SIZE,
     WORLD_DEPTH,
@@ -82,6 +84,7 @@ function overlapsPlayer(x, y, z, t) {
 // 入队一批方块操作，返回的 Promise 在全部应用完成后 resolve：
 // { label, total, applied, skipped[], 秒 }
 export function enqueueBuildOps(label, ops) {
+    if(!canUseFreeBuild())return Promise.resolve({label,total:ops.length,applied:0,skipped:[FREE_BUILD_REASON],秒:0});
     return new Promise((resolve) => {
         if (ops.length === 0) {
             resolve({ label, total: 0, applied: 0, skipped: [], 秒: 0 });
@@ -93,7 +96,13 @@ export function enqueueBuildOps(label, ops) {
 
 // 切世界（读档 / 覆盖重开）时清空施工队列：旧世界的待放方块绝不能写进新世界（幽灵建筑）。
 // 挂起的 enqueueBuildOps Promise 以「世界已切换」结果兑现，助手的工具调用不悬死，LLM 可据此收尾。
-export function clearBuildQueue() {
+export function clearBuildQueue({settleApplied=false}={}) {
+    // 同世界取消：已提交方块必须收敛显示和网络；切世界默认不重算旧世界。
+    if(settleApplied && (dirtyChunks.size || activeJob?.applied)) {
+        while(dirtyChunks.size)drainDirtyChunks();
+        updateRedstoneNetwork();
+        updateKineticNetwork();
+    }
     const pending = [activeJob, ...jobQueue].filter(Boolean);
     jobQueue = [];
     activeJob = null;
@@ -102,12 +111,13 @@ export function clearBuildQueue() {
     dirtyChunks.clear();
     budgetCarry = 0;
     for (const job of pending) {
-        job.resolve({ label: job.label, total: job.total, applied: job.applied, skipped: ['世界已切换，剩余操作作废'], 秒: 0 });
+        job.resolve({ label: job.label, total: job.total, applied: job.applied, skipped: [settleApplied?'施工已取消，已应用部分保留，剩余操作作废':'世界已切换，剩余操作作废'], 秒: 0 });
     }
 }
 
 // 每帧驱动：应用方块（受速度档/暂停控制）→ 按预算重建脏区块网格
 export function updateBuild(dt) {
+    if(!canUseFreeBuild()){clearBuildQueue({settleApplied:true});return;}
     drainDirtyChunks();
 
     if (state.buildPaused) return;
@@ -129,12 +139,14 @@ export function updateBuild(dt) {
     }
     while (n-- > 0) {
         const [x, y, z, t] = job.ops[job.cursor++];
+        if(!isVoxelId(t)){job.skipped.push(`不是方块ID:${t}`);continue;}
+        if (isBedId(t)) { job.skipped.push(`小床需由玩家在两格平地放置:${x},${y},${z}`); continue; }
         if (getBlock(x, y, z) === t) continue; // 已是目标方块，无需写入与重建
         if (overlapsPlayer(x, y, z, t)) {
             job.skipped.push(`与玩家重叠:${x},${y},${z}`);
             continue;
         }
-        setBlockSafe(x, y, z, t);
+        for(const c of setBlockSafe(x, y, z, t) || []) markDirty(c.x,c.z);
         markDirty(x, z);
         job.applied++;
     }

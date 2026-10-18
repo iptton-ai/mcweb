@@ -1,0 +1,122 @@
+[
+  {
+    "target": {
+      "x": 122.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 122.73155295278688,
+      "y": 40.30602476000003,
+      "z": 128.55462324892483,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 116.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 116.73396333252224,
+      "y": 39.345109599999844,
+      "z": 128.5848817460837,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 110.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 110.73384845626352,
+      "y": 38.36812415999975,
+      "z": 128.5950582326743,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 104.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 104.73231528857227,
+      "y": 38.146293319999884,
+      "z": 128.58518045557673,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 98.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 98.68112292434226,
+      "y": 39.39703159999955,
+      "z": 128.5456753652569,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 92.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 92.70540806694432,
+      "y": 39.38243075999988,
+      "z": 128.4732467714757,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 86.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 86.63428260991684,
+      "y": 39.41250771999981,
+      "z": 128.41689173961066,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  },
+  {
+    "target": {
+      "x": 80.5,
+      "z": 128.5
+    },
+    "position": {
+      "x": 80.63718973657005,
+      "y": 38.28314404000017,
+      "z": 128.38075389836567,
+      "health": 20
+    },
+    "mode": "survival",
+    "flying": false,
+    "dead": false
+  }
+]

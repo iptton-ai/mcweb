@@ -1,0 +1,180 @@
+{
+  "method": "浏览器真实模块白盒边界",
+  "checks": [
+    {
+      "name": "非方块大 ID 不截断写入世界",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "第一把工具入箱",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "第二把工具入箱",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "原木第一栈入箱",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "原木第二栈入箱",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "两把不同磨损工具往返守恒",
+      "passed": true,
+      "evidence": [
+        41,
+        17
+      ]
+    },
+    {
+      "name": "炉输入接收",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "炉燃料接收",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "炉子先加工，不瞬时出成品",
+      "passed": true,
+      "evidence": 4.000000000000002
+    },
+    {
+      "name": "加工中保存",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "加工中读取",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "加工进度恢复",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "持续产出三块玻璃",
+      "passed": true,
+      "evidence": {
+        "kind": "furnace",
+        "input": null,
+        "fuel": {
+          "id": 181,
+          "count": 1
+        },
+        "output": {
+          "id": 10,
+          "count": 3
+        },
+        "processing": null,
+        "progress": 0,
+        "burnRemaining": 39.99999999999966
+      }
+    },
+    {
+      "name": "真实播种入口落作物",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "断水停止生长",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "四阶段小麦成熟",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "收麦后可持续补种",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "收获后再播种",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "树苗不覆盖建筑",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "清障后可长成树",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "拆箱完整保留内容",
+      "passed": true,
+      "evidence": 128
+    },
+    {
+      "name": "刚拆箱立即保存",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "刚拆箱重新读取",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "重复读档",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "销毁内容跨重载不丢不重复",
+      "passed": true,
+      "evidence": 128
+    },
+    {
+      "name": "生活快照保存",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "生活快照恢复",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "生活快照内容相同",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "标准生存免费建造关闭",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "建造脚本执行前拒绝",
+      "passed": true,
+      "evidence": {
+        "result": "标准生存中 AI 提供材料清单和步骤；免费建造与源码改写需要在设置 → 生存中明确选择「自由实验」。",
+        "isError": true
+      }
+    },
+    {
+      "name": "切回标准生存取消待施工",
+      "passed": true,
+      "evidence": null
+    }
+  ]
+}

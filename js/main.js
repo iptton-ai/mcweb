@@ -1,6 +1,13 @@
+import { updateCrankUse } from './interaction.js';
+import { tickAdventure } from './adventure.js';
+import { updateAdventureHUD } from './adventureUI.js';
+import {tickHomestead,flushLifeDrops} from './homestead.js';
+import {syncLifePanel} from './lifeUI.js';
 // ==================== main.js ====================
 
 import { BlockTypes, CHUNK_SIZE, GameModes, KEYBOARD_TURN_SPEED, MAX_AIR, MAX_HEALTH, MAX_HUNGER, PLAYER_EYE_HEIGHT, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH } from './config.js';
+import { resetHomeWorld, tickFirstDay } from './homeSurvival.js';
+import { findSafeStandingPosition, flushBedChanges } from './bed.js';
 import { state } from './state.js';
 import { camera, renderer, scene } from './engine.js';
 import { generateWorld, getBlock, setBlockSafe } from './world.js';
@@ -18,7 +25,7 @@ import { updateTnt } from './tnt.js';
 import { respawn, updateDroppedItems, updateHealthUI, updateSurvivalStats } from './playerLife.js';
 import { updatePlayerMesh, updatePlayerPhysics } from './playerPhysics.js';
 import { keys, mouseDown, mouseMoveDelta, setupInput } from './input.js';
-import { getUIState, initUIModal, isKeyboardPlayActive, isPlaying, mouseLocked, onUIStateChange, setState } from './uiModal.js';
+import { getUIState, isWorldPaused, initUIModal, isKeyboardPlayActive, isPlaying, mouseLocked, onUIStateChange, setState } from './uiModal.js';
 import { setGameMode, showTooltip, updateBuildWidget, updateDebugInfo, updateHotbar, initBuildWidget } from './ui.js';
 import { initHelpDocs } from './helpDocs.js'; // 📖 游戏说明浮层（目录 + iframe 嵌 docs/ 图解文档）
 import { updateCameraRig, updateBuildFilming, resetBuildFilming } from './cameraRig.js';
@@ -52,7 +59,8 @@ function gameLoop(timestamp) {
         state.fpsTimer = 0;
     }
 
-    updateBuildFilming(dt); // 先检测开工、取景、开录，再消费施工队列
+    const worldPaused = isWorldPaused();
+    if (!worldPaused) updateBuildFilming(dt); // 先检测开工、取景、开录，再消费施工队列
 
     // 视角更新（锁定即 playing，浮层状态下指针必然未锁定，由 uiModal 统一保证）。
     // 自由摄像头时鼠标转的是摄像头朝向（freeCam），玩家视角保持不动
@@ -91,6 +99,9 @@ function gameLoop(timestamp) {
     // Enter 按下同样置位（js/input.js 共享触发点）。
     // 右键/X 不在这里消费：secondaryAction 已在按下瞬间触发一次（js/input.js），若再按帧消费
     // mouseDown.right，按住跨帧的一次点击会放置两次（2026-09-18 修复）；该标志只作按住态镜像
+    updateCrankUse(!worldPaused && (isPlaying() || isKeyboardPlayActive()) && state.camMode === 'player' && mouseDown.right);
+    updateAdventureHUD(dt);
+    if (!worldPaused) {
     const gameplayActive = isPlaying() || isKeyboardPlayActive();
     updateMining(dt, gameplayActive && state.camMode === 'player' && mouseDown.left);
 
@@ -111,6 +122,7 @@ function gameLoop(timestamp) {
 
     // 昼夜循环
     updateDayNightCycle(dt);
+    tickFirstDay(dt);
 
     // 敌人 / TNT / 掉落物
     if (state.player.attackCooldown > 0) state.player.attackCooldown -= dt;
@@ -124,6 +136,9 @@ function gameLoop(timestamp) {
 
     // 动力组（旋转动画 + 粉碎轮/机械锯计时，见 js/kinetic.js）
     updateKineticTick(dt);
+    tickHomestead(dt);
+    tickAdventure();
+    flushLifeDrops();
 
     // 机器产出的物品实体（磁吸/拾取，见 js/items.js）
     updateItemDrops(dt);
@@ -142,6 +157,10 @@ function gameLoop(timestamp) {
 
     // 粒子更新
     updateParticles(dt);
+    } else { updateMining(0,false); updateDayNightCycle(0); }
+    flushBedChanges();
+    syncLifePanel();
+    uiNS.updateHomeHud?.();
 
     // 高亮更新
     updateHighlight();
@@ -167,6 +186,7 @@ function gameLoop(timestamp) {
 // 生成全新世界：地形 + 出生点 + 出生点火把（无存档启动、或开始界面选「新世界」时调用）
 function freshWorld() {
     // 每个新世界随机取种（进存档；同种子同地形，见 js/world.js）
+    resetHomeWorld();
     state.worldSeed = (Math.random() * 0x7fffffff) | 0;
     generateWorld();
 
@@ -184,6 +204,8 @@ function freshWorld() {
             break;
         }
     }
+    const safeSpawn = findSafeStandingPosition({x:spawnX,y:spawnY,z:spawnZ},12,{naturalGround:true});
+    if(safeSpawn) { spawnX=safeSpawn.x;spawnY=safeSpawn.y;spawnZ=safeSpawn.z; }
     state.player.x = spawnX;
     state.player.y = spawnY;
     state.player.z = spawnZ;
@@ -220,7 +242,11 @@ function freshWorld() {
     p.air = MAX_AIR;
     p.xp = 0;
     p.toolWear = {};
+    p.toolReserveWear = {};
     p.fallStartY = null;
+    p.vx = p.vy = p.vz = 0;
+    p.hungerTimer = p.regenTimer = 0;
+    p.underwater = p.inWater = false;
     p.sprinting = false;
 
     // 红石组：清按钮/火把延迟队列与门/TNT 边沿基线（新世界不该残留旧世界电平）

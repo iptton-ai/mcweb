@@ -1,0 +1,145 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-18T15:49:49.155Z",
+  "mode": "32",
+  "nativeRpm": 32,
+  "substepsPerMeasuredFrame": 1,
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "2d411be692c79ac8744c68c7e9b33af602b93a358b4b57b38e6f6d8e62b63e3d",
+    "kinetic": "2f21e4032846c1b14a484895b2838a78a8cd2d02b8f8e73dac5232b8f5153bf3",
+    "items": "c968183a8104869f21306dfd1131923809151076bd4bdc43baff1698494f78fe",
+    "piston": "6a9dce56656234ac31b7810f7967f862013c3d4736bb9832c51b3b4260a3c524"
+  },
+  "scenes": {
+    "shafts": {
+      "components": 101,
+      "rotatingProps": 100,
+      "network": {
+        "n": 50,
+        "meanMs": 10.17165582,
+        "p95Ms": 10.82695799999999,
+        "maxMs": 10.945083000000011
+      },
+      "tick": {
+        "n": 1000,
+        "meanMs": 0.0014838326800000088,
+        "p95Ms": 0.0017050000000006095,
+        "maxMs": 0.004885000000000445
+      }
+    },
+    "production": {
+      "machines": 10,
+      "capacityPerLine": 384,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "activeFrames": 600,
+      "simulatedSeconds": 10,
+      "completions": 750,
+      "outputItems": 3000,
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.02463576833332657,
+        "p95Ms": 0.23029199999996308,
+        "maxMs": 0.6617499999999836
+      },
+      "completionFrames": {
+        "n": 75,
+        "meanMs": 0.17130841333332683,
+        "p95Ms": 0.33141699999987395,
+        "maxMs": 0.6617499999999836
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 750,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    },
+    "lifts": {
+      "lifts": 16,
+      "passengers": 16,
+      "stroke": 16,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "simulatedSeconds": 10,
+      "crossedCells": 960,
+      "passengerCells": 960,
+      "directionChanges": 64,
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.015092173333331023,
+        "p95Ms": 0.10795800000005329,
+        "maxMs": 0.6201670000000377
+      },
+      "movementFrames": {
+        "n": 60,
+        "meanMs": 0.12368404999997816,
+        "p95Ms": 0.18804199999999582,
+        "maxMs": 0.6201670000000377
+      },
+      "msPerCrossing": 0.007730253124998635,
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 0,
+        "pulleySteps": 960,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    },
+    "belts": {
+      "lines": 4,
+      "entities": 64,
+      "beltCells": 84,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "simulatedSeconds": 10,
+      "distance": 3636.9911461955066,
+      "turns": 192,
+      "delivered": 165,
+      "replenished": 165,
+      "fullQueueStoppedEntityFrames": 384,
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.03313130000000418,
+        "p95Ms": 0.03904199999988123,
+        "maxMs": 0.6567499999998745
+      },
+      "transportFrames": {
+        "n": 600,
+        "meanMs": 0.03313130000000418,
+        "p95Ms": 0.03904199999988123,
+        "maxMs": 0.6567499999998745
+      },
+      "fullChestFrames": {
+        "n": 75,
+        "meanMs": 0.026100573333348316,
+        "p95Ms": 0.041917000000012195,
+        "maxMs": 0.051832999999987805
+      },
+      "deliveryFrames": {
+        "n": 73,
+        "meanMs": 0.02680880821915782,
+        "p95Ms": 0.04774999999995089,
+        "maxMs": 0.05237499999998363
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 0,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    }
+  }
+}

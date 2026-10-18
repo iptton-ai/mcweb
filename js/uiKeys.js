@@ -47,6 +47,8 @@ const SCOPES = [
     { sel: ['#level-list'], on: isLevelListVisible },                              // 🗺 关卡列表
     { sel: ['#result-panel'], on: () => getUIState() === 'result' },               // 关卡结算
     { sel: ['#game-settings'], on: () => getUIState() === 'settings' },            // ⚙️ 设置
+    { sel: ['#adventure-panel'], on: () => getUIState() === 'adventure' },
+    { sel: ['#life-panel'], on: () => getUIState() === 'container' },
     { sel: ['#inventory-panel'], on: () => getUIState() === 'inventory' },         // E 背包
     { sel: ['#death-screen'], on: () => getUIState() === 'dead' },                 // 死亡界面
     { sel: ['#start-screen'], on: () => getUIState() === 'title' || getUIState() === 'pause' }, // 首屏/暂停

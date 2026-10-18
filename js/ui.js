@@ -1,3 +1,11 @@
+import { addInventoryStack, takeInventoryStack, inventoryCapacity } from './inventoryStacks.js';
+import { grantFarmStarter } from './homestead.js';
+import { canUseFreeBuild, setSurvivalRules } from './survivalRules.js';
+import { WORKSHOP_KIT, materialSource } from './itemSources.js';
+export { materialSource } from './itemSources.js';
+import { BED_ITEM_ID, DOOR_ITEM_ID, bedFacing } from './config.js';
+import { getBedAt } from './bed.js';
+import { defaultQuickbar, normalizeQuickbar, selectQuickbar, assignQuickbar, grantHomeStarter, getHomeGuide } from './homeSurvival.js';
 // ==================== ui.js ====================
 
 import { BELT_ITEM_ID, BlockInfo, BlockTypes, CHUNK_SIZE, CLUTCH_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, DEPLOYER_ITEM_ID, GameModes, HotbarBlocks, KEYPAD_ITEM_ID, LAMP_ITEM_ID, MERCHANT_ITEM_ID, OBSERVER_ITEM_ID, PISTON_ITEM_ID, PLATFORM_ITEM_ID, PULLEY_ITEM_ID, RECIPES, SAW_ITEM_ID, SHAFT_ITEM_ID, STICKY_PISTON_ITEM_ID, ToolTypes, WATERWHEEL_ITEM_ID, WORLD_HEIGHT, XP_PER_CRAFT, isToolId, ItemTypes, DUST_ITEM_ID } from './config.js';
@@ -33,39 +41,7 @@ export function setGameMode(mode) {
         p.flying = false;
         // 首次进入生存（2026-09-05 合成系统上线后对齐原版节奏）：木器三件 + 苹果 + 火把 + 原木，
         // 石器/铁器/钻石全靠「撸树→木板→木棍→工作台→挖矿→熔炉」逐级合成（config.js RECIPES）
-        if (Object.keys(state.player.inventory).length === 0) {
-            state.player.inventory[ToolTypes.WOOD_PICKAXE] = 1;
-            state.player.inventory[ToolTypes.WOOD_AXE] = 1;
-            state.player.inventory[ToolTypes.WOOD_SWORD] = 1;
-            state.player.inventory[ItemTypes.APPLE] = 5;
-            state.player.inventory[BlockTypes.TORCH] = 8;
-            state.player.inventory[BlockTypes.WOOD] = 6; // 原木：开局就能搓木板/木棍/工作台
-            // 活塞组套装（同上：无合成系统的补偿，够搭自动门/陷阱/飞行机器玩起来）
-            state.player.inventory[BlockTypes.SLIME] = 16;
-            state.player.inventory[PISTON_ITEM_ID] = 2;
-            state.player.inventory[STICKY_PISTON_ITEM_ID] = 2;
-            state.player.inventory[OBSERVER_ITEM_ID] = 2;
-            // 动力组套装（同上：水车→轴/齿轮→粉碎轮/机械锯的自动化产线入门，见 js/kinetic.js）
-            state.player.inventory[WATERWHEEL_ITEM_ID] = 2;
-            state.player.inventory[SHAFT_ITEM_ID] = 16;
-            state.player.inventory[COGWHEEL_ITEM_ID] = 8;
-            state.player.inventory[CRUSHER_ITEM_ID] = 2;
-            state.player.inventory[SAW_ITEM_ID] = 1;
-            // 物流+控制组（Create-lite L1）：传送带搬产出 + 离合器拉杆启停 + 投料器回流投料
-            state.player.inventory[BELT_ITEM_ID] = 16;
-            state.player.inventory[CLUTCH_ITEM_ID] = 2;
-            state.player.inventory[DEPLOYER_ITEM_ID] = 1;
-            // 电梯组（Create-lite L2）：滑轮+平台 = 绳升降电梯（拉杆换向，见 js/kinetic.js）
-            state.player.inventory[PULLEY_ITEM_ID] = 2;
-            state.player.inventory[PLATFORM_ITEM_ID] = 8;
-            // 教学组（Edu M1，2026-09-07）：答题机 + 红石件 = 「数学密码门」入门
-            // （答对即变红石信号源：贴门放直接开门，接粉可远程解锁，见 js/eduKeypad.js）
-            state.player.inventory[KEYPAD_ITEM_ID] = 3;
-            state.player.inventory[DUST_ITEM_ID] = 8;
-            state.player.inventory[LAMP_ITEM_ID] = 2;
-            // 教学组（Edu M2）：英语商人（右键单词交易拿奖励）；识字矿石挖矿自然遇到
-            state.player.inventory[MERCHANT_ITEM_ID] = 1;
-        }
+        if (!state.levelRun && !state.levelEdit) { grantHomeStarter(); setSurvivalRules(state.survivalRules); }
         // 切到生存时如果是夜晚，立即来一波怪（走正常生成规则，不会贴脸）
         if (isNight() && state.enemies.length === 0) {
             for (let i = 0; i < 3; i++) mobSpawnTick();
@@ -80,6 +56,15 @@ export function setGameMode(mode) {
     updateHotbar(); // 模式切换后刷新数量角标显示
 }
 
+export function claimWorkshopKit() {
+    if(!canUseFreeBuild() || state.levelRun || state.levelEdit || isCreative() || state.starterWorkshopClaimed) return false;
+    state.starterWorkshopClaimed=true;
+    for (const [id, count] of Object.entries(WORKSHOP_KIT)) {
+        state.player.inventory[id] = (state.player.inventory[id] || 0) + count;
+    }
+    updateHotbar(); showTooltip('🧰 已领取一次性机械实验包（不影响安家任务）'); return true;
+}
+
 export function toggleGameMode() {
     setGameMode(isCreative() ? GameModes.SURVIVAL : GameModes.CREATIVE);
     showTooltip(isCreative() ? '🏗️ 已切换到建造模式' : '⚔️ 已切换到生存模式');
@@ -89,63 +74,65 @@ export function toggleGameMode() {
 // 底部手持指示胶囊：HotbarBlocks 已达 38 项，单行平铺必溢出屏幕，
 // 完整选择走 E 打开的可滚动网格（openItemPicker），这里只常显当前手持。
 export function updateHotbar() {
-    const hotbar = document.getElementById('hotbar');
-    hotbar.innerHTML = '';
-    const index = state.player.selectedSlot;
-    const blockType = HotbarBlocks[index] ?? BlockTypes.GRASS;
-    const slot = document.createElement('div');
-    slot.className = 'hotbar-slot';
-    const canvas = document.createElement('canvas');
-    canvas.width = 16;
-    canvas.height = 16;
-    const ctx = canvas.getContext('2d');
-    const uv = blockUVs[blockType] || blockUVs[BlockTypes.STONE];
-    const tile = uv.top || { x: 0, y: 0 };
-    ctx.drawImage(atlasCanvas, tile.x * tileSize, tile.y * tileSize, tileSize, tileSize, 0, 0, 16, 16);
-    slot.appendChild(canvas);
-    const numSpan = document.createElement('span');
-    numSpan.className = 'slot-number';
-    numSpan.textContent = index + 1;
-    slot.appendChild(numSpan);
-    // 生存模式：显示数量角标，数量为 0 灰显；工具显示耐久条
-    if (!isCreative()) {
-        const count = state.player.inventory[blockType] || 0;
-        const countSpan = document.createElement('span');
-        countSpan.className = 'slot-count';
-        countSpan.textContent = count;
-        slot.appendChild(countSpan);
-        if (count === 0) slot.classList.add('empty');
-        appendDurabilityBar(slot, blockType, count);
-    }
-    hotbar.appendChild(slot);
-    const info = document.createElement('div');
-    info.className = 'hotbar-info';
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'hotbar-name';
-    nameSpan.textContent = BlockInfo[blockType].name;
-    info.appendChild(nameSpan);
-    const hintSpan = document.createElement('span');
-    hintSpan.className = 'hotbar-hint';
-    hintSpan.textContent = 'E 或点击 · 选择物品';
-    info.appendChild(hintSpan);
+    const hotbar=document.getElementById('hotbar');
+    hotbar.innerHTML='';
+    const bar=state.player.quickbar=normalizeQuickbar(state.player.quickbar);
+    const held=HotbarBlocks[state.player.selectedSlot];
+    bar.forEach((id,i)=>{
+        const slot=document.createElement('button');
+        slot.className='hotbar-slot'+(id===held?' selected':'');
+        slot.title=`${i+1} · ${BlockInfo[id]?.name}`; slot.setAttribute('aria-label',slot.title);
+        slot.appendChild(makeItemIcon(id,24));
+        const number=document.createElement('span');number.className='slot-number';number.textContent=i+1;slot.appendChild(number);
+        if(!isCreative()) {
+            const count=state.player.inventory[id]||0;
+            const badge=document.createElement('span');badge.className='slot-count';badge.textContent=count;slot.appendChild(badge);
+            if(!count) slot.classList.add('empty');
+            appendDurabilityBar(slot,id,count);
+        }
+        slot.onclick=e=>{e.stopPropagation();selectQuickbar(i);updateHotbar();};
+        slot.addEventListener('mouseenter',()=>showItemInfo(id));slot.addEventListener('mouseleave',hideItemInfo);
+        hotbar.appendChild(slot);
+    });
+    const info=document.createElement('button');info.className='hotbar-info';
+    info.textContent=`${BlockInfo[held]?.name || '物品'} · E 背包`;info.onclick=e=>{e.stopPropagation();openItemPicker();};
     hotbar.appendChild(info);
-    // 点击胶囊 = 打开选择网格（指针锁定时无光标点不到，主入口是 E 键；
-    // 助手面板打开等指针自由的场景可直接点）
-    hotbar.onclick = (e) => {
-        e.stopPropagation(); // 不触发「点击重新锁定指针」兜底
-        openItemPicker();
-    };
-    // 指针自由时（暂停菜单/助手面板开着）悬停胶囊也能看当前手持的说明
-    slot.addEventListener('mouseenter', () => showItemInfo(blockType));
-    slot.addEventListener('mouseleave', hideItemInfo);
+}
+
+let lastHomeText='';
+let lastHomeLayout='';
+export function updateHomeHud() {
+    const el=document.getElementById('home-hud');if(!el) return;
+    const visible=!isCreative()&&!state.levelRun&&!state.levelEdit;
+    el.hidden=!visible;if(!visible) return;
+    const debug=document.getElementById('debug-info');
+    const layout=(debug?.style.display||'')+'|'+window.innerWidth;
+    if(layout!==lastHomeLayout) { el.style.top=`${Math.max(92,debug?.offsetHeight ? debug.offsetTop+debug.offsetHeight+10 : 0)}px`;lastHomeLayout=layout; }
+    const h=state.homeBed;let compass='🏠 放下小床，右键设家';
+    if(h) {
+        const bed=getBedAt(h.x,h.y,h.z);
+        if(bed && bed.facing===h.facing) {
+            const dx=h.x+0.5-state.player.x,dz=h.z+0.5-state.player.z;
+            const angle=Math.atan2(-dx,-dz)-state.player.yaw;
+            const dir=((Math.round(angle/(Math.PI/4))%8)+8)%8;
+            compass=`🏠 ${['↑','↖','←','↙','↓','↘','→','↗'][dir]} 家 ${Math.round(Math.hypot(dx,dz))} 格`;
+        } else compass='🏠 原来的床已失效，请放新床后右键设家';
+    }
+    const phase=(state.time%state.dayLength)/state.dayLength;
+    const evening=phase>0.68&&phase<0.85?' 🌇 快天黑了，记得回家睡觉。':'';
+    const text=compass+'\n'+getHomeGuide()+evening;
+    if(text!==lastHomeText){el.textContent=text;lastHomeText=text;}
 }
 
 // ==================== 背包 + 合成面板（E 打开；2026-09-05 对齐参考版）====================
 // 创造模式 = 物品调色盘（可搜索）；生存模式 = 配方列表 + 物品网格：
 //   徒手配方随时可做；工作台/熔炉配方需要「右键打开」或「站在旁边 4 格内按 E」（自动探测）。
-// 点物品格 = 选中并收起；点配方 = 合成一次（消耗材料给产物 +1 经验）。
+// 点物品格 = 选中并收起；点「制作」或配方行 = 合成一次；材料 ? = 查来源（消耗材料给产物 +1 经验）。
 
 let craftStation = null; // 右键工作台/熔炉打开时强制的合成站（'crafting' | 'furnace' | null）
+let invCategory = 'all';
+let quickbarEditSlot = null;
+let quickbarControlsOpen = false;
 let invSearch = '';      // 搜索框关键字（按名称过滤物品与配方）
 
 // 物品图标已移到 itemInfo.js（makeItemIcon，说明条与网格共用）
@@ -184,6 +171,8 @@ function availableStations() {
 // 执行一次合成：校验材料与合成站 → 消耗 → 给产物（新工具满耐久）→ +1 经验。
 // 返回错误文案（null = 成功），面板据此提示
 export function craftRecipe(recipe) {
+    if(recipe.station==='furnace') return '请右键打开熔炉，放入原料和燃料；收起后继续烧制';
+    if(inventoryCapacity(recipe.out)<recipe.outCount) return '背包数量已达上限';
     const inv = state.player.inventory;
     const st = availableStations();
     if (recipe.station && !st[recipe.station]) {
@@ -191,16 +180,60 @@ export function craftRecipe(recipe) {
     }
     for (const idStr of Object.keys(recipe.cost)) {
         const id = Number(idStr);
-        if ((inv[id] || 0) < recipe.cost[id]) return '材料不足';
+        if ((inv[id] || 0) < recipe.cost[id]) return `还差 ${recipe.cost[id]-(inv[id]||0)} 个${BlockInfo[id]?.name}：${materialSource(id)}`;
     }
     for (const idStr of Object.keys(recipe.cost)) {
         const id = Number(idStr);
-        inv[id] -= recipe.cost[id];
+        for(let n=recipe.cost[id];n>0;) { const stack=takeInventoryStack(id,n); n-=stack.count; }
     }
-    if (!inv[recipe.out] && BlockInfo[recipe.out]?.maxDurability) delete state.player.toolWear[recipe.out];
-    inv[recipe.out] = (inv[recipe.out] || 0) + recipe.outCount; // 保留当前在用工具的磨损，备用工具满耐久
+    addInventoryStack({id:recipe.out,count:recipe.outCount});
     addXp(XP_PER_CRAFT);
+    updateHotbar();
     return null;
+}
+
+function renderInventoryControls() {
+    const host = document.getElementById('inv-home-controls');
+    if (!host) return;
+    host.innerHTML = '';
+    document.getElementById('inventory-panel')?.classList.toggle('editing-quickbar', quickbarControlsOpen);
+    const filters = document.createElement('div');
+    filters.className = 'inv-filter-row';
+    for (const [key, label] of [['all', '全部 · 已有优先'], ['owned', '已有'], ['home', '安家'], ['life', '农场与生活'], ['tools', '工具']]) {
+        const button = document.createElement('button');
+        button.textContent = label;
+        button.className = invCategory === key ? 'active' : '';
+        button.onclick = () => { invCategory = key; buildInventoryGrid(); };
+        filters.appendChild(button);
+    }
+    const toggle = document.createElement('button');
+    toggle.id = 'inv-quickbar-toggle';
+    toggle.textContent = quickbarControlsOpen ? '收起常用栏设置 ▴' : '设置常用栏 ▾';
+    toggle.setAttribute('aria-expanded', String(quickbarControlsOpen));
+    toggle.onclick = () => {
+        quickbarControlsOpen = !quickbarControlsOpen;
+        if (!quickbarControlsOpen) quickbarEditSlot = null;
+        renderInventoryControls();
+        document.getElementById('inv-quickbar-toggle')?.focus();
+    };
+    filters.appendChild(toggle);
+    host.appendChild(filters);
+    if (!quickbarControlsOpen) return;
+    const editor = document.createElement('div');
+    editor.className = 'quickbar-editor';
+    const label = document.createElement('p');
+    label.textContent = quickbarEditSlot === null
+        ? '先点位置，再点一件已有物品。'
+        : `设置第 ${quickbarEditSlot + 1} 格：点一件物品（再点位置取消）`;
+    editor.appendChild(label);
+    normalizeQuickbar(state.player.quickbar).forEach((id, i) => {
+        const button = document.createElement('button');
+        button.className = 'quick-edit' + (quickbarEditSlot === i ? ' active' : '');
+        button.textContent = `${i + 1} ${BlockInfo[id]?.name}`;
+        button.onclick = () => { quickbarEditSlot = quickbarEditSlot === i ? null : i; renderInventoryControls(); };
+        editor.appendChild(button);
+    });
+    host.appendChild(editor);
 }
 
 // 配方一行：产物图标×数量 + 材料清单 + 站点徽标；灰显 = 当前做不了（点一下提示原因）
@@ -224,7 +257,10 @@ function buildRecipeRow(recipe, stations) {
         const ing = document.createElement('span');
         ing.className = 'recipe-ing-item';
         ing.appendChild(makeItemIcon(id, 16));
-        ing.appendChild(document.createTextNode(`×${recipe.cost[id]}`));
+        ing.appendChild(document.createTextNode(`${BlockInfo[id]?.name} ×${recipe.cost[id]}（有 ${inv[id]||0}）`));
+        ing.title=materialSource(id);
+        const help=document.createElement('button');help.type='button';help.className='recipe-source';help.textContent='?';help.title=`${BlockInfo[id]?.name}从哪里来`;
+        help.onclick=e=>{e.stopPropagation();showTooltip(materialSource(id));};ing.appendChild(help);
         if ((inv[id] || 0) < recipe.cost[id]) ing.classList.add('lack');
         ings.appendChild(ing);
     }
@@ -233,6 +269,7 @@ function buildRecipeRow(recipe, stations) {
     st.className = 'recipe-station';
     st.textContent = !recipe.station ? '✋ 徒手' : recipe.station === 'crafting' ? '▦ 工作台' : '♨ 熔炉';
     row.appendChild(st);
+    const craft=document.createElement('button');craft.type='button';craft.className='recipe-craft';craft.textContent=recipe.station==='furnace'?'在熔炉操作':'制作';craft.setAttribute('aria-label',`制作${outInfo.name}`);row.appendChild(craft);
     row.addEventListener('click', () => {
         const err = craftRecipe(recipe);
         if (err) {
@@ -265,7 +302,7 @@ export function buildInventoryGrid() {
         const groups = [
             ['✋ 徒手合成', (r) => !r.station],
             ['▦ 工作台配方', (r) => r.station === 'crafting'],
-            ['♨ 熔炉烧制（煤炭 = 燃料）', (r) => r.station === 'furnace'],
+            ['♨ 熔炉参考（右键炉子操作）', (r) => r.station === 'furnace'],
         ];
         for (const [label, match] of groups) {
             const recipes = RECIPES.filter(match).filter((r) =>
@@ -287,25 +324,38 @@ export function buildInventoryGrid() {
         tip.textContent = '🧪 创造模式：物品无限、任意选择，无需合成。按 M 切换到生存模式，E 面板就有合成配方（撸树 → 木板 → 工作台 → 工具 → 挖矿 → 熔炉）。';
         section.appendChild(tip);
     }
-    // 底部提示随模式走：生存才有「点配方 = 合成一次」，创造模式别再误导
+    // 底部提示随模式走：生存才有「点「制作」或配方行 = 合成一次；材料 ? = 查来源」，创造模式别再误导
     const hint = document.getElementById('inventory-close-hint');
     if (hint) {
         hint.innerHTML = survival
-            ? '<kbd>方向键</kbd> 选择 · <kbd>Enter</kbd> 确认 &nbsp;|&nbsp; 点物品 = 选中并关闭 &nbsp;|&nbsp; 点配方 = 合成一次 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起'
-            : '<kbd>方向键</kbd> 选择 · <kbd>Enter</kbd> 确认 &nbsp;|&nbsp; 点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起';
+            ? '<span>方向键 / Enter 选物品 ·「制作」或配方行合成 · ? 查来源</span>'
+            : '<span>方向键 / Enter 选择 · 点物品选中并关闭</span>';
+        const close = document.createElement('button');
+        close.className = 'inventory-close-button';
+        close.textContent = '收起 E / Esc';
+        close.onclick = () => setState('playing');
+        hint.appendChild(close);
     }
-    // 物品格
-    HotbarBlocks.forEach((blockType, index) => {
+    renderInventoryControls();
+    // 排序只改变显示位置，selectedSlot 永远保留目录索引。
+    const entries=HotbarBlocks.map((id,index)=>({id,index}));
+    if(survival) entries.sort((a,b)=>Number((state.player.inventory[b.id]||0)>0)-Number((state.player.inventory[a.id]||0)>0));
+    entries.forEach(({id:blockType,index}) => {
+        if(invCategory==='owned' && !(state.player.inventory[blockType]>0)) return;
+        if(invCategory==='tools' && !isToolId(blockType)) return;
+        if(invCategory==='life' && !(blockType>=242||blockType===BlockTypes.FURNACE||blockType===BlockTypes.WOOL))return;
+        if(invCategory==='home' && ![BED_ITEM_ID,DOOR_ITEM_ID,BlockTypes.PLANKS,BlockTypes.WOOD,BlockTypes.CRAFTING_TABLE,BlockTypes.WOOL,BlockTypes.TORCH,ItemTypes.APPLE].includes(blockType)) return;
         const name = BlockInfo[blockType]?.name || '未知';
         if (invSearch && !name.includes(invSearch)) return;
         const slot = document.createElement('div');
         slot.className = 'inv-slot' + (index === state.player.selectedSlot ? ' selected' : '');
         slot.tabIndex = 0; // 键盘导航：方向键聚焦、Enter 选中（uiKeys.js）
         slot.appendChild(makeItemIcon(blockType, 24));
-        if (index < 9) {
+        const quickIndex=normalizeQuickbar(state.player.quickbar).indexOf(blockType);
+        if (quickIndex >= 0) {
             const numSpan = document.createElement('span');
             numSpan.className = 'slot-number';
-            numSpan.textContent = index + 1;
+            numSpan.textContent = quickIndex + 1;
             slot.appendChild(numSpan);
         }
         const nameSpan = document.createElement('span');
@@ -325,8 +375,12 @@ export function buildInventoryGrid() {
         slot.addEventListener('click', () => {
             // 生存模式数量 0 = 没有该物品，不可选中（对齐原版「用完即消失」，工具同理不得空手白嫖）
             if (!isCreative() && (state.player.inventory[blockType] || 0) <= 0) {
-                showTooltip(`❌ ${name} ×0，先去收集吧`);
+                showTooltip(`❌ ${name} ×0：${materialSource(blockType)}`);
                 return;
+            }
+            if(quickbarEditSlot!==null) {
+                assignQuickbar(quickbarEditSlot,blockType); quickbarEditSlot=null; updateHotbar(); buildInventoryGrid();
+                showTooltip('✅ 常用栏已更新，数字键 1～9 或滚轮切换'); return;
             }
             state.player.selectedSlot = index;
             updateHotbar();
@@ -347,6 +401,7 @@ let invSearchInit = false; // 搜索框监听只挂一次（input 在 HTML 里�
 export function openItemPicker(station = null) {
     if (state.player.dead) return; // 死亡界面优先，不开背包
     craftStation = station;
+    quickbarEditSlot=null;quickbarControlsOpen=false;invCategory='all';
     invSearch = '';
     const search = document.getElementById('inv-search');
     if (search) {
@@ -1419,6 +1474,7 @@ export function openExportPanel() {
             }).catch(() => { });
         } catch { }
     }
+    if(!panel.querySelector('.life-export-note')){const note=document.createElement('p');note.className='life-export-note';note.textContent='生活设施：关卡只带空箱、空炉和植物外形，不带普通世界库存、生产进度或家畜。';panel.querySelector('.lvl-body')?.appendChild(note) || panel.appendChild(note);}
     panel.classList.remove('hidden');
     state.levelExportOpen = true;
     syncPointerPolicy(); // 释放鼠标填名字/点按钮（关闭时自动回锁）

@@ -1,3 +1,7 @@
+import { MOB_HALF_WIDTH, mobCollisionHeight } from './config.js';
+import { LifeItems, LIFE, HotbarBlocks, isFenceId, collisionHeight } from './config.js';
+import { lifeData } from './lifeData.js';
+import { takeInventoryStack, addInventoryStack, damageInventoryTool } from './inventoryStacks.js';
 // ==================== entities.js ====================
 // 生物系统（2026-09-05 类型化，对齐参考版）：
 //   敌对（生存·夜晚刷新，白天着火消散）：僵尸（追击+近身攻击）、苦力怕（贴近引信→爆炸）
@@ -215,7 +219,8 @@ export function spawnMob(type, x, y, z) {
     const mesh = createMobMesh(type);
     mesh.position.set(x, y, z);
     scene.add(mesh);
-    state.enemies.push({
+    const animal = {
+        owned:false, animalId:0, name:'', woolTimer:0, shorn:false, fed:false, feedCooldown:0,
         type,
         hostile: !!def.hostile,
         x, y, z,
@@ -230,7 +235,9 @@ export function spawnMob(type, x, y, z) {
         moving: Math.random() > 0.5,
         flee: 0,
         fuse: 0,
-    });
+    };
+    state.enemies.push(animal);
+    return animal;
 }
 
 // 兼容旧入口：僵尸
@@ -304,7 +311,7 @@ export function mobSpawnTick() {
 // 闯关模式同样 gate（与 mobSpawnTick 同款守卫，掉卡外刷猪 = 幽灵实体）
 function passiveSpawnTick() {
     if (isLevelRunActive()) return;
-    const passives = state.enemies.filter((e) => !e.hostile);
+    const passives = state.enemies.filter((e) => !e.hostile && !e.owned);
     if (passives.length >= MAX_PASSIVE_MOBS) return;
     const p = state.player;
     const angle = Math.random() * Math.PI * 2;
@@ -320,7 +327,7 @@ function passiveSpawnTick() {
             const type = types[Math.floor(Math.random() * types.length)];
             // 小群生成：1~3 只同种家畜
             const n = 1 + Math.floor(Math.random() * 3);
-            for (let i = 0; i < n && state.enemies.filter((e) => !e.hostile).length < MAX_PASSIVE_MOBS; i++) {
+            for (let i = 0; i < n && state.enemies.filter((e) => !e.hostile && !e.owned).length < MAX_PASSIVE_MOBS; i++) {
                 spawnMob(type, bx + 0.5 + (Math.random() - 0.5) * 2, y + 1, bz + 0.5 + (Math.random() - 0.5) * 2);
             }
             return;
@@ -340,9 +347,30 @@ export function despawnTick() {
             if (dist > SPAWN_MAX_DIST || (dist > LAZY_DIST && Math.random() < DESPAWN_CHANCE)) {
                 killEnemySilent(e);
             }
-        } else if (dist > 96) {
+        } else if (!e.owned && dist > 96) {
             killEnemySilent(e);
         }
+    }
+}
+
+// 击退同样必须检查整个脚印；小步扫掠防止反复击退把家畜穿过围栏。
+function mobBodyBlocked(e,x,z) {
+    const height=mobCollisionHeight(e);
+    for(let bx=Math.floor(x-MOB_HALF_WIDTH);bx<=Math.floor(x+MOB_HALF_WIDTH);bx++)
+        for(let bz=Math.floor(z-MOB_HALF_WIDTH);bz<=Math.floor(z+MOB_HALF_WIDTH);bz++)
+            for(let by=Math.floor(e.y)-1;by<Math.ceil(e.y+height);by++) {
+                const b=getBlock(bx,by,bz);
+                if(isSolid(b)&&e.y<by+collisionHeight(b)&&e.y+height>by)return true;
+            }
+    return false;
+}
+function moveMobWithCollisions(e,dx,dz) {
+    const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.1));
+    for(let i=0;i<steps;i++) {
+        const x=Math.max(.5,Math.min(WORLD_WIDTH-.5,e.x+dx/steps));
+        if(!mobBodyBlocked(e,x,e.z))e.x=x;
+        const z=Math.max(.5,Math.min(WORLD_DEPTH-.5,e.z+dz/steps));
+        if(!mobBodyBlocked(e,e.x,z))e.z=z;
     }
 }
 
@@ -354,8 +382,7 @@ export function damageEnemy(e, dmg) {
     const dx = e.x - state.player.x;
     const dz = e.z - state.player.z;
     const len = Math.hypot(dx, dz) || 1;
-    e.x += dx / len * 0.5;
-    e.z += dz / len * 0.5;
+    moveMobWithCollisions(e,dx/len*.5,dz/len*.5);
     if (!e.hostile) e.flee = 3; // 被动生物被打就逃（远离玩家 3 秒）
     if (e.hp <= 0) killEnemy(e);
 }
@@ -432,6 +459,8 @@ export function updateEnemies(dt) {
         const dx = p.x - e.x;
         const dz = p.z - e.z;
         const dist = Math.hypot(dx, dz);
+        if(e.owned){e.feedCooldown=Math.max(0,(e.feedCooldown||0)-dt);if(e.shorn&&e.fed){e.woolTimer=Math.min(LIFE.woolSeconds,(e.woolTimer||0)+dt);if(e.woolTimer>=LIFE.woolSeconds){e.shorn=false;e.fed=false;e.woolTimer=0;}}}
+        if(e.type==='sheep')e.mesh.children[0]?.scale.set(1,e.shorn?0.6:1,e.shorn?0.75:1);
         // 懒惰距离（>32 格）：冻结 AI，原地站立（仍受重力、可被随机消失）
         const frozen = dist > LAZY_DIST;
         let stepX = 0, stepZ = 0;
@@ -446,7 +475,7 @@ export function updateEnemies(dt) {
                     e.attackTimer -= dt;
                     if (e.attackTimer <= 0) {
                         e.attackTimer = 1.0;
-                        damagePlayer(ENEMY_DAMAGE);
+                        damagePlayer(ENEMY_DAMAGE, 'melee', e);
                     }
                 } else if (e.type === 'creeper') {
                     // 引信：贴近（fuseDist 内）持续充能，离开则缓慢泄压；充满即自爆
@@ -461,7 +490,7 @@ export function updateEnemies(dt) {
                         if (e.fuse > def.fuseSec) {
                             const ex = e.x, ey = e.y + 0.7, ez = e.z;
                             killEnemy(e, true);
-                            explode(Math.floor(ex), Math.floor(ey), Math.floor(ez)); // 复用 TNT 爆炸（破坏方块+伤害+重建网格）
+                            explode(Math.floor(ex), Math.floor(ey), Math.floor(ez), 'creeper'); // 复用 TNT 爆炸（破坏方块+伤害+重建网格）
                             showTooltip('💥 苦力怕爆炸了！');
                             continue;
                         }
@@ -483,6 +512,8 @@ export function updateEnemies(dt) {
                     e.heading = Math.atan2(-dx, -dz); // 背向玩家逃跑
                     stepX = Math.sin(e.heading) * 1.9;
                     stepZ = Math.cos(e.heading) * 1.9;
+                } else if (HotbarBlocks[p.selectedSlot]===LifeItems.WHEAT && (isCreative()||p.inventory[LifeItems.WHEAT]>0) && dist<10 && dist>1.7 && meleePathClear(e,p)) {
+                    stepX=dx/dist*def.speed;stepZ=dz/dist*def.speed;e.heading=Math.atan2(dx,dz);
                 } else if (e.moving) {
                     stepX = Math.sin(e.heading) * def.speed * 0.5;
                     stepZ = Math.cos(e.heading) * def.speed * 0.5;
@@ -492,12 +523,18 @@ export function updateEnemies(dt) {
 
         // 水平移动 + 前方有墙跳上去（游荡的被动生物撞墙就换向）
         if (stepX || stepZ) {
-            const nx = e.x + stepX * dt;
-            const nz = e.z + stepZ * dt;
+            const nx = Math.max(.5, Math.min(WORLD_WIDTH-.5,e.x + stepX * dt));
+            const nz = Math.max(.5, Math.min(WORLD_DEPTH-.5,e.z + stepZ * dt));
             const bx = Math.floor(nx);
             const bz = Math.floor(nz);
             const by = Math.floor(e.y);
-            if (isSolid(getBlock(bx, by, bz)) && !isSolid(getBlock(bx, by + 1, bz)) && !isSolid(getBlock(bx, by + 2, bz))) {
+            const fenceBlocked = (xx,zz) => {
+                for(const ox of [-MOB_HALF_WIDTH,MOB_HALF_WIDTH])for(const oz of [-MOB_HALF_WIDTH,MOB_HALF_WIDTH])for(const yy of [Math.floor(e.y),Math.floor(e.y)-1]) {
+                    const b=getBlock(Math.floor(xx+ox),yy,Math.floor(zz+oz));if(isFenceId(b)&&e.y<yy+collisionHeight(b))return true;
+                }return false;
+            };
+            if(fenceBlocked(nx,nz)){if(!e.hostile)e.heading+=Math.PI/2;}
+            else if (isSolid(getBlock(bx, by, bz)) && !isSolid(getBlock(bx, by + 1, bz)) && !isSolid(getBlock(bx, by + 2, bz))) {
                 e.vy = 6.5;
             } else if (!isSolid(getBlock(bx, by, bz)) && !isSolid(getBlock(bx, by + 1, bz))) {
                 e.x = nx;
@@ -548,4 +585,28 @@ export function updateEnemies(dt) {
 export function initPlayerMesh() {
     playerMesh = createPlayerMesh();
     scene.add(playerMesh);
+}
+
+export function feedFarmAnimal(e){
+ if(state.levelRun||state.levelEdit||!state.enemies.includes(e)||e.hostile)return '这不是可以照料的动物';
+ if(e.feedCooldown>0)return '刚刚吃饱啦，稍后再喂';
+ if(!e.owned&&state.enemies.filter(a=>a.owned).length>=LIFE.maxAnimals)return `家畜已达 ${LIFE.maxAnimals} 只上限`;
+ if(!isCreative()&&!state.player.inventory[LifeItems.WHEAT])return '需要 1 份小麦，先种田收获';
+ if(!isCreative())takeInventoryStack(LifeItems.WHEAT);
+ if(!e.owned){e.owned=true;e.animalId=lifeData().nextAnimalId++;e.name=MOB_TYPES[e.type].name+e.animalId;}
+ e.fed=true;e.feedCooldown=10;e.hp=Math.min(MOB_TYPES[e.type].hp,e.hp+2);
+ return `${e.name}吃饱了，已认作你的家畜；可以取名字`;
+}
+export function shearFarmAnimal(e){
+ if(state.levelRun||state.levelEdit||!state.enemies.includes(e)||e.type!=='sheep')return '剪刀要用在绵羊身上';
+ if(!e.owned)return '先用小麦喂养认领这只羊';if(e.shorn)return '羊毛还没长好：喂 1 份小麦，继续游玩两分钟';
+ if(!isCreative()&&!state.player.inventory[LifeItems.SHEARS])return '需要先制作剪刀';
+ if(!isCreative()){addInventoryStack({id:BlockTypes.WOOL,count:3});damageInventoryTool(LifeItems.SHEARS);}
+ e.shorn=true;e.fed=false;e.woolTimer=0;e.feedCooldown=0;return '剪下羊毛 ×3！再喂小麦，羊毛会慢慢长回来';
+}
+export function nameFarmAnimal(e,name){if(!e?.owned||!state.enemies.includes(e))return '先喂小麦认领';e.name=String(name).trim().slice(0,24)||MOB_TYPES[e.type].name;return `名字已记住：${e.name}`;}
+export function restoreLivestock(){
+ for(const e of [...state.enemies])if(e.owned)killEnemySilent(e);
+ for(const record of state.lifePendingAnimals||[]){const e=spawnMob(record.type,record.x,record.y,record.z);if(e)Object.assign(e,record,{owned:true});}
+ state.lifePendingAnimals=[];
 }

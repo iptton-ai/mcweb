@@ -1,7 +1,10 @@
+import { isCrankId, isLargeCogId, isReverserId, reverserPowered, kineticAxisOf } from './config.js';
+import { LADDER_BASE, isLadderId } from './config.js';
+import {LifeBlocks,isCropId} from './config.js';
 // ==================== chunk.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, PLATFORM_BASE, PULLEY_ROPE_MAX, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, flagKind, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isFlagId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isPulleyId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, pulleyPowered, pulleyUp, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
+import { BED_HEIGHT, bedHalf, bedFacing, isBedId, BlockInfo, BlockTypes, CHUNK_SIZE, MAX_TORCH_LIGHTS, PISTON_HEAD_BASE, PLATFORM_BASE, PULLEY_ROPE_MAX, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, FACING_NORMALS, beltDir, buttonFacing, buttonPressed, clutchAxis, clutchEngaged, cogAxis, crusherAxis, deployerFacing, doorHalf, dustLit, flagKind, isBeltId, isButtonId, isClutchId, isCogId, isCrusherId, isDeployerId, isDoorId, isDustId, isFlagId, isKineticId, isLampLitId, isLeverId, isObserverId, isPlateId, isPistonHeadId, isPistonId, isPulleyId, isRTorchId, isRedstoneId, isRTorchLitId, isSawId, isShaftId, isWaterwheelId, leverFacing, leverOn, observerFacing, observerPowered, pistonExtended, pistonFacing, pistonSticky, platePressed, pulleyPowered, pulleyUp, rtorchFacing, rtorchLit, sawFacing, shaftAxis, waterwheelAxis } from './config.js';
 import { state } from './state.js';
 import { scene } from './engine.js';
 import { atlasSize, atlasTexture, getUVForFace, getDoorTileTexture, tileMap } from './textures.js';
@@ -87,6 +90,34 @@ export function getPropMesh(blockType) {
             ctx.fillRect(6, 3, 4, 3);
         });
         mesh = createCrossPlanes(tex);
+    } else if (isLadderId(blockType)) {
+        mesh = new THREE.Group();
+        const mat = new THREE.MeshLambertMaterial({color:0xb78b4f});
+        const part = (w,h,d,x,y,z) => { const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,y,z); mesh.add(m); };
+        for (const x of [-0.32,0.32]) part(0.1,1,0.12,x,0.5,-0.42);
+        for (const y of [0.12,0.37,0.62,0.87]) part(0.72,0.08,0.12,0,y,-0.42);
+        mesh.rotation.y = -(blockType-LADDER_BASE)*Math.PI/2;
+    } else if(isCropId(blockType)||blockType===LifeBlocks.SAPLING){
+        const mature=blockType===247,stage=isCropId(blockType)?blockType-244:3;
+        const tex=createPropTexture(ctx=>{ctx.clearRect(0,0,16,16);ctx.fillStyle=mature?'#e5c34f':'#579a3c';if(blockType===LifeBlocks.SAPLING){ctx.fillRect(7,6,2,10);ctx.fillRect(3,2,10,7);}else for(let n=2;n<15;n+=4){ctx.fillRect(n,12-stage*3,2,4+stage*3);ctx.fillRect(n-1,12-stage*3,4,2);}});
+        mesh=createCrossPlanes(tex);
+    } else if(blockType===LifeBlocks.FENCE||blockType===LifeBlocks.GATE||blockType===LifeBlocks.GATE_OPEN){
+        mesh=new THREE.Group();const mat=new THREE.MeshLambertMaterial({color:0xb48a53});
+        const add=(w,h,d,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);mesh.add(m);};
+        if(blockType===LifeBlocks.GATE_OPEN){add(.16,1.5,1,-.42,.75,0);}
+        else{add(.22,1.5,.22,0,.75,0);for(const y of [.45,1.1]){add(1,.15,.14,0,y,0);add(.14,.15,1,0,y,0);}}
+    } else if (isBedId(blockType)) {
+        const group = new THREE.Group();
+        const part = (w,h,d,x,y,z,color) => {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({color}));
+            m.position.set(x,y,z); group.add(m);
+        };
+        part(1,0.125,1,0,0.25,0,0x9a632f);
+        part(1,0.25,1,0,BED_HEIGHT-0.125,0,0xc84944);
+        for (const x of [-0.38,0.38]) part(0.16,0.25,0.16,x,0.125,bedHalf(blockType)?-0.38:0.38,0x78502b);
+        if(bedHalf(blockType)) part(0.78,0.07,0.34,0,BED_HEIGHT-0.035,-0.28,0xf2ead8);
+        group.rotation.y = -bedFacing(blockType)*Math.PI/2;
+        mesh = group;
     } else if (isDoorId(blockType)) {
         // 门：3/16 格厚的薄片板，朝向/开合由方块 ID 决定（编码见 config.js）
         const { w, d, ox, oz } = doorSlabTransform(blockType);
@@ -471,14 +502,13 @@ function buildKineticMesh(blockType) {
         axisNormal = FACING_NORMALS[sawFacing(blockType)];
         buildSawMesh(spinner, orient); // 圆锯片进 spinner，固定机身挂 orient
     } else {
-        const axis = isShaftId(blockType) ? shaftAxis(blockType)
-            : isCogId(blockType) ? cogAxis(blockType)
-                : isWaterwheelId(blockType) ? waterwheelAxis(blockType)
-                    : isClutchId(blockType) ? clutchAxis(blockType)
-                        : crusherAxis(blockType);
+        const axis = kineticAxisOf(blockType);
         axisNormal = AXIS_TO_NORMAL[axis];
         if (isShaftId(blockType)) buildShaftMesh(spinner);
         else if (isCogId(blockType)) buildCogMesh(spinner);
+        else if (isLargeCogId(blockType)) buildLargeCogMesh(spinner);
+        else if (isCrankId(blockType)) buildCrankMesh(spinner,orient);
+        else if (isReverserId(blockType)) buildReverserMesh(spinner,orient,!!reverserPowered(blockType));
         else if (isWaterwheelId(blockType)) buildWaterwheelMesh(spinner);
         else if (isClutchId(blockType)) buildClutchMesh(spinner, clutchEngaged(blockType) === 1);
         else buildCrusherMesh(spinner);
@@ -514,6 +544,44 @@ function buildCogMesh(spinner) {
         tooth.rotation.y = -ang; // 齿长轴指向半径方向
         spinner.add(tooth);
     }
+}
+
+// 大齿轮用浅木轮缘、16齿与四辐条区分小齿轮；选取轮廓同步覆盖轮缘。
+function buildLargeCogMesh(spinner) {
+    const wood=new THREE.MeshLambertMaterial({color:0xd4a65b});
+    const dark=new THREE.MeshLambertMaterial({color:0x725335});
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(0.62,0.075,6,24),wood);
+    rim.rotation.x=Math.PI/2; spinner.add(rim);
+    for (let i=0;i<4;i++) {
+        const spoke=new THREE.Mesh(new THREE.BoxGeometry(1.3,0.2,0.075),wood);
+        spoke.rotation.y=i*Math.PI/4; spinner.add(spoke);
+    }
+    for (let i=0;i<16;i++) {
+        const angle=i*Math.PI/8, tooth=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.24,0.075),wood);
+        tooth.position.set(Math.cos(angle)*0.72,0,Math.sin(angle)*0.72);
+        tooth.rotation.y=-angle; spinner.add(tooth);
+    }
+    spinner.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.48,8),dark));
+}
+function buildCrankMesh(spinner,orient) {
+    const metal=new THREE.MeshLambertMaterial({color:0x8c9caa});
+    const wood=new THREE.MeshLambertMaterial({color:0xc38b47});
+    spinner.add(new THREE.Mesh(new THREE.CylinderGeometry(0.105,0.105,0.9,8),metal));
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.1,0.12),metal);
+    arm.position.set(0.16,0.28,0); spinner.add(arm);
+    const grip=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.28,8),wood);
+    grip.position.set(0.33,0.36,0); spinner.add(grip);
+    const bearing=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.3,0.42),wood);
+    bearing.position.y=-0.18; orient.add(bearing);
+}
+function buildReverserMesh(spinner,orient,powered) {
+    buildShaftMesh(spinner);
+    const body=new THREE.Mesh(new THREE.BoxGeometry(0.64,0.55,0.64),new THREE.MeshLambertMaterial({color:0x625c59}));
+    orient.add(body);
+    const output=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.07,0.5),new THREE.MeshLambertMaterial({color:0xf1c74a}));
+    output.position.y=0.32; orient.add(output); // 固定正轴端黄标，不随轴转。
+    const signal=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.16,0.05),new THREE.MeshLambertMaterial({color:powered?0xff493b:0x542b28}));
+    signal.position.z=0.34; orient.add(signal);
 }
 
 // 水车：双轮缘 + 三根通长辐条（六向）+ 周圈八片桨叶，视觉放大到 1.56 格直径（允许越界）
@@ -945,7 +1013,9 @@ export function updateChunkMeshes() {
 // 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组/旗组）。
 // 电梯平台（L2）与星辉门（关卡工坊，customMesh:false 满格普通面渲染）除外——走普通面渲染零 propMesh
 function isPropBlock(bt) {
-    return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) ||
+    return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) || isBedId(bt) || isLadderId(bt) ||
+        isCropId(bt) || bt === LifeBlocks.SAPLING ||
+        bt === LifeBlocks.FENCE || bt === LifeBlocks.GATE || bt === LifeBlocks.GATE_OPEN ||
         isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||
         isPistonId(bt) || isPistonHeadId(bt) || isObserverId(bt) || isFlagId(bt) ||
         (isKineticId(bt) && bt !== PLATFORM_BASE);

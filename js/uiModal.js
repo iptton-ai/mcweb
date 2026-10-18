@@ -20,7 +20,7 @@
 //   3. 浮层显隐与准星可见性由本模块统一驱动，其他模块经 onUIStateChange 订阅
 //      （如 main.js 刷新暂停菜单文案、input.js 清空按键防粘滞）。
 
-import { state } from './state.js';
+import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
 import { hideItemInfo } from './itemInfo.js';
 
@@ -42,6 +42,17 @@ export function getUIState() {
     return uiState;
 }
 
+// 普通单人生存的安全阅读门；创造施工和关卡计时保持原来的行为。
+export function isWorldPaused() {
+    if(isCreative() || state.levelRun || state.levelEdit) return false;
+    const el = typeof document === 'undefined' ? null : document.activeElement;
+    const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable === true);
+    return uiState !== 'playing' || !!state.windowUnfocused || !!document.hidden || !!typing ||
+        !!state.helpDocOpen || !!state.questionBankOpen || !!state.authorPanelOpen ||
+        !!state.prefabPickerOpen || !!state.levelExportOpen || !!state.recordingControlsOpen ||
+        Object.values(state.readingPanels || {}).some(Boolean);
+}
+
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板。
 // 纯键盘输入模式下永不请求锁定（鼠标指针保持可见，专职操作 UI 浮层）
 function wantLockNow() {
@@ -54,12 +65,12 @@ function wantLockNow() {
 // 「正在操作游戏」= playing 且指针已锁定（供每帧鼠标相关门控用）。
 // 纯键盘模式下恒为 false：鼠标的视角/挖掘/放置输入全部让位给键盘（见 input.js 的键盘路径）
 export function isPlaying() {
-    return uiState === 'playing' && mouseLocked && !state.editorExitOpen && !state.levelEdit?.exiting;
+    return !isWorldPaused() && uiState === 'playing' && mouseLocked && !state.editorExitOpen && !state.levelEdit?.exiting;
 }
 
 // 游戏状态层面是否活跃（键盘门控用：面板打开不影响游戏键）
 export function isGameActive() {
-    return uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
+    return !isWorldPaused() && uiState === 'playing' && !state.recordingControlsOpen && !state.levelExportOpen
         && !state.editorExitOpen && !state.levelEdit?.exiting
         && !state.prefabPickerOpen && !state.authorPanelOpen && !state.questionBankOpen
         && !state.helpDocOpen;
@@ -116,6 +127,8 @@ export function setAssistantVisible(v) {
     if (v === assistantVisible) return;
     assistantVisible = v;
     state.assistantOpen = v;
+    // 拍摄控件随助手隐藏时一并退出操作态，否则纯键盘仍被隐藏面板拦住。
+    if (!v) state.recordingControlsOpen = false;
     syncOverlays();
     applyPointerPolicy();
 }
@@ -195,6 +208,9 @@ function syncOverlays() {
     const menuVisible = uiState === 'title' || uiState === 'pause';
     const screen = document.getElementById('start-screen');
     if (screen) screen.classList.toggle('hidden', !menuVisible);
+    document.getElementById('life-panel')?.classList.toggle('open',uiState==='container');
+    if(uiState!=='container') state.lifePanel=null;
+    document.getElementById('adventure-panel')?.classList.toggle('open',uiState==='adventure');
     const inv = document.getElementById('inventory-panel');
     if (inv) inv.classList.toggle('open', uiState === 'inventory');
     // 离开背包态时兜底隐藏物品说明条（面板 display:none 不一定触发 mouseleave）
@@ -315,6 +331,8 @@ export function initUIModal() {
     hintEl.textContent = '🖱 点击画面继续';
     document.body.appendChild(hintEl);
 
+    window.addEventListener('blur', () => { state.windowUnfocused=true; clearStuckKeys(); });
+    window.addEventListener('focus', () => { state.windowUnfocused=false; clearStuckKeys(); });
     document.addEventListener('pointerlockchange', onPointerLockChange);
     document.addEventListener('pointerlockerror', onLockRejected);
     syncOverlays();

@@ -1,3 +1,4 @@
+import { crankId, largeCogId, reverserId, shaftId, cogId, beltId, sawId, leverId, LifeBlocks } from './config.js';
 // ==================== levelPrefabs.js ====================
 // 关卡工坊·预设组件库（2026-09-16）：一键盖出的「半成品关卡零件」——旗标、答题门、
 // 星辉门、答题滑轮电梯、城堡塔楼、检查点小屋等。组件只是几何（放完的答题机仍要
@@ -257,6 +258,57 @@ export const PREFABS = [
         },
     },
 ];
+
+// 物理实验采用完整小场地快照，避免盖章时旧建筑残留影响传动。
+function physicsScene(w,h,d,build) {
+    return put => {
+        const cells=new Map();
+        const set=(x,y,z,id)=>cells.set(`${x},${y},${z}`,{x,y,z,id});
+        for (let x=0;x<w;x++) for (let z=0;z<d;z++) for (let y=0;y<h;y++) set(x,y,z,y===0?PLANKS:AIR);
+        build(set);
+        for (const c of cells.values()) put(c.x,c.y,c.z,c.id);
+    };
+}
+PREFABS.push(
+    {id:'physics_hand_transport',name:'✋ 手摇运输台',cat:'物理实验',w:9,h:4,d:5,grounded:true,anchor:{x:1,y:0,z:3},
+        desc:'按住右键/X摇动铜色手柄，带上丢入物品即可运输。普通世界末端自动入箱；松手停机，Shift绕过操作放置。',
+        build:physicsScene(9,4,5,put=>{
+            put(1,1,2,crankId(0)); put(2,1,2,shaftId(0));
+            for(let x=3;x<=6;x++) put(x,1,2,beltId(1));
+            put(7,1,2,LifeBlocks.CHEST);
+        })},
+    {id:'physics_speed_comparison',name:'⚙️ 快慢对照工厂',cat:'物理实验',w:12,h:4,d:9,grounded:true,anchor:{x:5,y:0,z:4},
+        desc:'浅色大齿轮与深色小齿轮对照：一侧16RPM、一侧4RPM。补放原木看锯切耗时，丢物品比较带速，瞄准读取倍率与负载。',
+        build:physicsScene(12,4,9,put=>{
+            for(const [z,fast] of [[2,true],[6,false]]) {
+                for(const x of [0,1]) {put(x,1,z,waterwheelId(0));put(x,2,z,WATER);}
+                put(2,1,z,fast?largeCogId(0):cogId(0));
+                put(2,2,z,fast?cogId(0):largeCogId(0)); put(3,2,z,shaftId(0));
+                for(let x=3;x<=9;x++) put(x,1,z,PLANKS);
+                for(let x=4;x<=7;x++) put(x,2,z,beltId(1));
+                put(8,2,z,sawId(3)); put(9,2,z,BlockTypes.LOG);
+            }
+        })},
+    {id:'physics_lift_lab',name:'🛗 升降实验台',cat:'物理实验',w:6,h:10,d:5,grounded:true,anchor:{x:2,y:0,z:3},
+        desc:'站平台抬头操作机头下方拉杆：卷绳上升/放绳下降。低顶会阻止继续抬升；拆去障碍后恢复。换向器不改变上下行。',
+        build:physicsScene(6,10,5,put=>{
+            put(2,0,2,PLATFORM_BASE); put(2,6,2,pulleyId(false,false));
+            put(2,7,2,shaftId(1)); put(2,8,2,waterwheelId(1)); put(2,9,2,WATER);
+            for(let y=1;y<=5;y++) put(3,y,2,COBBLESTONE);
+            put(2,5,2,leverId(1,0)); // 挂机头底面，平台起点即可抬头操作，不被支柱挡住。
+            for(let z=1;z<=3;z++) put(1,3,z,PLANKS);
+        })},
+    {id:'physics_phase_merge',name:'↔️ 合流纠偏台',cat:'物理实验',w:8,h:8,d:5,grounded:true,anchor:{x:3,y:0,z:3},
+        desc:'双水车经一次齿轮啮合发生转向冲突。打开拉杆让换向器纠偏，机械锯恢复加工；关掉又卡死。黄色标记是换向端。',
+        build:physicsScene(8,8,5,put=>{
+            put(3,1,2,waterwheelId(0)); put(3,2,2,WATER);
+            put(4,1,2,cogId(0)); put(4,2,2,cogId(1));
+            put(4,3,2,reverserId(1,false)); put(4,4,2,shaftId(1));
+            put(4,5,2,waterwheelId(1)); put(4,6,2,WATER);
+            put(5,2,2,COBBLESTONE); put(5,3,2,leverId(0,0));
+            put(2,1,2,sawId(5)); put(1,1,2,BlockTypes.LOG);
+        })},
+);
 
 // ==================== 查询与纯几何展开 ====================
 

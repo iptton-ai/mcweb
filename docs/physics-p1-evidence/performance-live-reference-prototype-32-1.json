@@ -1,0 +1,86 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-18T16:13:32.436Z",
+  "mode": "32",
+  "nativeRpm": 32,
+  "substepsPerMeasuredFrame": 1,
+  "particleMode": "live",
+  "particleRandomSeed": 20261018,
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded; particle lifecycle included",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "2d411be692c79ac8744c68c7e9b33af602b93a358b4b57b38e6f6d8e62b63e3d",
+    "kinetic": "2f21e4032846c1b14a484895b2838a78a8cd2d02b8f8e73dac5232b8f5153bf3",
+    "kineticGraph": "8544da144eb5963c5515b0ead1e240773695239d07825cb7376a60dccb04cfc2",
+    "items": "c968183a8104869f21306dfd1131923809151076bd4bdc43baff1698494f78fe",
+    "piston": "6a9dce56656234ac31b7810f7967f862013c3d4736bb9832c51b3b4260a3c524",
+    "world": "1f29e6acfc71c4800becbb83d36c16f3ee09f19e25e2670e7d01ab9a9141ccf9",
+    "particles": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+  },
+  "scenes": {
+    "production": {
+      "machines": 10,
+      "capacityPerLine": 384,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "activeFrames": 600,
+      "simulatedSeconds": 10,
+      "completions": 750,
+      "outputItems": 3000,
+      "particlePopulation": {
+        "atSampleStart": 574,
+        "atSampleEnd": 585,
+        "lifecycleAdvanced": true
+      },
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.044565468333333434,
+        "p95Ms": 0.08787499999999682,
+        "maxMs": 0.3564999999999827
+      },
+      "completionFrames": {
+        "n": 75,
+        "meanMs": 0.09076449333333547,
+        "p95Ms": 0.12466700000001651,
+        "maxMs": 0.2827920000000006
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 750,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    }
+  },
+  "gates": [
+    {
+      "key": "production/allFrames",
+      "meanBudgetMs": 0.028620688,
+      "p95BudgetMs": 0.1162992,
+      "pass": null,
+      "valid": false,
+      "reason": "Historical production budget omitted particle lifecycle; like-for-like live baseline pending"
+    },
+    {
+      "key": "production/completionFrames",
+      "meanBudgetMs": 0.138885086,
+      "p95BudgetMs": 0.5270988,
+      "pass": null,
+      "valid": false,
+      "reason": "Historical production budget omitted particle lifecycle; like-for-like live baseline pending"
+    },
+    {
+      "key": "production/actual-speed",
+      "expected": "790..810 logs in 10 s, 10 saws at 32 RPM",
+      "pass": false
+    }
+  ],
+  "pass": false
+}

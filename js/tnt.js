@@ -46,13 +46,14 @@ export function clearTntEntities() {
     state.tntEntities.length = 0;
 }
 
-export function explode(cx, cy, cz) {
+export function explode(cx, cy, cz, source = 'tnt') {
     playExplosionSound();
     const R = 3;
     const chunksToRebuild = new Set([`${Math.floor(cx / CHUNK_SIZE)},${Math.floor(cz / CHUNK_SIZE)}`]);
     // 闯关模式（W12 爆炸保护）：锁具/旗组/星辉门/门免疫爆炸——谜题结构不许被炸穿；
     // 普通方块照炸（苦力怕在关卡里本就不刷，这里的 TNT 来自关卡作者自己的布置）
     const protectLevelBlocks = isLevelRunActive();
+    const protectHome = source === 'creeper' && state.survivalDifficulty === 'gentle' && !state.levelRun && !state.levelEdit;
     for (let dx = -R; dx <= R; dx++) {
         for (let dy = -R; dy <= R; dy++) {
             for (let dz = -R; dz <= R; dz++) {
@@ -60,12 +61,13 @@ export function explode(cx, cy, cz) {
                 if (d > R + 0.5) continue;
                 const x = cx + dx, y = cy + dy, z = cz + dz;
                 const bt = getBlock(x, y, z);
+                if (protectHome) continue;
                 if (bt === BlockTypes.AIR || bt === BlockTypes.BEDROCK) continue;
                 if (protectLevelBlocks &&
                     (isKeypadId(bt) || isFlagId(bt) || isStarlightId(bt) || isDoorId(bt))) continue;
                 if (bt === BlockTypes.TORCH) removeTorchLightAt(x, y, z);
                 if (isCustomMesh(bt)) removeDroppedItemAt(x, y, z);
-                setBlockSafe(x, y, z, BlockTypes.AIR);
+                for(const c of setBlockSafe(x, y, z, BlockTypes.AIR) || []) chunksToRebuild.add(`${Math.floor(c.x/CHUNK_SIZE)},${Math.floor(c.z/CHUNK_SIZE)}`);
                 chunksToRebuild.add(`${Math.floor(x / CHUNK_SIZE)},${Math.floor(z / CHUNK_SIZE)}`);
                 if (Math.random() < 0.3) {
                     spawnBreakParticles(x, y, z, bt);
@@ -101,7 +103,7 @@ export function explode(cx, cy, cz) {
     const p = state.player;
     const pd = Math.hypot(p.x - cx - 0.5, p.y - cy - 0.5, p.z - cz - 0.5);
     if (pd < 5 && !p.dead) {
-        damagePlayer(Math.round((5 - pd) * 3));
+        damagePlayer(Math.round((5 - pd) * 3), 'explosion', {x:cx+.5,z:cz+.5});
         const kb = 8;
         if (pd > 0) {
             p.vx += (p.x - cx - 0.5) / pd * kb;

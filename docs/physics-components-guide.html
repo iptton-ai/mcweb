@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>让机关转起来 · 我的世界物理组件</title>
+<style>
+:root{color-scheme:dark;--bg:#131c22;--panel:#1e2b32;--line:#3c525c;--text:#edf4ef;--muted:#a8bcc1;--gold:#f3c675;--mint:#91d6ba;--red:#ffa79a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.8 system-ui,"PingFang SC","Microsoft YaHei",sans-serif}main{max-width:920px;margin:auto;padding:32px 24px 48px}h1,h2,h3,p{margin:0}h1{font-size:clamp(28px,5vw,42px);line-height:1.25;margin:8px 0 14px}h2{font-size:23px;margin:32px 0 14px}h3{font-size:18px;margin-bottom:8px}p+p{margin-top:9px}.eyebrow{color:var(--mint);font-size:12px;letter-spacing:.15em}.lead{max-width:660px;color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card,.lab,.note,.steps{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}.card p{color:var(--muted);font-size:14px}.icon{height:76px;width:76px;margin-bottom:10px}.tag{display:inline-block;color:var(--gold);font-size:12px;margin-top:10px}kbd{font:inherit;font-size:.85em;background:#30424b;border:1px solid #62747c;border-radius:5px;padding:1px 5px;white-space:nowrap}.lab{margin-top:14px}.lab-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.badge{font-size:12px;color:var(--mint);border:1px solid #587b70;padding:3px 9px;border-radius:20px;white-space:nowrap}.controls{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin:20px 0}.controls label{display:flex;align-items:center;gap:8px;font-size:14px}.controls select,.controls input,.hold{font:inherit}.controls select{border:1px solid #697c84;background:#17232b;color:var(--text);border-radius:7px;padding:7px 10px}.controls input{accent-color:var(--gold);width:112px}.hold{border:2px solid #8dbf99;border-radius:10px;background:#294b3e;color:#edfff4;cursor:pointer;touch-action:none;user-select:none;padding:10px 18px;font-weight:650}.hold[aria-pressed="true"]{background:#557b47;border-color:#deeba8}.hold:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.meters{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.meter{background:#142128;border:1px solid #304852;padding:13px 10px;border-radius:10px}.meter span{display:block;color:var(--muted);font-size:12px}.meter output{font-size:21px;font-weight:650;color:var(--gold)}#lab-status{margin-top:15px;font-weight:650;min-height:29px}#lab-detail{color:var(--muted);font-size:13px;min-height:48px}.diagram{display:flex;align-items:center;justify-content:center;gap:20px;padding:6px 0 18px}.gear{width:64px;height:64px;color:var(--gold);animation:turn 8s linear infinite;animation-play-state:paused;transform-origin:50% 50%}.gear.out{width:48px;height:48px;color:var(--mint);animation-direction:reverse}.diagram.running .gear{animation-play-state:running}.arrow{color:var(--muted);font-size:24px}.shaft{font-size:12px;color:var(--muted);text-align:center}.shaft strong{display:block;color:var(--text)}@keyframes turn{to{transform:rotate(360deg)}}.note{border-left:4px solid var(--gold);margin-top:16px}.note p{color:var(--muted)}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;background:var(--panel);font-size:14px}th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line)}th{color:var(--mint);font-weight:600;white-space:nowrap}tbody tr:last-child td{border-bottom:0}.steps{padding-left:42px;margin:0}.steps li{padding:4px 0}.steps li+li{margin-top:10px}.steps strong{color:var(--gold)}.recipe{font-size:13px;color:var(--muted);margin-top:9px}footer{color:#92a8b0;font-size:12px;margin-top:28px;border-top:1px solid var(--line);padding-top:16px}code{font:inherit;color:var(--gold)}@media(max-width:640px){main{padding:22px 15px 36px}.cards{grid-template-columns:1fr}.card{display:grid;grid-template-columns:60px 1fr;column-gap:14px}.icon{width:56px;height:56px;grid-row:1/4;margin:0}.card h3,.card p,.card .tag{grid-column:2}.meters{grid-template-columns:repeat(2,1fr)}.lab-head{display:block}.badge{margin-top:8px;display:inline-block}.diagram{gap:12px}.controls{gap:14px 10px}.controls label:last-child{width:100%}th,td{padding:11px}}@media(prefers-reduced-motion:reduce){.gear{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">搭机关 · 做实验</div>
+  <h1>让机关转起来</h1>
+  <p class="lead">从手摇启动一条传送带，再用大小齿轮改变速度。观察真正送进箱子的物品、走过的距离和动力读数，解释你的机关为什么这样工作。</p>
+</header>
+
+<h2>认识三个新组件</h2>
+<section class="cards" aria-label="新增组件">
+  <article class="card">
+    <svg class="icon" viewBox="0 0 76 76" aria-label="手摇动力器" role="img"><rect x="9" y="31" width="25" height="32" rx="4" fill="#425962"/><rect x="18" y="40" width="35" height="10" rx="3" fill="#c7d9d7"/><path d="M48 46V20H63" fill="none" stroke="#e6b557" stroke-width="9" stroke-linejoin="round"/><rect x="58" y="8" width="12" height="27" rx="5" fill="#966542"/><circle cx="21" cy="45" r="5" fill="#ecf5e9"/></svg>
+    <h3>手摇动力器</h3>
+    <p>对准后按住右键或 <kbd>X</kbd> 供能，松手即停。开面板、移开准星或切换相机后，要重新按下。</p>
+    <span class="tag" id="crank-spec">手动动力源</span>
+  </article>
+  <article class="card">
+    <svg class="icon" viewBox="0 0 76 76" aria-label="大齿轮" role="img"><g fill="#c79143"><path d="M31 2h14v13H31zM31 61h14v13H31zM2 31h13v14H2zM61 31h13v14H61zM10 10h14v14H10zM52 10h14v14H52zM10 52h14v14H10zM52 52h14v14H52z"/><circle cx="38" cy="38" r="29"/></g><circle cx="38" cy="38" r="20" fill="#f1c678"/><circle cx="38" cy="38" r="12" fill="#556f70"/><circle cx="38" cy="38" r="5" fill="#dfede5"/></svg>
+    <h3>大齿轮</h3>
+    <p>大齿轮带小齿轮，变成两倍速；小带大，变成半速。啮合会反转，沿同一根轴串接则等速同向。</p>
+    <span class="tag">速度改变，负载也改变</span>
+  </article>
+  <article class="card">
+    <svg class="icon" viewBox="0 0 76 76" aria-label="红石换向器，右端黄色标记" role="img"><rect x="2" y="32" width="72" height="13" rx="3" fill="#c1d0d4"/><rect x="16" y="12" width="44" height="51" rx="5" fill="#627381"/><path d="M26 27h25l-6-6m6 6-6 6" fill="none" stroke="#ff9386" stroke-width="5" stroke-linejoin="round"/><path d="M50 49H25l6-6m-6 6 6 6" fill="none" stroke="#e9cf81" stroke-width="5" stroke-linejoin="round"/><rect x="57" y="25" width="7" height="27" rx="2" fill="#f6d16f"/></svg>
+    <h3>红石换向器</h3>
+    <p>串进传动轴：无红石信号时直通，有信号时两端反向。可修正两个动力源合流时的旋向冲突。</p>
+    <span class="tag">黄标＝轴正向端</span>
+  </article>
+</section>
+<p class="recipe">在工作台制作：手摇＝木板×4＋木棍×2＋铁锭×1；大齿轮＝木板×8＋传动轴×1；换向器＝传动轴×1＋红石粉×1＋铁锭×2。实际材料以背包配方为准。</p>
+
+<h2>先试算，再去世界里验证</h2>
+<section class="lab" aria-labelledby="lab-title">
+  <div class="lab-head"><div><h3 id="lab-title">同一个动力源，能带多快？</h3><p class="lead">改变传动倍率和传送带数量，再按住按钮。</p></div><span class="badge">数值示意 · 不操作游戏世界</span></div>
+  <div class="controls">
+    <button class="hold" id="crank-button" type="button" aria-pressed="false">按住供能</button>
+    <label>传动倍率 <select id="ratio"><option value="0.25">¼ 倍 · 两级减速</option><option value="0.5">½ 倍 · 小带大</option><option value="1" selected>1 倍 · 直接传动</option><option value="2">2 倍 · 大带小</option><option value="4">4 倍 · 两级增速</option></select></label>
+    <label>传送带 <input id="belt-count" type="range" min="1" max="8" value="4"><output id="belt-count-value">4 格</output></label>
+  </div>
+  <div class="diagram" id="motion" aria-hidden="true">
+    <div class="shaft"><svg class="gear" viewBox="0 0 64 64"><path fill="currentColor" d="M26 2h12v9l7 4 8-5 6 10-8 5v14l8 5-6 10-8-5-7 4v9H26v-9l-7-4-8 5-6-10 8-5V25l-8-5 6-10 8 5 7-4Z"/><circle cx="32" cy="32" r="9" fill="#1e2b32"/></svg><strong>动力源</strong></div>
+    <span class="arrow">→</span><div class="shaft"><svg class="gear out" id="output-gear" viewBox="0 0 64 64"><path fill="currentColor" d="M26 2h12v9l7 4 8-5 6 10-8 5v14l8 5-6 10-8-5-7 4v9H26v-9l-7-4-8 5-6-10 8-5V25l-8-5 6-10 8 5 7-4Z"/><circle cx="32" cy="32" r="9" fill="#1e2b32"/></svg><strong>传送带接入轴</strong></div>
+  </div>
+  <div class="meters">
+    <div class="meter"><span>输入转速</span><output id="input-rpm">0 RPM</output></div>
+    <div class="meter"><span>输出转速</span><output id="output-rpm">0 RPM</output></div>
+    <div class="meter"><span>实际带速</span><output id="belt-speed">0 格/秒</output></div>
+    <div class="meter"><span>需求 / 容量</span><output id="stress">16 / 0 SU</output></div>
+  </div>
+  <p id="lab-status" role="status" aria-live="polite">按住按钮供能</p>
+  <p id="lab-detail">试试同样四格传送带，在两倍速与半速时有什么变化。</p>
+</section>
+<div class="note"><h3>速度与负载，是两项一起观察的量</h3><p>游戏中，每个机器的基础负载乘上它自己的速度倍率。增加动力源可增加容量，不能把它们的转速直接相加。SU 是游戏的负载预算；这里不把它当作真实世界的扭矩或功率单位。</p></div>
+
+<h2>在游戏里做四个实验</h2>
+<ol class="steps">
+  <li><strong>手摇运输台：</strong>在创造或关卡编辑器按 <kbd>B</kbd>，选模板后对准地面盖章。把物品丢上带，对准手摇按住右键或 <kbd>X</kbd>，比较停与走。普通世界的末端箱子会自动收货；编辑器内只体验运输。</li>
+  <li><strong>变速对照台：</strong>对准各段动力块读 HUD。大带小与小带大各运行相同时间，比较带上物品走过的距离。齿轮端面沿轴串起来，是否仍然变速？</li>
+  <li><strong>升降实验台：</strong>站上平台，抬头操作机头底面的拉杆：打开卷绳上升，关闭放绳下降。对比转速与平台跨格速度；在乘客前方设障碍，检查平台停下，撤掉障碍再运行。</li>
+  <li><strong>合流纠偏台：</strong>双水车经奇数次啮合后旋向冲突，整网停机。打开换向器旁的红石开关，观察机器恢复工作、容量合并；关闭开关再次验证。</li>
+</ol>
+<p class="recipe">手摇只能在普通世界或编辑器操作，闯关模式禁用。要贴着手摇放其他方块，按住 <kbd>Shift</kbd> 再右键。</p>
+
+<h2>连接、方向与读数</h2>
+<div class="table-wrap"><table><thead><tr><th>要观察的现象</th><th>当前组件规则</th></tr></thead><tbody>
+  <tr><td>大小齿轮怎么接</td><td>同轴端面相接：1 倍同向。平行轴横向相邻：至少一只是大齿轮才啮合。垂直轴相邻、连线沿其中一轴：可啮合。啮合均反向，倍率取决于大小。</td></tr>
+  <tr><td>方向从哪边看</td><td>从轴正向端看：X 为东侧，Y 为上侧，Z 为南侧。HUD 正转按右手轴正角速度定义；比较两个轴时先选同一观察端。</td></tr>
+  <tr><td>换向后带会倒走吗</td><td>运输始终沿传送带箭头；滑轮仍由红石控制卷/放绳。轴旋向影响传动兼容关系，锯、粉碎轮、投料器在两种旋向都可工作。</td></tr>
+  <tr><td>电梯怎样上下走</td><td>垂挂滑轮：充能向上卷、断电向下放。顶举滑轮：充能向下卷、断电向上放。动力中断时平台悬停。</td></tr>
+  <tr><td>怎样读速度</td><td id="speed-rule">基准转速对应 1 倍速；可使用范围和实际机器速度见准星 HUD。</td></tr>
+</tbody></table></div>
+
+<h2>机关不动时，从这里检查</h2>
+<div class="table-wrap"><table><thead><tr><th>提示或现象</th><th>下一步</th></tr></thead><tbody>
+  <tr><td>没有动力</td><td>检查水车正上方的水，或重新按住手摇；轴应同轴连接，锯/投料器从背面接入；检查离合器是否断开。</td></tr>
+  <tr><td>应力超载</td><td>减少机器或降速，也可接入转速与旋向兼容的动力源。升速会增加负载。</td></tr>
+  <tr><td>转速冲突 / 旋向冲突</td><td>检查合流处的传动倍率与齿轮反转次数。换向器能纠正旋向；转速不同则要调整大小齿轮连接。</td></tr>
+  <tr><td>超出转速范围</td><td>减少连续增速/减速级数。超界会整网停止，系统不会偷偷改成另一档速度。</td></tr>
+  <tr><td>未找到平台 / 行程端点</td><td>确认平台在滑轮绳方向、绳路无实心阻挡。到端点会停，撤掉目标格障碍可继续。</td></tr>
+  <tr><td>乘客前方受阻</td><td>留出乘客头顶和身体空间，检查侧墙、围栏与世界边界。平台会在移动前停下，避免把乘客塞进障碍。</td></tr>
+</tbody></table></div>
+<footer>这些是机关建造与基础观察实验。比较时尽量只改一个条件，并记录输入、输出与现象。正文示例使用本游戏的离散方块和负载规则。</footer>
+</main>
+<script type="module">
+import { CRANK_RPM, CRANK_SU_CAPACITY, WHEEL_RPM, BELT_SPEED, BELT_SU_LOAD, KINETIC_MIN_RPM, KINETIC_MAX_RPM } from '../js/config.js';
+const byId = id => document.getElementById(id);
+const hold = byId('crank-button');
+let pressed = false;
+byId('crank-spec').textContent = `${CRANK_RPM} RPM · ${CRANK_SU_CAPACITY} SU`;
+byId('speed-rule').textContent = `${WHEEL_RPM} RPM 为基准；本格速度倍率＝|RPM|÷${WHEEL_RPM}。可用范围 ${KINETIC_MIN_RPM}～${KINETIC_MAX_RPM} RPM。加工耗时除以倍率，带速和升降速度乘以倍率。`;
+function render() {
+  const ratio = Number(byId('ratio').value), count = Number(byId('belt-count').value);
+  const demand = count * BELT_SU_LOAD * ratio, capacity = pressed ? CRANK_SU_CAPACITY : 0;
+  const running = pressed && demand <= capacity;
+  byId('belt-count-value').textContent = `${count} 格`;
+  byId('input-rpm').textContent = `${running ? CRANK_RPM : 0} RPM`;
+  byId('output-rpm').textContent = `${running ? CRANK_RPM * ratio : 0} RPM`;
+  byId('belt-speed').textContent = `${running ? Number((BELT_SPEED * ratio).toFixed(3)) : 0} 格/秒`;
+  byId('stress').textContent = `${demand} / ${capacity} SU`;
+  hold.setAttribute('aria-pressed', String(pressed));
+  byId('motion').classList.toggle('running', running);
+  byId('output-gear').style.animationDuration = `${8 / ratio}s`;
+  byId('output-gear').style.animationDirection = ratio === 0.5 || ratio === 2 ? 'reverse' : 'normal';
+  const status = byId('lab-status');
+  status.textContent = !pressed ? '按住按钮供能' : running ? '正在运行 · 保持按住' : '应力超载 · 整条网络停止';
+  status.style.color = pressed && !running ? 'var(--red)' : 'var(--mint)';
+  byId('lab-detail').textContent = `${count} 格带 × 基础 ${BELT_SU_LOAD} SU × ${ratio} 倍速 ＝ ${demand} SU。` +
+    (pressed && !running ? `超过手摇的 ${CRANK_SU_CAPACITY} SU 容量，减少带数或降低倍率后再试。` : `目标 ${CRANK_RPM * ratio} RPM；输送方向仍沿箭头。齿轮动画只作比例示意。`);
+}
+function release() { if (pressed) { pressed = false; render(); } }
+hold.addEventListener('pointerdown', e => { if (e.button !== 0) return; hold.setPointerCapture(e.pointerId); pressed = true; render(); });
+hold.addEventListener('pointerup', release);
+hold.addEventListener('pointercancel', release);
+hold.addEventListener('lostpointercapture', release);
+hold.addEventListener('keydown', e => { if (e.key !== ' ' && e.key !== 'Enter') return; e.preventDefault(); if (!pressed) { pressed = true; render(); } });
+hold.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); release(); } });
+hold.addEventListener('blur', release);
+window.addEventListener('blur', release);
+document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
+byId('ratio').addEventListener('change', render);
+byId('belt-count').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

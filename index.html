@@ -1044,6 +1044,48 @@
             min-height: 40px;
             max-height: 30vh;
         }
+        /* 安家常用栏：九格始终可见，窄屏收紧，不挤出屏幕。 */
+        #hotbar{gap:3px;padding:5px;max-width:96vw;bottom:12px;}
+        #hotbar .hotbar-slot{width:clamp(30px,5.5vw,48px);height:clamp(36px,6vw,48px);padding:0;color:white;border-color:#686878;cursor:pointer;}
+        #hotbar .hotbar-slot.selected{border-color:#ffdf7c;box-shadow:inset 0 0 0 1px #ffdf7c;}
+        #hotbar .hotbar-slot canvas{width:28px;height:28px;}
+        #hotbar .hotbar-info{border:0;background:transparent;color:#f1e9d9;font:12px/1.5 inherit;padding:0 6px;max-width:120px;cursor:pointer;}
+        #home-hud{position:fixed;top:92px;left:14px;max-width:min(420px,70vw);white-space:pre-line;background:#172c26d9;color:#e8f1d8;padding:9px 12px;border-radius:8px;font:13px/1.6 system-ui;z-index:12;pointer-events:none;}
+        #home-hud[hidden]{display:none;}
+        body.hud-hidden #home-hud{display:none;}
+        #inv-home-controls{margin:10px 0;color:#eee;font:12px/1.5 system-ui;}
+        #inv-home-controls p{margin:5px 0;}
+        #inv-home-controls button{margin:2px;padding:5px 7px;background:#34394c;border:1px solid #697083;border-radius:5px;color:#eee;cursor:pointer;}
+        #inv-home-controls button.active{border-color:#cdeb85;background:#46563e;}
+        .recipe-craft{margin-left:auto;flex:none;padding:6px 11px;border-radius:5px;border:1px solid #a9cf70;background:#405c36;color:#fff;cursor:pointer;}
+        .recipe-source{padding:0 4px;margin-left:3px;border-radius:50%;border:1px solid #8b96a4;background:transparent;color:#d3deec;cursor:help;}
+        /* 面板与说明条分区：短窗口也保留物品行，两个长列表各自滚动。 */
+        #inventory-panel{top:calc((100dvh - 150px)/2);height:min(850px,calc(100dvh - 174px));max-height:none;padding:10px 14px;overflow:hidden;gap:8px;}
+        #inventory-panel.open{display:flex;flex-direction:column;}
+        #inventory-panel h2{flex:none;margin:0;font-size:18px;line-height:26px;}
+        #crafting-section{flex:0 1 34%;min-height:64px;max-height:300px;margin:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
+        #inv-toolbar{flex:none;margin:0;}
+        #inv-search{padding:6px 10px;font-size:13px;}
+        #inv-home-controls{flex:none;margin:0;}
+        #inv-home-controls .inv-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:2px;}
+        #inv-quickbar-toggle{margin-left:auto;}
+        #inv-home-controls .quickbar-editor{max-height:98px;overflow-y:auto;overscroll-behavior:contain;}
+        #inventory-grid{flex:1 1 45%;min-height:160px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;align-content:start;grid-auto-rows:74px;padding:3px;}
+        #inventory-panel.editing-quickbar #crafting-section{flex-basis:64px;max-height:150px;min-height:48px;}
+        #inventory-panel.editing-quickbar #inventory-grid{min-height:80px;}
+        @media(min-height:900px){
+            #crafting-section{flex:0 0 240px;min-height:200px;max-height:240px;}
+            #inventory-panel.editing-quickbar #crafting-section{flex:0 0 220px;min-height:200px;max-height:240px;}
+        }
+        #inventory-close-hint{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;font-size:11px;line-height:1.4;text-align:left;color:#b9bfd0;}
+        .inventory-close-button{flex:none;border:1px solid #7b889b;background:#323d4d;color:#edf0f7;padding:5px 9px;border-radius:6px;cursor:pointer;}
+        #inventory-panel.open ~ #item-info-strip{bottom:12px;max-height:138px;overflow-y:auto;overscroll-behavior:contain;padding:8px 12px;gap:12px;align-items:flex-start;pointer-events:auto;}
+        #inventory-panel.open ~ #item-info-strip .iis-item{min-width:76px;padding-right:12px;}
+        #inventory-panel.open ~ #item-info-strip .iis-lines{font-size:12px;line-height:1.45;}
+        #sleep-veil{position:fixed;inset:0;z-index:100;pointer-events:none;opacity:0;background:#0c1725;}
+        #sleep-veil.sleeping{animation:sleep-morning .8s ease-out;}
+        @keyframes sleep-morning{0%{opacity:.88}100%{opacity:0}}
+        @media(max-width:540px){#hotbar .hotbar-info{position:absolute;bottom:100%;background:#20283be8;left:50%;transform:translateX(-50%);max-width:230px;white-space:nowrap;border-radius:6px;padding:3px 10px;}#home-hud{font-size:11px;top:86px;}}
     </style>
 </head>
 <body>
@@ -1079,7 +1121,7 @@
         <div class="controls-info">
             <kbd>W A S D</kbd> 移动 &nbsp;|&nbsp; <kbd>空格</kbd> 跳跃（创造双击 = 飞行）&nbsp;|&nbsp; <kbd>Shift</kbd> 潜行 / 水中下沉 &nbsp;|&nbsp; <kbd>Ctrl</kbd> 疾跑<br>
             <kbd>鼠标左键</kbd> 破坏 / 攻击 &nbsp;|&nbsp; <kbd>鼠标右键</kbd> 放置 / 进食 / 打开工作台·熔炉 &nbsp;|&nbsp; <kbd>中键</kbd> 吸取方块（创造）<br>
-            <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换手持 &nbsp;|&nbsp; <kbd>E</kbd> 背包与合成（点配方 = 合成）&nbsp;|&nbsp; <kbd>Z</kbd> 丢弃手持<br>
+            <kbd>鼠标滚轮</kbd> / <kbd>1-9</kbd> 切换九格常用栏 &nbsp;|&nbsp; <kbd>E</kbd> 背包与合成（点配方 = 合成）&nbsp;|&nbsp; <kbd>Z</kbd> 丢弃手持<br>
             <kbd>F</kbd> 切换飞行（建造模式）&nbsp;|&nbsp; <kbd>M</kbd> 切换游戏模式 &nbsp;|&nbsp; <kbd>Esc</kbd>/<kbd>Q</kbd> 释放鼠标<br>
             <kbd>F5</kbd> 或 <kbd>V</kbd> 切换视角 &nbsp;|&nbsp; <kbd>F1</kbd> 隐藏界面 &nbsp;|&nbsp; <kbd>F2</kbd> 截图 &nbsp;|&nbsp; <kbd>F3</kbd> 调试信息 &nbsp;|&nbsp; <kbd>F6</kbd> 昼夜切换（创造）<br>
             <kbd>R</kbd> 开始录制 / 停止并保存 &nbsp;|&nbsp; <kbd>Tab</kbd> 操作拍摄面板 &nbsp;|&nbsp; <kbd>C</kbd> 切换镜头<br>
@@ -1181,12 +1223,14 @@
     <!-- 死亡界面 -->
     <div id="death-screen">
         <h1>☠ 你死了！</h1>
-        <p>被黑暗中的怪物击败了……背包物品保留，在出生点重生</p>
+        <p>休息一下再出发。背包物品保留，有床就回家；床不可用时回安全出生点。</p>
         <button id="respawn-btn">🔥 重生</button>
     </div>
 
     <!-- 物品栏 -->
     <div id="hotbar"></div>
+    <div id="home-hud" hidden></div>
+    <div id="sleep-veil" aria-hidden="true"></div>
 
     <!-- 物品选择网格：E 或点击底部手持胶囊打开，点选物品即选中并收起 -->
     <div id="inventory-panel">
@@ -1194,6 +1238,7 @@
         <!-- 合成配方区（生存模式：徒手 / 工作台 / 熔炉三组；ui.js 动态渲染） -->
         <div id="crafting-section"></div>
         <div id="inv-toolbar"><input id="inv-search" type="text" placeholder="🔍 搜索方块或物品…" autocomplete="off"></div>
+        <div id="inv-home-controls"></div>
         <div id="inventory-grid"></div>
         <div id="inventory-close-hint">点物品 = 选中并关闭 &nbsp;|&nbsp; <kbd>E</kbd> / <kbd>Esc</kbd> 收起</div>
     </div>

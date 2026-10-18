@@ -1,0 +1,11 @@
+{
+  "officialLevel": "村口热身赛",
+  "during": {
+    "active": true,
+    "saveBlocked": true,
+    "homeChangeBlocked": true,
+    "pauseExcluded": true
+  },
+  "restored": true,
+  "runtimeErrors": []
+}

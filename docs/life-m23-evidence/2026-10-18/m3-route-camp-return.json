@@ -1,0 +1,161 @@
+{
+  "trace": [
+    {
+      "target": {
+        "x": 86.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 86.60890348350685,
+        "y": 38.001,
+        "z": 128.61957267753954,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 92.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 92.42798492597656,
+        "y": 40.488868400000264,
+        "z": 128.50241973473481,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 98.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 98.54149363231137,
+        "y": 40.448203519999915,
+        "z": 128.47445014409453,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 104.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 104.6512920720861,
+        "y": 39.358914920000075,
+        "z": 128.53733404306954,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 110.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 110.31655371105951,
+        "y": 38.509064640000474,
+        "z": 128.51622168804076,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 116.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 116.41844530614037,
+        "y": 38.08918792000025,
+        "z": 128.5986683236621,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 122.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 122.4773709066114,
+        "y": 40.36109032000053,
+        "z": 128.57266799005708,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    },
+    {
+      "target": {
+        "x": 128.5,
+        "z": 128.5
+      },
+      "position": {
+        "x": 128.5895157061104,
+        "y": 39.69471103999983,
+        "z": 128.46021678615358,
+        "health": 20
+      },
+      "mode": "survival",
+      "flying": false,
+      "dead": false
+    }
+  ],
+  "end": {
+    "sites": [
+      {
+        "id": "mine",
+        "x": 128,
+        "y": 38,
+        "z": 80
+      },
+      {
+        "id": "tower",
+        "x": 176,
+        "y": 40,
+        "z": 128
+      },
+      {
+        "id": "camp",
+        "x": 80,
+        "y": 38,
+        "z": 128
+      }
+    ],
+    "discovered": [
+      "mine",
+      "tower",
+      "camp"
+    ],
+    "souvenirs": 3,
+    "xp": 12,
+    "health": 20,
+    "flying": false,
+    "position": {
+      "x": 128.5895157061104,
+      "y": 39.69471103999983,
+      "z": 128.46021678615358
+    },
+    "save": true
+  }
+}

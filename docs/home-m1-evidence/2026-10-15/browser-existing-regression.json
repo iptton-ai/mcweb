@@ -1,0 +1,25 @@
+{
+  "regression": [
+    {
+      "native": "PASS",
+      "cases": 9
+    },
+    {
+      "rafFall": "PASS"
+    },
+    {
+      "keyboardWall": "PASS",
+      "z": 40.300999999999995
+    },
+    {
+      "keyboardAttack": "PASS",
+      "rearHp": 20,
+      "frontHp": 14
+    }
+  ],
+  "lifecycle": {
+    "lifecycle": "PASS",
+    "cases": 6,
+    "indexedDB": true
+  }
+}

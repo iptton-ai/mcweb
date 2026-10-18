@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: 致命伤害显示十颗空心，不把负血量画成超长心条
+ok 1 - 致命伤害显示十颗空心，不把负血量画成超长心条
+  ---
+  duration_ms: 73.51075
+  type: 'test'
+  ...
+# Subtest: 审查 R1：同层脚印跨床与整块，两个扫描顺序都先落到较高顶面
+ok 2 - 审查 R1：同层脚印跨床与整块，两个扫描顺序都先落到较高顶面
+  ---
+  duration_ms: 162.514333
+  type: 'test'
+  ...
+# Subtest: 审查 R2：真实挖红石灯/普通支撑都清双格并只返一床
+ok 3 - 审查 R2：真实挖红石灯/普通支撑都清双格并只返一床
+  ---
+  duration_ms: 143.914
+  type: 'test'
+  ...
+# Subtest: 审查 R9：真实挖床任一半立即撤下开启拉杆、返挂件并让负载断电
+ok 4 - 审查 R9：真实挖床任一半立即撤下开启拉杆、返挂件并让负载断电
+  ---
+  duration_ms: 335.2325
+  type: 'test'
+  ...
+# Subtest: 审查 R9：AI拆支撑与爆炸半床撤挂件，环境清理不送物品进背包
+ok 5 - 审查 R9：AI拆支撑与爆炸半床撤挂件，环境清理不送物品进背包
+  ---
+  duration_ms: 409.848917
+  type: 'test'
+  ...
+# Subtest: 审查 R3：原木地板可睡觉/床重生/出生回退，不创建平台改坏建筑
+ok 6 - 审查 R3：原木地板可睡觉/床重生/出生回退，不创建平台改坏建筑
+  ---
+  duration_ms: 191.419084
+  type: 'test'
+  ...
+# Subtest: 审查 R4：真实制作前后按木板→工作台→放置→补料→床阶段提示
+ok 7 - 审查 R4：真实制作前后按木板→工作台→放置→补料→床阶段提示
+  ---
+  duration_ms: 56.218291
+  type: 'test'
+  ...
+# Subtest: 审查 R5：所有物品共用真实来源，水/草/矿石不虚构可采物品，实验包与领取清单一致
+ok 8 - 审查 R5：所有物品共用真实来源，水/草/矿石不虚构可采物品，实验包与领取清单一致
+  ---
+  duration_ms: 1.073292
+  type: 'test'
+  ...
+# Subtest: 审查 R7：旧空背包创造档首进生存可领一次；旧生存/非空创造不补发
+ok 9 - 审查 R7：旧空背包创造档首进生存可领一次；旧生存/非空创造不补发
+  ---
+  duration_ms: 298.997208
+  type: 'test'
+  ...
+# Subtest: 审查 R8：二至四格高的平台敌人能走出边缘落到床边，应阻止睡觉
+ok 10 - 审查 R8：二至四格高的平台敌人能走出边缘落到床边，应阻止睡觉
+  ---
+  duration_ms: 138.760333
+  type: 'test'
+  ...
+# Subtest: M3 审查：锯切产物离机首帧存读档，原料与四木板到入箱全程守恒
+ok 11 - M3 审查：锯切产物离机首帧存读档，原料与四木板到入箱全程守恒
+  ---
+  duration_ms: 428.248
+  type: 'test'
+  ...
+# Subtest: M3 审查：粉碎轮产物弹出首帧存读档也不会丢失或再次加工
+ok 12 - M3 审查：粉碎轮产物弹出首帧存读档也不会丢失或再次加工
+  ---
+  duration_ms: 212.469959
+  type: 'test'
+  ...
+# Subtest: M3 审查：四向梯子被普通或粘性活塞推压只返一梯，不留下悬空可爬梯
+ok 13 - M3 审查：四向梯子被普通或粘性活塞推压只返一梯，不留下悬空可爬梯
+  ---
+  duration_ms: 810.595333
+  type: 'test'
+  ...
+# Subtest: M3 审查：只有原料的新玩家收到制作指引，远处营地工作台不被说成亲手放置
+ok 14 - M3 审查：只有原料的新玩家收到制作指引，远处营地工作台不被说成亲手放置
+  ---
+  duration_ms: 45.676416
+  type: 'test'
+  ...
+# Subtest: M3 审查：未打开 J 时 HUD 已安装定位样式，首次开面板不重复安装且暂停隐藏
+ok 15 - M3 审查：未打开 J 时 HUD 已安装定位样式，首次开面板不重复安装且暂停隐藏
+  ---
+  duration_ms: 43.328625
+  type: 'test'
+  ...
+# Subtest: M3 审查：作品录像调用助手入口，初始化前安全拒绝、初始化后可见
+ok 16 - M3 审查：作品录像调用助手入口，初始化前安全拒绝、初始化后可见
+  ---
+  duration_ms: 41.218458
+  type: 'test'
+  ...
+# Subtest: M3 v1/v2 eight full-world SHA256 remain byte-identical
+ok 17 - M3 v1/v2 eight full-world SHA256 remain byte-identical
+  ---
+  duration_ms: 1442.154667
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 1: real walking/jumping mine roundtrip, tower climb and camp
+ok 18 - M3 v3 seed 1: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 269.567667
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 42: real walking/jumping mine roundtrip, tower climb and camp
+ok 19 - M3 v3 seed 42: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 258.99325
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 2026: real walking/jumping mine roundtrip, tower climb and camp
+ok 20 - M3 v3 seed 2026: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 223.314417
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 1287621887: real walking/jumping mine roundtrip, tower climb and camp
+ok 21 - M3 v3 seed 1287621887: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 231.1585
+  type: 'test'
+  ...
+# Subtest: M3 ladder placement support removal refunds once and no dangling climb
+ok 22 - M3 ladder placement support removal refunds once and no dangling climb
+  ---
+  duration_ms: 52.599917
+  type: 'test'
+  ...
+# Subtest: M3 closing the assistant also releases hidden recording controls for keyboard play
+ok 23 - M3 closing the assistant also releases hidden recording controls for keyboard play
+  ---
+  duration_ms: 43.9895
+  type: 'test'
+  ...
+# Subtest: M3 armor and facing shield protect explicit combat only, consume wear and break
+ok 24 - M3 armor and facing shield protect explicit combat only, consume wear and break
+  ---
+  duration_ms: 44.951417
+  type: 'test'
+  ...
+# Subtest: M3 shield requires held key and clears on panel; old level-run combat bypasses gear
+ok 25 - M3 shield requires held key and clears on panel; old level-run combat bypasses gear
+  ---
+  duration_ms: 41.192417
+  type: 'test'
+  ...
+# Subtest: M3 four-tier repair costs, no-charge failures, active only and reserve wear preserved
+ok 26 - M3 four-tier repair costs, no-charge failures, active only and reserve wear preserved
+  ---
+  duration_ms: 47.324959
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 30Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 27 - M3 saw→belt→chest 30Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 1071.458333
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 60Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 28 - M3 saw→belt→chest 60Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 939.878625
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 120Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 29 - M3 saw→belt→chest 120Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 940.75825
+  type: 'test'
+  ...
+# Subtest: M3 reversed belt never reports delivery and partial chest capacity preserves remainder
+ok 30 - M3 reversed belt never reports delivery and partial chest capacity preserves remainder
+  ---
+  duration_ms: 153.052917
+  type: 'test'
+  ...
+# Subtest: M3 exploration/markers/equipment/projects survive save, snapshot and temporary editor isolation
+ok 31 - M3 exploration/markers/equipment/projects survive save, snapshot and temporary editor isolation
+  ---
+  duration_ms: 341.876833
+  type: 'test'
+  ...
+# Subtest: M3 farm goal only counts mature harvest and chosen sites; project names kept when switching
+ok 32 - M3 farm goal only counts mature harvest and chosen sites; project names kept when switching
+  ---
+  duration_ms: 53.634791
+  type: 'test'
+  ...
+# Subtest: M3 lift goal requires real powered movement in its project region
+ok 33 - M3 lift goal requires real powered movement in its project region
+  ---
+  duration_ms: 161.695042
+  type: 'test'
+  ...
+# Subtest: M3 persisted exploration fields are bounded and reject out-of-world markers
+ok 34 - M3 persisted exploration fields are bounded and reject out-of-world markers
+  ---
+  duration_ms: 62.12025
+  type: 'test'
+  ...
+# Subtest: M3 装备、梯子及生活工具来源说明不出现未定义攻击数据
+ok 35 - M3 装备、梯子及生活工具来源说明不出现未定义攻击数据
+  ---
+  duration_ms: 1.37975
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7346.668917

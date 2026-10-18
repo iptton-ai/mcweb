@@ -19,6 +19,7 @@ export const state = {
         onGround: false,
         flying: false,
         selectedSlot: 0,
+        quickbar: null, // 九格存物品 ID，selectedSlot 仍是全目录索引
         inventoryOpen: false,
         mouseLocked: false,
         health: MAX_HEALTH,
@@ -31,11 +32,23 @@ export const state = {
         air: MAX_AIR, // 氧气秒数：头部没入水倒数，归零开始溺水扣血
         xp: 0, // 经验分：合成 +1、挖矿按矿石（煤/铁 +2、钻 +7）、杀敌对生物 +3，纯计分不花用
         toolWear: {}, // 工具耐久：toolId -> 已用次数（剩余 = maxDurability - wear，见 mining.js damageHeldTool）
+        toolReserveWear: {},
         sprinting: false, // 疾跑中（Ctrl：速度 ×1.5，饥饿消耗 ×2.7）
         fallStartY: null, // 摔落伤害起点高度（离地/离水时记录，落地结算落差，见 playerPhysics.js）
         inWater: false, // 身体泡在水中（游泳物理与摔落豁免，见 playerPhysics.js）
     },
+    life: null, lifePendingDrops: [], lifePendingAnimals: [], lifePanel: null, survivalRules: 'standard',
     gameMode: GameModes.CREATIVE,
+    generationVersion: 1, // v1 老地形；新世界 v3 添加浅池和探索地标，不重造旧世界
+    homeBed: null, // 床尾坐标和朝向，属于存档槽
+    survivalDifficulty: 'adventure',
+    survivalStarted: true, // 旧世界不重复赠物；新世界首次进入生存时赠安家包
+    firstDayRemaining: 0,
+    starterWorkshopClaimed: false,
+    homeGuideEnabled: true,
+    readingPanels: {}, // 题卡公开阅读态：仅普通生存冻结世界
+    windowUnfocused: false,
+    bedDirtyCells: [], // 双格床被底层写入清理时，待刷新的两格
     worldSeed: 0, // 世界种子：进存档，所有地形噪声混入（同种子同地形，见 js/world.js）
     saveSlot: 0, // 当前游玩的存档槽位（0..SAVE_SLOTS-1，读写均指向该槽，见 js/saveGame.js）
     enemies: [],
@@ -55,6 +68,8 @@ export const state = {
     spawn: { x: WORLD_WIDTH / 2, y: 0, z: WORLD_DEPTH / 2 },
     enemySpawnTimer: 0, // 刷怪游戏刻累积计时器
     viewMode: 0, // 0=第一人称 1=第三人称(背后)
+    handCrankIntent: null, // 运行时操作，不进存档
+    handCrankPower: null,
     camMode: 'player', // 摄像头模式（js/cameraRig.js）：'player'=跟随玩家 / 'free'=自由摄像头 / 'build'=建造跟拍
     inputMode: 'mouse', // 输入方式：'mouse'=鼠标锁定转视角（默认）| 'keyboard'=纯键盘（方向键转视角，不请求指针锁定，见 js/input.js）
     freeCam: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, // 自由摄像头的位姿（进入时从玩家相机初始化）

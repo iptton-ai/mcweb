@@ -298,13 +298,18 @@ test('10. 滑轮电梯：充能卷绳上升、行程端点停、断电放绳、�
 test('11. 平台载客：卷绳平台升一格，站顶玩家跟着 +1（carryRiders 跨模块）', () => {
     freshWorld();
     buildPulleyLift();
+    // P1 承载碰撞检查：原 y=11 平台升至 12 后玩家头顶进入 y=14 滑轮。
+    // 将起始平台下移一格，保留「平台与玩家共同上升一格」的原验收目的。
+    setB(28, 11, 30, BlockTypes.AIR);
+    setB(28, 10, 30, PLATFORM_ITEM_ID);
+    updateKineticNetwork();
     const p = state.player;
-    p.x = 28.5; p.y = 12; p.z = 30.5; // 站在平台顶（平台格 y=11 的顶面=12，水平在平台格内）
+    p.x = 28.5; p.y = 11; p.z = 30.5; // 站在平台格 y=10 的顶面=11
     toggleLeverAt(28, 14, 29); // 卷绳
     pump(0.05, 15);
-    assert.equal(at(28, 12, 30), PLATFORM_ITEM_ID, '平台跨格上升一格');
-    assert.equal(at(28, 11, 30), BlockTypes.AIR, '旧格已清空');
-    assert.equal(p.y, 13, '玩家被 carryRiders（piston.js 导出、kinetic.js 调用）载运 y+1');
+    assert.equal(at(28, 11, 30), PLATFORM_ITEM_ID, '平台跨格上升一格');
+    assert.equal(at(28, 10, 30), BlockTypes.AIR, '旧格已清空');
+    assert.equal(p.y, 12, '玩家被 carryRiders（piston.js 导出、kinetic.js 调用）载运 y+1');
 });
 
 test('12. 活塞推平台脱绑：推离绳路径卷绳不动，推回绳路径重新绑上可动', () => {

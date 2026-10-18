@@ -1,0 +1,86 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-18T16:14:51.354Z",
+  "mode": "32",
+  "nativeRpm": 32,
+  "substepsPerMeasuredFrame": 1,
+  "particleMode": "live",
+  "particleRandomSeed": 20261018,
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded; particle lifecycle included",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "a4a19eba31d67f28e40bdc7cb890266bc26ce660ee96daf4a91b29b683747556",
+    "kinetic": "832eac4d01b9afc90e37ca6527993bd00d532a2a9347cc86d502dbbbeea121ed",
+    "kineticGraph": "8544da144eb5963c5515b0ead1e240773695239d07825cb7376a60dccb04cfc2",
+    "items": "88d659a66ad151f6924fa199e992f83b2bf749da45ba35334d8cb9acef62799b",
+    "piston": "7a809b7350cd26227dee0f35dca6a90c8657af9c78fce14872754bee16a28256",
+    "world": "391f25c9bf856ccf62a4ff7daf8dbaeb43f9d68ce71fd540ae2c2b6cb441b544",
+    "particles": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+  },
+  "scenes": {
+    "production": {
+      "machines": 10,
+      "capacityPerLine": 384,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "activeFrames": 600,
+      "simulatedSeconds": 10,
+      "completions": 800,
+      "outputItems": 3200,
+      "particlePopulation": {
+        "atSampleStart": 508,
+        "atSampleEnd": 513,
+        "lifecycleAdvanced": true
+      },
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.04558409666666662,
+        "p95Ms": 0.09612500000000068,
+        "maxMs": 0.3702920000000063
+      },
+      "completionFrames": {
+        "n": 80,
+        "meanMs": 0.09445312499999617,
+        "p95Ms": 0.1627499999999884,
+        "maxMs": 0.23999999999998067
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 800,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    }
+  },
+  "gates": [
+    {
+      "key": "production/allFrames",
+      "meanBudgetMs": 0.069716006,
+      "p95BudgetMs": 0.136452,
+      "pass": true,
+      "method": "fair-live-v1",
+      "valid": true
+    },
+    {
+      "key": "production/completionFrames",
+      "meanBudgetMs": 0.136883096,
+      "p95BudgetMs": 0.2550516,
+      "pass": true,
+      "method": "fair-live-v1",
+      "valid": true
+    },
+    {
+      "key": "production/actual-speed",
+      "expected": "790..810 logs in 10 s, 10 saws at 32 RPM",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

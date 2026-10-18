@@ -1,3 +1,8 @@
+import {captureLifeState,validateLifeState,restoreLifeState} from './lifeData.js';
+import {restoreLivestock, clearAllEnemies} from './entities.js';
+import {clearItemDrops} from './items.js';
+import {flushLifeDrops} from './homestead.js';
+import { captureHomeState, restoreHomeState } from './homeSurvival.js';
 // ==================== saveGame.js ====================
 // 游戏存档：多槽位（每槽一个独立世界）写入 localStorage。
 // 槽位 key：mcweb.save.v1.slotN（N=0..SAVE_SLOTS-1）；轻量索引 mcweb.save.index
@@ -203,18 +208,24 @@ export function saveGame() {
                 // 死亡状态下不把 0 血写进存档，读出来直接满血可玩
                 health: p.dead ? MAX_HEALTH : p.health,
                 selectedSlot: p.selectedSlot,
+                quickbar: p.quickbar,
                 inventory: p.inventory,
                 hunger: p.hunger ?? MAX_HUNGER, // 生存进度组（2026-09-05）：饱食/氧气/经验/工具耐久
                 air: p.air ?? MAX_AIR,
                 xp: p.xp || 0,
                 toolWear: p.toolWear || {},
+                toolReserveWear: p.toolReserveWear || {},
             },
             gameMode: state.gameMode,
             worldSeed: state.worldSeed | 0,
             viewMode: state.viewMode,
             time: state.time,
             spawn: { ...state.spawn },
+            ...captureHomeState(),
+            life: captureLifeState(),
         };
+        const lifeError=validateLifeState(save.life,state.blocks,save.dims,save.player);
+        if(lifeError){console.error(lifeError);return false;}
         localStorage.setItem(SLOT_KEY_PREFIX + state.saveSlot, JSON.stringify(save));
         // 同步索引（失败不影响存档本身：索引可由扫描重建）
         const idx = readIndex();
@@ -275,10 +286,13 @@ export function loadGame(slot = state.saveSlot) {
             console.error('存档数据长度与尺寸不符，放弃恢复');
             return false;
         }
+        const lifeError=validateLifeState(save.life,u8,dims,save.player||{});
+        if(lifeError){console.error(lifeError);return false;}
         // 旧版存档：齿轮 ID 区间已改作红石组，清为空气（拉杆/红石灯/门不受影响）
         if (save.version === 1) migrateLegacyGears(u8);
 
         // 尺寸与当前一致：直接采用；不一致：迁移（老区域内容原样保留 + 同种子重生成四周）
+        state.generationVersion = [2,3].includes(save.generationVersion) ? save.generationVersion : 1;
         state.worldSeed = save.worldSeed | 0; // 迁移路径重生成依赖种子，先恢复
         if (sw === WORLD_WIDTH && sh === WORLD_HEIGHT && sd === WORLD_DEPTH) {
             state.blocks = u8;
@@ -316,7 +330,11 @@ export function loadGame(slot = state.saveSlot) {
         air: p.air ?? MAX_AIR,
         xp: p.xp || 0,
         toolWear: p.toolWear || {},
+        toolReserveWear: p.toolReserveWear || {},
     });
+    restoreHomeState(save);
+    clearAllEnemies(); clearItemDrops();
+    restoreLifeState(save.life); restoreLivestock(); flushLifeDrops();
     if (save.gameMode) state.gameMode = save.gameMode;
     if (typeof save.time === 'number') state.time = save.time;
     if (save.spawn) state.spawn = save.spawn;
@@ -362,11 +380,15 @@ export function importSlotJson(text, slot = state.saveSlot) {
     const total = dims[0] * dims[1] * dims[2];
     try {
         const bytes = base64ToU8(save.blocks);
+        let decoded=bytes;
         if (save.version >= 3 && save.enc === 'rle') {
-            if (!rleDecode(bytes, total)) return '存档方块压缩数据损坏';
+            decoded=rleDecode(bytes,total);
+            if (!decoded) return '存档方块压缩数据损坏';
         } else if (bytes.length !== total) {
             return '存档方块数据长度与尺寸不符';
         }
+        const lifeError=validateLifeState(save.life,decoded,dims,save.player||{});
+        if(lifeError)return lifeError;
     } catch {
         return '存档方块编码无效';
     }

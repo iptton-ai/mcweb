@@ -1,3 +1,5 @@
+import { AdventureItems, ADVENTURE, LADDER_BASE } from './config.js';
+import { materialSource } from './itemSources.js';
 // ==================== itemInfo.js ====================
 // 物品说明条（屏幕底部对话式）：鼠标悬停 E 面板的物品格/配方行，或指针自由时的手持胶囊，
 // 在屏幕最底下显示「左边 = 物品图标+名称，右边 = 说明行」的信息条（#item-info-strip）。
@@ -6,10 +8,13 @@
 // 显隐由 ui.js 悬停接线与 uiModal.syncOverlays（离开 inventory 态兜底隐藏）驱动。
 
 import {
-    BlockInfo, BlockTypes, ItemTypes, RECIPES,
+    BED_ITEM_ID, BlockInfo, BlockTypes, ItemTypes, RECIPES,
     DOOR_ITEM_ID, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID,
     PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID,
     WATERWHEEL_ITEM_ID, SHAFT_ITEM_ID, COGWHEEL_ITEM_ID, CRUSHER_ITEM_ID, SAW_ITEM_ID,
+    CRANK_ITEM_ID, CRANK_RPM, CRANK_SU_CAPACITY, LARGE_COG_ITEM_ID, REVERSER_ITEM_ID,
+    WHEEL_RPM, WHEEL_SU_CAPACITY, BELT_SPEED, LIFT_SPEED, DEPLOYER_SEC,
+    KINETIC_MIN_RPM, KINETIC_MAX_RPM,
     CLUTCH_ITEM_ID, BELT_ITEM_ID, DEPLOYER_ITEM_ID, PULLEY_ITEM_ID, PLATFORM_ITEM_ID,
     PEN_ID, FLAG_BASE, FLAG_CHECKPOINT, FLAG_GOAL, STARLIGHT_BASE,
 } from './config.js';
@@ -33,6 +38,11 @@ const ORE_GATES = [
 
 // 特殊行为附加行（有状态方块/材料来源等数据表表达不了的信息）
 const SPECIAL_HINTS = {
+    [LADDER_BASE]: ['贴墙侧面放置；Space / W 上爬，Shift 下爬，松手停住', '顶部要留出口，梯子高出平台一格；拆墙后梯子会掉下'],
+    [AdventureItems.ARMOR]: ['按 J → 装备与维修，可以装备、收起和修复'],
+    [AdventureItems.SHIELD]: ['按 J 装备后，面朝攻击来源并按住 O；手持时也可按住右键 / X'],
+    [BED_ITEM_ID]: ['占两格平地 · 白天右键设家，夜晚右键睡到清晨', '床边留两格高通道 · 新世界赠 3 羊毛可做第一张床'],
+    [BlockTypes.WOOL]: ['新世界首次进入生存赠 3 个，配 3 木板在工作台做床；绵羊也会掉落'],
     [BlockTypes.TNT]: ['右键点燃（放置时是惰性的）· 红石信号上升沿也可引爆'],
     [DOOR_ITEM_ID]: ['放置生成两格高的门 · 右键开关整扇'],
     [DUST_ITEM_ID]: ['红石布线：铺在实心方块顶面 · 信号每格 -1 级，可上下爬坡'],
@@ -45,16 +55,19 @@ const SPECIAL_HINTS = {
     [PISTON_ITEM_ID]: ['红石上升沿伸出（最多推 12 格）· 下降沿收回'],
     [STICKY_PISTON_ITEM_ID]: ['同活塞 · 收回时把头前方块拉回一格'],
     [OBSERVER_ITEM_ID]: ['正前方方块变化 → 背面输出 0.2s 脉冲（可做时钟）'],
-    [WATERWHEEL_ITEM_ID]: ['顶面接触水 = 动力源（8 RPM · 每台 +64 应力容量）'],
+    [WATERWHEEL_ITEM_ID]: [`顶面接触水 = 动力源（${WHEEL_RPM} RPM · 每台 +${WHEEL_SU_CAPACITY} 应力容量）`],
+    [CRANK_ITEM_ID]: [`对准后按住右键 / X 供能（${CRANK_RPM} RPM · ${CRANK_SU_CAPACITY} SU），松手即停`, '开面板或移开准星会停止；Shift+右键可贴面建造；闯关中不能操作'],
     [SHAFT_ITEM_ID]: ['沿轴向 1:1 传速 · 点顶面 = 立轴、贴墙 = 横轴'],
-    [COGWHEEL_ITEM_ID]: ['与垂直轴的相邻齿轮啮合 = 换向反转（平行并排不连接）'],
+    [COGWHEEL_ITEM_ID]: ['小齿轮垂直啮合反向等速；与大齿轮啮合会变速，同轴端面串接不变速'],
+    [LARGE_COG_ITEM_ID]: ['大带小 = 2倍速，小带大 = 半速；啮合反向，大小同轴端面串接仍为1倍速', `机器实际速度和负载随转速变化；支持 ${KINETIC_MIN_RPM}～${KINETIC_MAX_RPM} RPM，超范围整网停机`],
+    [REVERSER_ITEM_ID]: ['串进轴中：红石无电直通、有电反转；固定黄色标记是正轴换向端', '可修正双动力源旋向冲突；带箭头与滑轮卷放绳方向不随轴反转'],
     [CRUSHER_ITEM_ID]: ['两枚水平相邻配对 · 右键向轮子上方投料碾碎（石头→圆石→沙砾→沙）'],
     [SAW_ITEM_ID]: ['通电后自动锯切朝向格（原木→木板 ×4）'],
     [CLUTCH_ITEM_ID]: ['串进传动轴的红石开关 · 充能 = 断开传动（水车侧照转，下游停）'],
-    [BELT_ITEM_ID]: ['贴顶面放置 · 通电后以 1.5 格/秒沿箭头运送物品（玩家站上会被带动）'],
-    [DEPLOYER_ITEM_ID]: ['通电后每 0.5 秒把捕获到的方块物品放进朝向格（投料口自动化）'],
+    [BELT_ITEM_ID]: [`贴顶面放置 · ${WHEEL_RPM} RPM 时沿箭头运送 ${BELT_SPEED} 格/秒，速度随转速变化`, '末端同高紧贴箱子可直接入库；满箱等待，产物不过期；玩家站上也被带动'],
+    [DEPLOYER_ITEM_ID]: [`${WHEEL_RPM} RPM 时每 ${DEPLOYER_SEC} 秒投放一次，提速会缩短间隔（投料口自动化）`],
     [PULLEY_ITEM_ID]: ['贴方块底面（朝下垂挂）或顶面（朝上顶举）放置，背面接传动轴', '红石充能 = 卷绳（平台向滑轮收拢）· 断电 = 放绳；无动力 = 平台悬停', '正下方/上方 32 格内放一块电梯平台即自动绑绳（应力 32，平台另计 8）'],
-    [PLATFORM_ITEM_ID]: ['被滑轮绳绑定后随卷放绳升降（1.5 格/秒），站上去的人和物品一起走', '也可当普通建材：实心平台，能放东西、能被活塞推动'],
+    [PLATFORM_ITEM_ID]: [`被滑轮绑定后载人载物升降，${WHEEL_RPM} RPM 时 ${LIFT_SPEED} 格/秒，速度随转速变化`, '乘客前方受阻会停，撤障恢复；可当普通建材，也能被活塞推动'],
     [BlockTypes.WATER]: ['静态水：供水车/造水景 · 只能被方块覆盖，不可挖掘'],
     [BlockTypes.TORCH]: ['光源 · 照到的格子夜间不刷怪'],
     [BlockTypes.COAL_ORE]: ['生成于 y<44 的岩层'],
@@ -102,13 +115,17 @@ export function describeItem(id) {
     const info = BlockInfo[id];
     if (!info) return [];
     if (!usageMap) buildRecipeMaps();
-    const lines = [];
+    const lines = [`来源：${materialSource(id)}`];
 
     // ---- 工具/武器（BlockInfo[id].tool 是对象；方块的 .tool 是类别字符串，二者靠 typeof 区分）----
     const tool = typeof info.tool === 'object' ? info.tool : null;
     if (tool) {
         const cls = TOOL_CLASS[tool.class] || { label: '工具', mines: '', icon: '🔧' };
-        if (tool.class === 'sword') {
+        if (['armor','shield','hoe','shears'].includes(tool.class)) {
+            const uses={armor:`战斗/爆炸减伤 ${ADVENTURE.armorReduction*100}%`,shield:`举盾挡住前方攻击，减伤 ${ADVENTURE.shieldReduction*100}%`,hoe:'右键草地或泥土开垦耕地',shears:'在家畜面板剪羊毛'};
+            lines.push(uses[tool.class]);
+            lines.push(`耐久 ${info.maxDurability} · J 手册可在工作台旁维修`);
+        } else if (tool.class === 'sword') {
             lines.push(`${cls.icon} 武器：攻击 ${tool.damage} 伤害 · 冷却 ${tool.attackCd}s（徒手 1 伤 / 0.25s）`);
             lines.push(`耐久 ${info.maxDurability} · 挖掘不加速，砍怪专用`);
         } else {
@@ -198,5 +215,8 @@ export function showItemInfo(id) {
 }
 
 export function hideItemInfo() {
+    // 背包底部为说明预留独立区域，保留最后一件的说明，便于移过去滚动阅读。
+    // 关闭背包时 uiModal 先撤 open，再调用这里，说明条仍会正常收起。
+    if (document.getElementById('inventory-panel')?.classList.contains('open')) return;
     document.getElementById('item-info-strip')?.classList.remove('show');
 }

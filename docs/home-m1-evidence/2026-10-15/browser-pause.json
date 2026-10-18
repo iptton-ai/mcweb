@@ -1,0 +1,16 @@
+{
+  "kind": "browser-wallclock-pause",
+  "elapsedMs": 28696.800000071526,
+  "passed": true,
+  "after": {
+    "time": 780,
+    "hunger": 13,
+    "health": 20,
+    "xyz": [
+      122.5,
+      64.001,
+      122.5
+    ],
+    "firstDayRemaining": 123
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "warmupCycles": 3,
+  "measuredCycles": 20,
+  "samples": [
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    },
+    {
+      "geometry": 190,
+      "textures": 2,
+      "scene": 11,
+      "props": 0,
+      "drops": 0,
+      "components": 0,
+      "progress": 0
+    }
+  ],
+  "stable": true,
+  "scope": "real WebGL render + all variants + item drops + save/load + world reset"
+}

@@ -1,3 +1,7 @@
+import { LifeBlocks } from './config.js';
+import { insertChestStack } from './homestead.js';
+import { adventureData } from './adventureData.js';
+import { addInventoryStack } from './inventoryStacks.js';
 // ==================== items.js ====================
 // 物品实体：机器产出的真掉落物（粉碎轮/机械锯的产出走这里，见 js/kinetic.js），
 // 区别于玩家挖掘的「直接进背包」——有简单重力、落地即停、玩家靠近磁吸、
@@ -18,7 +22,7 @@ import { isSolid } from './chunk.js';
 import { atlasSize, atlasTexture, blockUVs, getUVForFace } from './textures.js';
 import { playPickupSound } from './audio.js';
 import { updateHotbar } from './ui.js';
-import { isBeltRunningAt } from './kinetic.js';
+import { isBeltRunningAt, beltSpeedAt } from './kinetic.js';
 
 // 几何/材质模块级共享（掉落物几十个上下，逐个 dispose 不值得；移除实体只 scene.remove）
 const dropGeoCache = new Map(); // 方块 itemId -> 0.25 立方几何（六面图集 UV）
@@ -91,6 +95,7 @@ export function spawnItemDrop(x, y, z, itemId, count = 1, opts = {}) {
         vz: opts.vz || 0,
         pickupDelay: opts.pickupDelay || 0,
         toolWear: opts.toolWear || 0,
+        lifePersistent: opts.lifePersistent === true,
     });
 }
 
@@ -101,6 +106,7 @@ export function clearItemDrops() {
 }
 
 function removeDrop(i) {
+    if (beltBuckets) beltBuckets.get(beltBucketKey(state.itemDrops[i]))?.delete(state.itemDrops[i]);
     scene.remove(state.itemDrops[i].mesh);
     state.itemDrops.splice(i, 1);
 }
@@ -111,23 +117,70 @@ function removeDrop(i) {
 // 扫掠捕获：本帧与上一帧位置之间的 feet 格逐格比较，防低帧率远坠整格跳过带格漏捕
 // （G2 裁决 R1-08）。命中 → 豁免重力与磁吸（寿命照走、1.5 格拾取保留——带通向玩家
 // = 免费的自动收集线，差异 13）；沿带向匀速平移；前方 ~0.35 格内有其它物品实体则
-// 排队暂停（简版 O(N²)，G2 裁决 R3-15）；前方实心墙抵墙停留；跨格自动接力——
+// 排队暂停（少量全扫、多量用格桶选候选）；前方实心墙抵墙停留；跨格自动接力——
 // 新 feet 不是 running 带则恢复普通物理并保留残余带向速度（自然弹出/落地）。
 // 断电（isBeltRunningAt false）判定不命中 → 普通物理，物品原地停住，寿命内复电再带走。
 const BELT_QUEUE_DIST = 0.35; // 排队间距（前方有物品实体时保持的最小距离）
 const BELT_SWEEP_MAX = 8; // 扫掠格数上限（防极端帧率下大区间扫列）
 
+// 多物品只检查小步扫掠附近的格桶；仍使用实体的实时坐标判断队距。
+// 帧内每次移动/删除都同步索引，避免拐弯跨格后漏看已处理的队首。
+let beltBuckets = null;
+const beltBucketKey = d => Math.floor(d.x) * 65536 + Math.floor(d.z);
+function syncBeltBucket(d, oldKey) {
+    if (!beltBuckets) return;
+    const key = beltBucketKey(d);
+    if (key === oldKey) return;
+    beltBuckets.get(oldKey)?.delete(d);
+    let bucket = beltBuckets.get(key);
+    if (!bucket) beltBuckets.set(key, bucket = new Set());
+    bucket.add(d);
+}
+function limitQueueFraction(d, o, dx, dz, fraction) {
+    if (o===d || o.count<=0 || Math.abs(o.y-d.y)>0.3) return fraction;
+    const rx=d.x-o.x, rz=d.z-o.z, toward=rx*dx+rz*dz;
+    if (toward>=0) return fraction;
+    const a=dx*dx+dz*dz, c=rx*rx+rz*rz-BELT_QUEUE_DIST*BELT_QUEUE_DIST;
+    const disc=toward*toward-a*c;
+    if (disc<=0 || a<1e-18) return fraction;
+    return Math.min(fraction,Math.max(0,(-toward-Math.sqrt(disc))/a));
+}
+function queueFraction(d, dx, dz) {
+    let fraction=1;
+    if (!beltBuckets) {
+        for (const o of state.itemDrops) {
+            fraction=limitQueueFraction(d,o,dx,dz,fraction);
+            if (fraction<1e-9) break;
+        }
+        return fraction;
+    }
+    const ex=d.x+dx, ez=d.z+dz;
+    const x0=Math.floor(Math.min(d.x,ex)-BELT_QUEUE_DIST), x1=Math.floor(Math.max(d.x,ex)+BELT_QUEUE_DIST);
+    const z0=Math.floor(Math.min(d.z,ez)-BELT_QUEUE_DIST), z1=Math.floor(Math.max(d.z,ez)+BELT_QUEUE_DIST);
+    for (let x=x0; x<=x1; x++) for (let z=z0; z<=z1; z++) {
+        const bucket=beltBuckets.get(x*65536+z);
+        if (!bucket) continue;
+        for (const o of bucket) {
+            fraction=limitQueueFraction(d,o,dx,dz,fraction);
+            if (fraction<1e-9) return fraction;
+        }
+    }
+    return fraction;
+}
+
 function beltCarried(d, prevY, dt) {
     const colX = Math.floor(d.x), colZ = Math.floor(d.z);
     // 扫掠捕获：从上一帧位置到本帧位置的 feet 区间自上而下找第一格 running 带
-    let beltY = -1, beltIdFound = 0;
+    let beltY = -1, beltIdFound = 0, beltSpeedFound = 0;
     const yTop = Math.floor(Math.max(prevY, d.y) - BELT_RIDE_Y);
     const yBot = Math.max(Math.floor(Math.min(prevY, d.y) - BELT_RIDE_Y), yTop - BELT_SWEEP_MAX);
     for (let y = yTop; y >= yBot; y--) {
         const b = getBlock(colX, y, colZ);
-        if (isBeltId(b) && isBeltRunningAt(colX, y, colZ)) {
+        const speed=isBeltId(b) ? beltSpeedAt(colX,y,colZ) : 0;
+        if (speed) {
             beltY = y;
             beltIdFound = b;
+            beltSpeedFound = speed;
             break;
         }
     }
@@ -150,34 +203,43 @@ function beltCarried(d, prevY, dt) {
         return false;
     }
     d.carried = true;
-    const [ux, , uz] = BELT_DIRS[beltDir(beltIdFound)];
-    d.beltVX = ux * BELT_SPEED;
-    d.beltVZ = uz * BELT_SPEED;
-    // 间距排队简版：前方约 0.35 格内有其它物品实体则本帧暂停（不叠成一点）
-    let queued = false;
-    for (const o of state.itemDrops) {
-        if (o === d) continue;
-        const ox = o.x - d.x, oz = o.z - d.z, oy = o.y - d.y;
-        if (ox * ux + oz * uz <= 0) continue; // 只看带向前方
-        if (ox * ox + oy * oy + oz * oz < BELT_QUEUE_DIST * BELT_QUEUE_DIST) {
-            queued = true;
-            break;
+    d.lifePersistent = true;
+    let remaining=Math.min(dt,0.25);
+    for (let step=0; step<8 && remaining>1e-9 && d.count>0; step++) {
+        const bx=Math.floor(d.x), bz=Math.floor(d.z);
+        const id=step===0 ? beltIdFound : getBlock(bx,beltY,bz);
+        const speed=step===0 ? beltSpeedFound : beltSpeedAt(bx,beltY,bz);
+        if (!isBeltId(id) || !speed) break;
+        let [ux,,uz]=BELT_DIRS[beltDir(id)];
+        let toTurn=Infinity;
+        // 先沿来向走到转角中心再转弯，不能在格边提前折线并横向挤过队首。
+        if (ux && d.beltVZ && (bz+0.5-d.z)*d.beltVZ>1e-9) {
+            ux=0;uz=Math.sign(d.beltVZ);toTurn=Math.abs(bz+0.5-d.z);
+        } else if (uz && d.beltVX && (bx+0.5-d.x)*d.beltVX>1e-9) {
+            ux=Math.sign(d.beltVX);uz=0;toTurn=Math.abs(bx+0.5-d.x);
         }
-    }
-    if (!queued) {
-        // 抵墙停留：前方格实心则暂停移动不穿越（撤墙后自动续走；寿命照扣防无限堆积）
-        const nx = d.x + d.beltVX * dt, nz = d.z + d.beltVZ * dt;
-        if (!isSolid(getBlock(Math.floor(nx), beltY, Math.floor(nz)))) {
-            d.x = nx;
-            d.z = nz;
+        const stepTime=Math.min(remaining,0.2/speed,toTurn/speed);
+        const distance=speed*stepTime;
+        d.beltVX=ux*speed; d.beltVZ=uz*speed;
+        const t=Math.min(1,10*stepTime);
+        const dx=ux*distance+(ux?0:(bx+0.5-d.x)*t);
+        const dz=uz*distance+(uz?0:(bz+0.5-d.z)*t);
+        // 连横向回中一起扫掠，拐角队列也不能靠回中挤入另一物品。
+        const fraction=queueFraction(d,dx,dz);
+        const nx=d.x+dx*fraction, nz=d.z+dz*fraction;
+        const tx=Math.floor(nx), tz=Math.floor(nz), front=getBlock(tx,beltY,tz);
+        if (front===LifeBlocks.CHEST && !state.levelRun && !state.levelEdit) {
+            const result=insertChestStack(tx,beltY,tz,{id:d.itemId,count:d.count,wear:d.toolWear||0});
+            if (result.accepted) {
+                d.count-=result.accepted;
+                adventureData().delivered=Math.min(1e9,adventureData().delivered+result.accepted);
+            }
         }
+        if (!isSolid(front)) { d.x=nx; d.z=nz; }
+        d.y+=(beltY+BELT_RIDE_Y-d.y)*t;
+        remaining-=stepTime;
+        if (isSolid(front) || fraction<1e-9) break;
     }
-    // 横向与高度向骑行面收敛：垂直于带向的水平轴 lerp 回格中心（防斜着飘出带缘），
-    // 高度 lerp 到 带格底 + BELT_RIDE_Y（从上方落入带格时向下收敛到骑行面）
-    const t = Math.min(1, 10 * dt);
-    if (ux !== 0) d.z += (colZ + 0.5 - d.z) * t; // 带沿 X：z 收敛
-    else d.x += (colX + 0.5 - d.x) * t; // 带沿 Z：x 收敛
-    d.y += (beltY + BELT_RIDE_Y - d.y) * t;
     d.vx = 0;
     d.vz = 0;
     d.vy = 0;
@@ -189,10 +251,26 @@ function beltCarried(d, prevY, dt) {
 // carried 判定插在拾取之后、磁吸/重力之前（传送带优先接管，见上方 beltCarried）
 export function updateItemDrops(dt) {
     const p = state.player;
+    beltBuckets = state.itemDrops.length >= 24 ? new Map() : null;
+    if (beltBuckets) for (const d of state.itemDrops) syncBeltBucket(d, null);
     for (let i = state.itemDrops.length - 1; i >= 0; i--) {
         const d = state.itemDrops[i];
+        const oldBucket = beltBuckets ? beltBucketKey(d) : null;
+        const prevY = d.py ?? d.y;
+        d.py = d.y;
+        // 带先接管物品再判断拾取和磁吸，末端箱子也在这里先接收。
+        const carried = beltCarried(d, prevY, dt);
+        syncBeltBucket(d,oldBucket);
+        const onBelt = carried || isBeltId(getBlock(Math.floor(d.x),Math.floor(d.y-BELT_RIDE_Y),Math.floor(d.z)));
+        if(onBelt) d.lifePersistent=true;
+        if(d.count<=0) { removeDrop(i); continue; }
         d.age += dt;
-        if (d.age > ITEM_LIFETIME_SEC) {
+        if(carried) {
+            d.mesh.position.set(d.x,d.y+Math.sin(d.age*2.2)*0.04,d.z);
+            d.mesh.rotation.y+=dt*2;
+            continue;
+        }
+        if (d.age > ITEM_LIFETIME_SEC && !d.lifePersistent) {
             removeDrop(i);
             continue;
         }
@@ -200,27 +278,17 @@ export function updateItemDrops(dt) {
         const dist = Math.hypot(dx, dy, dz);
         const thrown = d.pickupDelay > 0; // 玩家丢弃的实体：冷却内不可拾取，且永不磁吸（捡回需走近 1.5 格）
         if (!p.dead && d.age >= d.pickupDelay && dist < ITEM_PICKUP_DIST) {
-            if (!isCreative()) {
-                // 计数背包仅记录当前一把工具磨损；合并时保留较大磨损，避免拾取修复工具。
-                if (BlockInfo[d.itemId]?.maxDurability) {
-                    p.toolWear[d.itemId] = Math.max(p.inventory[d.itemId] ? (p.toolWear[d.itemId] || 0) : 0, d.toolWear || 0);
-                }
-                state.player.inventory[d.itemId] = (state.player.inventory[d.itemId] || 0) + d.count;
+            if (!isCreative() || d.lifePersistent) {
+                const accepted=addInventoryStack({id:d.itemId,count:d.count,wear:d.toolWear||0});
+                d.count-=accepted;
+                if(d.count>0) continue;
                 updateHotbar();
             }
             playPickupSound();
             removeDrop(i);
             continue;
         }
-        // carried 判定（扫掠区间 = 上一帧起点到本帧起点，普通物理的位移发生在其后）
-        const prevY = d.py ?? d.y;
-        d.py = d.y;
-        if (beltCarried(d, prevY, dt)) {
-            d.mesh.position.set(d.x, d.y + Math.sin(d.age * 2.2) * 0.04, d.z);
-            d.mesh.rotation.y += dt * 2;
-            continue;
-        }
-        if (!p.dead && !thrown && dist < ITEM_MAGNET_DIST) {
+        if (!p.dead && !thrown && !onBelt && dist < ITEM_MAGNET_DIST) {
             // 机器产出磁吸：不用走过去捡（手感优先）
             const step = Math.min(6 * dt, dist);
             d.x += dx / dist * step;
@@ -260,5 +328,7 @@ export function updateItemDrops(dt) {
         }
         d.mesh.position.set(d.x, d.y + Math.sin(d.age * 2.2) * 0.04, d.z); // 落地后轻微浮动
         d.mesh.rotation.y += dt * 2;
+        syncBeltBucket(d,oldBucket);
     }
+    beltBuckets = null; // 索引只活一帧，切世界不持有旧实体。
 }

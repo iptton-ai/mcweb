@@ -1,0 +1,210 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-18T16:14:42.342Z",
+  "mode": "8",
+  "nativeRpm": 8,
+  "substepsPerMeasuredFrame": 1,
+  "particleMode": "historical",
+  "particleRandomSeed": null,
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded; particle lifecycle not advanced (historical)",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "a4a19eba31d67f28e40bdc7cb890266bc26ce660ee96daf4a91b29b683747556",
+    "kinetic": "832eac4d01b9afc90e37ca6527993bd00d532a2a9347cc86d502dbbbeea121ed",
+    "kineticGraph": "8544da144eb5963c5515b0ead1e240773695239d07825cb7376a60dccb04cfc2",
+    "items": "88d659a66ad151f6924fa199e992f83b2bf749da45ba35334d8cb9acef62799b",
+    "piston": "7a809b7350cd26227dee0f35dca6a90c8657af9c78fce14872754bee16a28256",
+    "world": "391f25c9bf856ccf62a4ff7daf8dbaeb43f9d68ce71fd540ae2c2b6cb441b544",
+    "particles": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+  },
+  "scenes": {
+    "shafts": {
+      "components": 101,
+      "rotatingProps": 100,
+      "network": {
+        "n": 50,
+        "meanMs": 10.060419179999998,
+        "p95Ms": 11.128791999999976,
+        "maxMs": 11.312999999999988
+      },
+      "tick": {
+        "n": 1000,
+        "meanMs": 0.0014261370499999973,
+        "p95Ms": 0.0015583300000002963,
+        "maxMs": 0.00192957999999976
+      }
+    },
+    "production": {
+      "machines": 10,
+      "capacityPerLine": 384,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "activeFrames": 600,
+      "simulatedSeconds": 10,
+      "completions": 200,
+      "outputItems": 800,
+      "particlePopulation": {
+        "atSampleStart": 840,
+        "atSampleEnd": 2000,
+        "lifecycleAdvanced": false
+      },
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.008225475000004584,
+        "p95Ms": 0.0392500000000382,
+        "maxMs": 0.36599999999998545
+      },
+      "completionFrames": {
+        "n": 20,
+        "meanMs": 0.1131604499999753,
+        "p95Ms": 0.1584579999998823,
+        "maxMs": 0.36599999999998545
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 200,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    },
+    "lifts": {
+      "lifts": 16,
+      "passengers": 16,
+      "stroke": 16,
+      "warmFrames": 120,
+      "sampleFrames": 2400,
+      "simulatedSeconds": 40,
+      "crossedCells": 960,
+      "passengerCells": 960,
+      "directionChanges": 48,
+      "allFrames": {
+        "n": 2400,
+        "meanMs": 0.00544495374999741,
+        "p95Ms": 0.005082999999785898,
+        "maxMs": 0.58137499999998
+      },
+      "movementFrames": {
+        "n": 60,
+        "meanMs": 0.11470344999998663,
+        "p95Ms": 0.16929099999993014,
+        "maxMs": 0.58137499999998
+      },
+      "msPerCrossing": 0.007168965624999165,
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 0,
+        "pulleySteps": 960,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    },
+    "belts": {
+      "lines": 4,
+      "entities": 64,
+      "beltCells": 84,
+      "warmFrames": 120,
+      "sampleFrames": 1200,
+      "simulatedSeconds": 20,
+      "distance": 1767.2159998977236,
+      "turns": 76,
+      "delivered": 64,
+      "replenished": 64,
+      "fullQueueStoppedEntityFrames": 2735,
+      "allFrames": {
+        "n": 1200,
+        "meanMs": 0.02816731583333213,
+        "p95Ms": 0.057583000000022366,
+        "maxMs": 0.3301249999999527
+      },
+      "transportFrames": {
+        "n": 1200,
+        "meanMs": 0.02816731583333213,
+        "p95Ms": 0.057583000000022366,
+        "maxMs": 0.3301249999999527
+      },
+      "fullChestFrames": {
+        "n": 300,
+        "meanMs": 0.031010573333329225,
+        "p95Ms": 0.06158399999981157,
+        "maxMs": 0.3301249999999527
+      },
+      "deliveryFrames": {
+        "n": 18,
+        "meanMs": 0.050703722222200064,
+        "p95Ms": 0.2385420000000522,
+        "maxMs": 0.2385420000000522
+      },
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 0,
+        "pulleySteps": 0,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    }
+  },
+  "gates": [
+    {
+      "key": "shafts/network",
+      "meanBudgetMs": 12.174,
+      "p95BudgetMs": 13.252,
+      "pass": true
+    },
+    {
+      "key": "shafts/tick",
+      "meanBudgetMs": 0.001657,
+      "p95BudgetMs": 0.001872,
+      "pass": true
+    },
+    {
+      "key": "production/allFrames",
+      "meanBudgetMs": 8.768625862,
+      "p95BudgetMs": 0.02805,
+      "pass": false,
+      "method": "historical-no-lifecycle",
+      "valid": false
+    },
+    {
+      "key": "production/completionFrames",
+      "meanBudgetMs": 262.94376246,
+      "p95BudgetMs": 268.7495004,
+      "pass": true,
+      "method": "historical-no-lifecycle",
+      "valid": false
+    },
+    {
+      "key": "lifts/allFrames",
+      "meanBudgetMs": 0.005472955,
+      "p95BudgetMs": 0.0042492,
+      "pass": false
+    },
+    {
+      "key": "lifts/movementFrames",
+      "meanBudgetMs": 0.1040858,
+      "p95BudgetMs": 0.2549508,
+      "pass": false
+    },
+    {
+      "key": "belts/transportFrames",
+      "meanBudgetMs": 0.044045301,
+      "p95BudgetMs": 0.27135,
+      "pass": true
+    },
+    {
+      "key": "belts/fullChestFrames",
+      "meanBudgetMs": 0.071707996,
+      "p95BudgetMs": 0.2985504,
+      "pass": true
+    }
+  ],
+  "pass": false
+}

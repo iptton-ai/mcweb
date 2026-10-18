@@ -1,0 +1,430 @@
+{
+  "schema": "mcweb.physics.perf-evidence.v1",
+  "records": [
+    {
+      "file": "performance-baseline8.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-baseline8.json",
+      "sha256": "a35cc737f96f573dace5819a9ca0dfe9d56744b61020471a1fb814f71d8b988a",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:47:41.565Z"
+    },
+    {
+      "file": "performance-final-32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-32-1.json",
+      "sha256": "729b626efc42605d467696a31ff23bbca388ecdf4175c58763f3c37a40abc6c9",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:53.219Z"
+    },
+    {
+      "file": "performance-final-32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-32-2.json",
+      "sha256": "2f7ec188a7420fbbb987715fe049152ebff5617fc170f898f51dcef84831eb12",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:56.044Z"
+    },
+    {
+      "file": "performance-final-32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-32-3.json",
+      "sha256": "49d36c995acb7b85c97e8db25976aa6132d78806611d21f72228d72fd7ca920f",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:59.826Z"
+    },
+    {
+      "file": "performance-final-8-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-8-1.json",
+      "sha256": "5d9a96680c32645b687e53132fedcaad0615b99972884299c5ed12768d61c1e6",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:51.777Z"
+    },
+    {
+      "file": "performance-final-8-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-8-2.json",
+      "sha256": "98adf929e99a807b24c6c316cd537c620db24dafdd8d891acea4904d1a408b7f",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:54.597Z"
+    },
+    {
+      "file": "performance-final-8-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-final-8-3.json",
+      "sha256": "01b74955d279ec73f205773366b310cd7595f3d239c3b2b56c7a5e7e1e72308d",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:50:57.625Z"
+    },
+    {
+      "file": "performance-lift-final-32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-32-1.json",
+      "sha256": "781517bb55ea86e2488bf4338eeab0a7b5f2d09f4e9183a003c57e8bd7ac8e9b",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:01.112Z"
+    },
+    {
+      "file": "performance-lift-final-32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-32-2.json",
+      "sha256": "c4face42059795d139c28cc178521612dc8d051736f6dc39793492803150c0fb",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:01.578Z"
+    },
+    {
+      "file": "performance-lift-final-32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-32-3.json",
+      "sha256": "46d53ebc0f68c46081485a3a7efbeecb7c59e7d6e332f664479c7430a70ff7e7",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:02.035Z"
+    },
+    {
+      "file": "performance-lift-final-8-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-8-1.json",
+      "sha256": "51ab7277fd7fc478cda9e022acbe082bdf4cc340e7c2a2fd6725f1a8a6c00d8f",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:00.876Z"
+    },
+    {
+      "file": "performance-lift-final-8-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-8-2.json",
+      "sha256": "8c903def5bce18af0d4c537d925eae20df927edef0862998e871ea02d21f1f53",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:01.343Z"
+    },
+    {
+      "file": "performance-lift-final-8-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-lift-final-8-3.json",
+      "sha256": "d292d0d0ed1b8d2463b6beb166da0cc56a43b93a83437b6faec03841822d5870",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:17:01.803Z"
+    },
+    {
+      "file": "performance-live-reference-baseline8-8-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-baseline8-8-1.json",
+      "sha256": "923ceeb68652c8655cce3e3e91f5f58e63eeb72637e5676b944e8ac85a16f516",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:27.815Z"
+    },
+    {
+      "file": "performance-live-reference-baseline8-8-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-baseline8-8-2.json",
+      "sha256": "256e52b98ae9e9f98a2d651393908f94b3675102efbeb806e65304ffe0d5ddf4",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:32.665Z"
+    },
+    {
+      "file": "performance-live-reference-baseline8-8-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-baseline8-8-3.json",
+      "sha256": "4e90ddea29702b8e2007c79e6d6f65fbd7f001c71ced1174a2f77ec5fc6dd53b",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:37.525Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-32-1.json",
+      "sha256": "e2abcd95901976ab7a1103fc759a12dee0724d96f0e9038d2e191bdae32b0228",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:32.436Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-32-2.json",
+      "sha256": "27b781f9138e2e5cfed4d095701036ac2646278fc02a5b5162f867f1e0cc727e",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:37.295Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-32-3.json",
+      "sha256": "6b4c6d6c463c86844fa7be36948ebcff5d5b1fa5fb5f535a2e453118d946cd87",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:42.115Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-proxy32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-proxy32-1.json",
+      "sha256": "4d4414428f1f5f9907b5a19e2e48ead567be72fc3c255095f640b0c84e49a33a",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:32.196Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-proxy32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-proxy32-2.json",
+      "sha256": "86ebc1e91b2af57100d79637edab7ac8d2fc042073a90df4676437b5a1eaed54",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:37.047Z"
+    },
+    {
+      "file": "performance-live-reference-prototype-proxy32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-reference-prototype-proxy32-3.json",
+      "sha256": "480808930d42a7953de72629bf0dd01ffbcb7e8008fa648cd446393e01d6835f",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:13:41.869Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-baseline8-8-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-baseline8-8-1.json",
+      "sha256": "ebe18102f2f30a6814ba9abd4c4cfadba50118e376370dc79e26cfde7e908f7f",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:37.118Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-baseline8-8-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-baseline8-8-2.json",
+      "sha256": "524a1cd76e6d0b4f861c0463ff1b19bd761a85187a8e29761232b6cc25837969",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:41.930Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-baseline8-8-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-baseline8-8-3.json",
+      "sha256": "8569bd2ae76b761a1a842bc3ff68617da986c32b4081e30660fa8564c2ba5e48",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:46.806Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-32-1.json",
+      "sha256": "d6ea6125763bd446fb45a6cb7ddafd1a96cf3c5b5376650eb77678a22246a8b2",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:41.697Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-32-2.json",
+      "sha256": "0515aad2960c14be5da130a668e190cafb940cee07eb8e868a31f37789f596a3",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:46.578Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-32-3.json",
+      "sha256": "1e96cef85bd2aa179cdf35b9514a965d03af0e969a4eb1f463f0fdb867818b95",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:51.471Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-proxy32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-proxy32-1.json",
+      "sha256": "890cbf77296cc310c239b459feaac42f998764e51b047d931531415ded8a04af",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:41.447Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-proxy32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-proxy32-2.json",
+      "sha256": "b2e01f822d4a1814c52b5ffaee5359e1fab7cd96d64f5d9453d94ddcbbd07fb7",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:46.331Z"
+    },
+    {
+      "file": "performance-live-unseeded-reference-prototype-proxy32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-live-unseeded-reference-prototype-proxy32-3.json",
+      "sha256": "afb19711ec4b5b9b150c59dac72e66dda08c40f08e7bd44f11c177b32af292f6",
+      "mode": "proxy32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:12:51.216Z"
+    },
+    {
+      "file": "performance-native32.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-native32.json",
+      "sha256": "d66733ea3c10049d2df765f9e8283b5704547b8657db5e823bdb7c34db93b512",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:49:49.155Z"
+    },
+    {
+      "file": "performance-prototype-8.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-prototype-8.json",
+      "sha256": "fe3b3a46ded45b899e78d69ae69c4b74217975b714523c7f065e62bd7d4234a1",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:48:19.512Z"
+    },
+    {
+      "file": "performance-prototype-proxy32.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-prototype-proxy32.json",
+      "sha256": "f69ec428315e81bb83e213c0b3ea749c4c8f875df3fce5c3f58be5c5ff9be68f",
+      "mode": "proxy32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:48:21.036Z"
+    },
+    {
+      "file": "performance-proxy32.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-proxy32.json",
+      "sha256": "f0f0a5931e79781b82bf0d12e76f9ff12f289163bab57242be7304251c83d72a",
+      "mode": "proxy32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T15:47:02.186Z"
+    },
+    {
+      "file": "performance-round2-32-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-32-1.json",
+      "sha256": "69a27cbbff6fdf78242c1c2c13a9cc84cb4413b6c55b1a5357fad28bcc76091d",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:31.261Z"
+    },
+    {
+      "file": "performance-round2-32-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-32-2.json",
+      "sha256": "ff1c7e7561cd6ccf18253bb0966b6ababd14e3e70a1e2912663ef8a2c2de847c",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:33.989Z"
+    },
+    {
+      "file": "performance-round2-32-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-32-3.json",
+      "sha256": "318d879b678f00ef98f2d644534649729c552176b64883bd489379374e369c0a",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:36.669Z"
+    },
+    {
+      "file": "performance-round2-8-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-8-1.json",
+      "sha256": "6ff2273c7954034735eff28208108dc042ba1603e9bd9701f80f2b161e32605e",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:29.909Z"
+    },
+    {
+      "file": "performance-round2-8-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-8-2.json",
+      "sha256": "d45fe73fd4831847de85188526fbabc00bfe3aecf146e071e9d348ca02927c29",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:32.588Z"
+    },
+    {
+      "file": "performance-round2-8-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round2-8-3.json",
+      "sha256": "4fbf9e22550f63d7c9e878127d6da44b5bffb26c419d7130ba6d59f3081200c1",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:00:35.321Z"
+    },
+    {
+      "file": "performance-round3-32-historical-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-historical-1.json",
+      "sha256": "f0553aea090df8ff072d3fe244086ee446e51e058a516eefed10a9f53c46d9d5",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:43.681Z"
+    },
+    {
+      "file": "performance-round3-32-historical-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-historical-2.json",
+      "sha256": "a50b07724643cf37236bc83c0a81c016f8be8e9391dc7055032d2665d0460651",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:46.768Z"
+    },
+    {
+      "file": "performance-round3-32-historical-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-historical-3.json",
+      "sha256": "da59c3bc3be9a5dd726a63f3fae23e8c17b99e2af5b7babcdf049eeb65e8eaf5",
+      "mode": "32",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:49.834Z"
+    },
+    {
+      "file": "performance-round3-32-live-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-live-1.json",
+      "sha256": "4f87dcc14c9d27f95098e1e7d2be8b813a79cfa745c0be9ecb95043b2a01950b",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:45.196Z"
+    },
+    {
+      "file": "performance-round3-32-live-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-live-2.json",
+      "sha256": "5be655812ea215ce0308978cd0d68020b18d067c6a8fbcc9bb0ac4efe95e08e0",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:48.294Z"
+    },
+    {
+      "file": "performance-round3-32-live-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-32-live-3.json",
+      "sha256": "fb255806622833d80187c50b2aa2b084f85079f66f5af37c62fb863af78a9f8f",
+      "mode": "32",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:51.354Z"
+    },
+    {
+      "file": "performance-round3-8-historical-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-historical-1.json",
+      "sha256": "c56ff1ac5018e47d6dfc1ba20dc0492550669793c92bb97f864d0f195fc6e4ff",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:42.342Z"
+    },
+    {
+      "file": "performance-round3-8-historical-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-historical-2.json",
+      "sha256": "febf4d0ba45b828a33ab6b28500bb5e3d8cd5f146962ec82c4cb55e4a56ce71f",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:45.423Z"
+    },
+    {
+      "file": "performance-round3-8-historical-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-historical-3.json",
+      "sha256": "0c64f37c1ea65054938d0d3b93556e40f9f3688de2f0fe31c3ffb0b02190e326",
+      "mode": "8",
+      "particleMode": "historical",
+      "timestamp": "2026-10-18T16:14:48.518Z"
+    },
+    {
+      "file": "performance-round3-8-live-1.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-live-1.json",
+      "sha256": "510fe3a468f65ba6061495ff71e9800e0910d187a50d588782edf344ee72e07c",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:44.985Z"
+    },
+    {
+      "file": "performance-round3-8-live-2.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-live-2.json",
+      "sha256": "8b203a1ed9954403a3a85bba5247c182d6e4a4d1ca88a3a9ac16a8860f04e415",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:48.078Z"
+    },
+    {
+      "file": "performance-round3-8-live-3.json",
+      "sourceTemporaryFile": "/tmp/mcweb-p1-perf-round3-8-live-3.json",
+      "sha256": "0aa8b53f35ecd32ee623bb6813e4f24ccdce0d9aa9fb33558f4eb48bfff605d2",
+      "mode": "8",
+      "particleMode": "live",
+      "timestamp": "2026-10-18T16:14:51.144Z"
+    }
+  ],
+  "budgets": "performance-frozen-budgets.json"
+}

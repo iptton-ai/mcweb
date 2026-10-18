@@ -5,7 +5,7 @@
 
 import { BlockTypes, DOOR_ITEM_ID, DOOR_THICKNESS, PLAYER_HEIGHT, PLAYER_WIDTH, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, doorFacing, doorHalf, doorId, doorOpen, isDoorId } from './config.js';
 import { isCreative, state } from './state.js';
-import { getBlock, getBlockIndex, setBlockSafe } from './world.js';
+import { getBlock, setBlockSafe } from './world.js';
 import { refreshPropAt } from './chunk.js';
 import { spawnBreakParticles } from './particles.js';
 import { playDoorSound } from './audio.js';
@@ -87,10 +87,10 @@ export function breakDoorAt(x, y, z) {
     const half = doorHalf(id);
     const oy = half === 0 ? y + 1 : y - 1;
     const cells = [{ x, y, z, id }];
-    state.blocks[getBlockIndex(x, y, z)] = BlockTypes.AIR;
+    setBlockSafe(x, y, z, BlockTypes.AIR);
     const otherId = getBlock(x, oy, z);
     if (isDoorId(otherId) && doorHalf(otherId) !== half) {
-        state.blocks[getBlockIndex(x, oy, z)] = BlockTypes.AIR;
+        setBlockSafe(x, oy, z, BlockTypes.AIR);
         cells.push({ x, y: oy, z, id: otherId });
     }
     if (!isCreative()) {

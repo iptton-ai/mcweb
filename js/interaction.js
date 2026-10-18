@@ -1,14 +1,23 @@
+import { isCrankId } from './config.js';
+import { LADDER_BASE, isLadderId, AdventureItems } from './config.js';
+import { toggleEquipment } from './adventure.js';
+import { adventureData } from './adventureData.js';
+import { LifeItems, LifeBlocks, isCropId, isContainerId } from './config.js';
+import { useFarmItem, harvestPlant, flushLifeDrops } from './homestead.js';
+import { openLifePanel } from './lifeUI.js';
+import { addInventoryStack, takeInventoryStack } from './inventoryStacks.js';
 // ==================== interaction.js ====================
 
 import * as THREE from 'three';
-import { BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PEN_ID, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, STARLIGHT_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, HANZI_ORE, isKeypadId, isKineticId, isLampId, isLeverId, isMerchantId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isStarlightId, isToolId, kineticItemId, keypadSolved, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
+import { BED_ITEM_ID, isBedId, BlockInfo, BlockTypes, CHUNK_SIZE, FIST_ATTACK, HotbarBlocks, LEAVES_APPLE_CHANCE, PEN_ID, PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, REACH_CREATIVE, REACH_SURVIVAL, STARLIGHT_BASE, WORLD_DEPTH, WORLD_HEIGHT, WORLD_WIDTH, isButtonId, isDustId, isDoorId, HANZI_ORE, isKeypadId, isKineticId, isLampId, isLeverId, isMerchantId, isObserverId, isPistonGroupId, isPistonHeadId, isPistonId, isPlateId, isRedstoneId, isRTorchId, isStarlightId, isToolId, kineticItemId, keypadSolved, ItemTypes, DUST_ITEM_ID, RTORCH_ITEM_ID, BUTTON_ITEM_ID, PLATE_ITEM_ID, LEVER_ITEM_ID, LAMP_ITEM_ID, DOOR_ITEM_ID, PISTON_ITEM_ID, STICKY_PISTON_ITEM_ID, OBSERVER_ITEM_ID, outlineOf, pistonSticky } from './config.js';
 import { isCreative, state } from './state.js';
 import { camera } from './engine.js';
-import { getBlock, getBlockIndex } from './world.js';
+import { getBlock, setBlockSafe } from './world.js';
 import { isCustomMesh, rebuildChunk, removeDroppedItemAt, removeTorchLightAt } from './chunk.js';
+import { tryPlaceBed, breakBedAt, interactBedAt, flushBedChanges, refundRemovedBeds } from './bed.js';
 import { breakDoorAt, toggleDoorAt, tryPlaceDoor } from './door.js';
 import { breakPistonGroupAt, placePiston } from './piston.js';
-import { breakKineticAt, crusherIntakeError, placeKinetic, updateKineticNetwork } from './kinetic.js';
+import { setCrankActive, breakKineticAt, crusherIntakeError, placeKinetic, updateKineticNetwork } from './kinetic.js';
 import { breakRedstoneAt, placeRedstone, popUnsupportedRedstone, pressButtonAt, toggleLeverAt, updateRedstoneNetwork } from './redstone.js';
 import { spawnBreakParticles } from './particles.js';
 import { playBlockSound } from './audio.js';
@@ -83,7 +92,7 @@ function rayVsAABB(o, d, min, max, tMin, tMax) {
 }
 
 // ==================== 方块交互 ====================
-export function raycastBlocks() {
+export function raycastBlocks(includeWater=false) {
     const { origin: o, dir, eye } = getPickRay();
     const origin = { x: o.x, y: o.y, z: o.z };
     const direction = { x: dir.x, y: dir.y, z: dir.z };
@@ -124,37 +133,35 @@ export function raycastBlocks() {
             z += stepZ;
             tMaxZ += tDeltaZ;
         }
-        const block = getBlock(x, y, z);
-        if (block !== BlockTypes.AIR && block !== BlockTypes.WATER) {
-            // 选取形状（照原版 outlineShape）：不满格的道具按 outline 局部 AABB 精确求交，
-            // 射线只穿过格子空白部分 = 不算命中，继续 DDA 打到后面的方块（无 outline = 整格）
-            const boxes = outlineOf(block);
-            let tHit = dist;
-            if (boxes) {
-                const tExit = Math.min(tMaxX, tMaxY, tMaxZ); // 射线在本格内的参数区间 [dist, tExit]
-                tHit = -1;
-                for (let i = 0; i < boxes.length; i += 6) {
-                    const t = rayVsAABB(origin, direction,
-                        [x + boxes[i], y + boxes[i + 1], z + boxes[i + 2]],
-                        [x + boxes[i + 3], y + boxes[i + 4], z + boxes[i + 5]], dist, tExit);
-                    if (t >= 0) {
-                        tHit = t;
-                        break;
-                    }
+        // 当前格和下方伸入本格的高模型共同竞争最近命中（围栏高1.5格）。
+        const tExit=Math.min(tMaxX,tMaxY,tMaxZ);
+        let nearest=null;
+        for(const by of [y,y-1]) {
+            const block=getBlock(x,by,z);
+            if(block===BlockTypes.AIR||(!includeWater&&block===BlockTypes.WATER))continue;
+            const shape=outlineOf(block);
+            if(by!==y && (!shape || !shape.some((v,i)=>i%6===4&&v>1)))continue;
+            const boxes=shape||[0,0,0,1,1,1];
+            for(let i=0;i<boxes.length;i+=6) {
+                const lo=[x+boxes[i],by+boxes[i+1],z+boxes[i+2]];
+                const hi=[x+boxes[i+3],by+boxes[i+4],z+boxes[i+5]];
+                const t=rayVsAABB(origin,direction,lo,hi,dist,tExit);
+                if(t<0||nearest&&t>=nearest.distance)continue;
+                const point=[origin.x+direction.x*t,origin.y+direction.y*t,origin.z+direction.z*t];
+                // 面法线取真实AABB边界，不能把上半格误当成斜向面。
+                let axis=0,normal=-1,error=Infinity;
+                for(let a=0;a<3;a++)for(const side of [-1,1]) {
+                    const delta=Math.abs(point[a]-(side<0?lo[a]:hi[a]));
+                    if(delta<error){error=delta;axis=a;normal=side;}
                 }
-                if (tHit < 0) {
-                    lastX = x;
-                    lastY = y;
-                    lastZ = z;
-                    continue;
-                }
+                const face={dx:0,dy:0,dz:0};face[['dx','dy','dz'][axis]]=normal;
+                nearest={x,y:by,z,block,distance:t,face};
             }
-            // 命中点必须落在手的触及范围内（从眼睛算起），否则视为够不着
-            const hx = origin.x + direction.x * tHit;
-            const hy = origin.y + direction.y * tHit;
-            const hz = origin.z + direction.z * tHit;
-            if (Math.hypot(hx - eye.x, hy - eye.y, hz - eye.z) > reach + 0.01) return null;
-            return { x, y, z, block, distance: tHit, face: { dx: lastX - x, dy: lastY - y, dz: lastZ - z } };
+        }
+        if(nearest) {
+            const hx=origin.x+direction.x*nearest.distance,hy=origin.y+direction.y*nearest.distance,hz=origin.z+direction.z*nearest.distance;
+            if(Math.hypot(hx-eye.x,hy-eye.y,hz-eye.z)>reach+.01)return null;
+            return nearest;
         }
         lastX = x;
         lastY = y;
@@ -216,6 +223,9 @@ export function breakBlockAt(hit) {
         return;
     }
     if (hit.block === BlockTypes.BEDROCK) return;
+    if (isCropId(hit.block) || hit.block===LifeBlocks.SAPLING) { const msg=harvestPlant(hit.x,hit.y,hit.z);showTooltip(msg);updateHotbar();return; }
+    const bedChangeStart = state.bedDirtyCells.length;
+    try {
     // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
     if (isRedstoneId(hit.block)) {
         const cells = breakRedstoneAt(hit.x, hit.y, hit.z);
@@ -229,6 +239,10 @@ export function breakBlockAt(hit) {
         return;
     }
     // 门：打掉任意半扇，整扇消失，生存模式返还一个门物品
+    if (isBedId(hit.block)) {
+        for(const c of breakBedAt(hit.x,hit.y,hit.z)) { spawnBreakParticles(c.x,c.y,c.z,c.id); rebuildAround(c.x,c.z); }
+        playBlockSound(false); updateHotbar(); return;
+    }
     if (isDoorId(hit.block)) {
         const cells = breakDoorAt(hit.x, hit.y, hit.z);
         for (const c of cells) {
@@ -279,8 +293,7 @@ export function breakBlockAt(hit) {
             state.player.inventory[ItemTypes.APPLE] = (state.player.inventory[ItemTypes.APPLE] || 0) + 1;
         }
     }
-    const idx = getBlockIndex(hit.x, hit.y, hit.z);
-    state.blocks[idx] = BlockTypes.AIR;
+    setBlockSafe(hit.x,hit.y,hit.z,BlockTypes.AIR);
     if (brokeSolvedKeypad) updateRedstoneNetwork();
     if (hanziToast) showTooltip(hanziToast);
     // 生存模式按掉落映射采集（null=无掉落，缺省=自身；石头→圆石、草方块→泥土等原版规则）。
@@ -289,7 +302,9 @@ export function breakBlockAt(hit) {
     if (!isCreative()) {
         const info = BlockInfo[hit.block];
         let itemId = null;
+        if (hit.block===BlockTypes.GRASS) addInventoryStack({id:LifeItems.SEEDS,count:1});
         if (hit.block === BlockTypes.LEAVES) {
+            addInventoryStack({id:LifeBlocks.SAPLING,count:1});
             if (Math.random() < LEAVES_APPLE_CHANCE) itemId = ItemTypes.APPLE;
         } else {
             const tool = getHeldTool();
@@ -323,10 +338,29 @@ export function breakBlockAt(hit) {
     if (hit.z % CHUNK_SIZE === 0 && cz > 0) rebuildChunk(cx, cz - 1);
     if (hit.z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < Math.ceil(WORLD_DEPTH / CHUNK_SIZE) - 1) rebuildChunk(
         cx, cz + 1);
+    } finally {
+        flushLifeDrops();
+        if (!isBedId(hit.block)) refundRemovedBeds(state.bedDirtyCells.slice(bedChangeStart));
+        flushBedChanges({ dropAttachments: true });
+        updateHotbar();
+    }
 }
 
 export function placeBlock() {
-    const hit = raycastBlocks();
+    const heldLife=HotbarBlocks[state.player.selectedSlot];
+    if ([AdventureItems.ARMOR,AdventureItems.SHIELD].includes(heldLife) && !state.levelRun && !state.levelEdit) {
+        if (heldLife === AdventureItems.SHIELD && adventureData().shield) return;
+        showTooltip(toggleEquipment(heldLife)); updateHotbar(); return;
+    }
+    const hit = raycastBlocks(heldLife===LifeItems.BUCKET);
+    if(!state.levelRun && !state.levelEdit && !keys.ShiftLeft && !keys.ShiftRight) {
+        const animal=raycastFarmAnimal();
+        if(animal) { openLifePanel({kind:'animal',animalId:animal.animalId,animal}); return; }
+        if(hit && isContainerId(hit.block)) {openLifePanel({kind:'block',x:hit.x,y:hit.y,z:hit.z});return;}
+        if(hit && (hit.block===LifeBlocks.GATE || hit.block===LifeBlocks.GATE_OPEN)) {setBlockSafe(hit.x,hit.y,hit.z,hit.block===LifeBlocks.GATE?LifeBlocks.GATE_OPEN:LifeBlocks.GATE);rebuildAround(hit.x,hit.z);return;}
+        if(hit && hit.block===LifeBlocks.WHEAT_MATURE) {showTooltip(harvestPlant(hit.x,hit.y,hit.z));updateHotbar();return;}
+        const result=useFarmItem(heldLife,hit);if(result!==null){showTooltip(result);updateHotbar();return;}
+    }
     // 右键手持食物 = 进食（饥饿未满才吃得下；创造模式没有饥饿，提示一下）
     const heldId = HotbarBlocks[state.player.selectedSlot];
     if (BlockInfo[heldId]?.food) {
@@ -341,11 +375,20 @@ export function placeBlock() {
     // 右键工作台/熔炉 = 打开合成面板（潜行+右键则照常放方块，对齐原版「Shift 绕过交互」）
     if (hit && !keys['ShiftLeft'] && !keys['ShiftRight']) {
         const station = BlockInfo[hit.block]?.station;
+        if (station==='furnace') { showTooltip('临时关卡中的熔炉不加工生活库存'); return; }
         if (station) {
             openItemPicker(station);
             showTooltip(station === 'crafting' ? '▦ 已连接工作台 · 进阶配方已解锁' : '♨ 已连接熔炉 · 添加原料与燃料');
             return;
         }
+    }
+    if (hit && isBedId(hit.block) && !keys['ShiftLeft'] && !keys['ShiftRight']) { interactBedAt(hit.x,hit.y,hit.z); return; }
+    if (hit && isCrankId(hit.block) && !keys.ShiftLeft && !keys.ShiftRight) {
+        if (state.levelRun) { showTooltip('关卡中手摇动力不可操作'); return; }
+        state.handCrankIntent={x:hit.x,y:hit.y,z:hit.z,id:hit.block,world:state.blocks,
+            camMode:state.camMode,viewMode:state.viewMode};
+        setCrankActive(hit.x,hit.y,hit.z,true);
+        return;
     }
     // 右键门 = 开/关整扇门（原版交互），不放置方块。
     // 闯关模式拒绝手动开关（W11）：门只能由答题机/星辉门答对后的红石信号打开
@@ -403,6 +446,14 @@ export function placeBlock() {
         const bx = hit.x + hit.face.dx;
         const by = hit.y + hit.face.dy;
         const bz = hit.z + hit.face.dz;
+        const bedItem = HotbarBlocks[state.player.selectedSlot];
+        if (isBedId(bedItem)) {
+            if(!isCreative() && !(state.player.inventory[bedItem]>0)) { showTooltip('还没有小床：在工作台用 3 羊毛和 3 木板制作'); return; }
+            const error=tryPlaceBed(bx,by,bz,state.player.yaw);
+            if(error) { showTooltip(error); return; }
+            if(!isCreative()) state.player.inventory[bedItem]--;
+            updateHotbar(); playBlockSound(true); return;
+        }
         if (bx < 0 || bx >= WORLD_WIDTH || by < 0 || by >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH) return;
         // 检查是否与玩家重叠
         const px = state.player.x;
@@ -429,6 +480,13 @@ export function placeBlock() {
         if (!isCreative() && (state.player.inventory[selectedType] || 0) <= 0) {
             showTooltip(`❌ ${BlockInfo[selectedType].name}不足，先去采集吧`);
             return;
+        }
+        if (isLadderId(selectedType)) {
+            if ((!hit.face.dx && !hit.face.dz) || !BlockInfo[hit.block]?.solid || BlockInfo[hit.block]?.customMesh) { showTooltip('木梯要贴在墙的侧面；靠近后按空格或 W 上爬，Shift 下降'); return; }
+            const facing = hit.face.dz === 1 ? 0 : hit.face.dx === -1 ? 1 : hit.face.dz === -1 ? 2 : 3;
+            setBlockSafe(bx,by,bz,LADDER_BASE+facing);
+            if (!isCreative()) state.player.inventory[selectedType]--;
+            rebuildAround(bx,bz); updateHotbar(); playBlockSound(true); return;
         }
         // 门：一格物品生成上下两格的有状态方块（facing 随玩家朝向）
         if (isDoorId(selectedType)) {
@@ -489,7 +547,7 @@ export function placeBlock() {
             showTooltip(intakeErr);
             return;
         }
-        state.blocks[getBlockIndex(bx, by, bz)] = selectedType;
+        setBlockSafe(bx, by, bz, selectedType);
         // 生存模式：消耗一个
         if (!isCreative()) {
             state.player.inventory[selectedType]--;
@@ -526,14 +584,13 @@ export function dropHeldItem() {
     const p = state.player;
     const id = HotbarBlocks[p.selectedSlot];
     if (!id) return;
-    const toolWear = !isCreative() && p.inventory[id] === 1 ? (p.toolWear[id] || 0) : 0;
+    let toolWear = 0;
     if (!isCreative()) {
         if ((p.inventory[id] || 0) <= 0) {
             showTooltip('手里没有这个物品');
             return;
         }
-        p.inventory[id]--;
-        if ((p.inventory[id] || 0) <= 0) delete p.toolWear[id]; // 最后一把工具丢光：清掉耐久残留，下次合成的新工具不带旧磨损
+        toolWear = takeInventoryStack(id,1,p,true)?.wear || 0;
     }
     const dir = lookDirection();
     spawnItemDrop(p.x + dir.x * 0.6, p.y + 1.4, p.z + dir.z * 0.6, id, 1,
@@ -543,6 +600,7 @@ export function dropHeldItem() {
 
 // 方块 ID → 物品栏对应物品（中键吸取用）：有状态方块映射回各自的 *_ITEM_ID 代表变体
 export function pickBlockItem(blockId) {
+    if (isBedId(blockId)) return BED_ITEM_ID;
     if (isDoorId(blockId)) return DOOR_ITEM_ID;
     if (isDustId(blockId)) return DUST_ITEM_ID;
     if (isRTorchId(blockId)) return RTORCH_ITEM_ID;
@@ -577,4 +635,26 @@ export function pickBlockUnderCrosshair() {
     state.player.selectedSlot = idx;
     updateHotbar();
     showTooltip(`🖱️ 已吸取：${BlockInfo[itemId].name}`);
+}
+
+// Animal interaction uses the same screen ray, reach and voxel occlusion as mining.
+export function raycastFarmAnimal() {
+ const {origin,dir,eye}=getPickRay(),wall=raycastBlocks();let best=null,near=Infinity;
+ const eyeT=Math.max(0,(eye.x-origin.x)*dir.x+(eye.y-origin.y)*dir.y+(eye.z-origin.z)*dir.z);
+ for(const e of state.enemies){if(e.hostile)continue;const t=rayVsAABB(origin,dir,[e.x-.45,e.y,e.z-.8],[e.x+.45,e.y+1.15,e.z+.8],eyeT,4+origin.distanceTo(eye));if(t<0||t>=near||origin.clone().addScaledVector(dir,t).distanceTo(eye)>4||wall&&wall.distance<=t)continue;best=e;near=t;}
+ return best;
+}
+
+// 按住态只用于手摇，不重复调用放置/开门等一次性交互。
+export function updateCrankUse(held) {
+    const use=state.handCrankIntent;
+    const valid=held && use && !state.player.dead && !state.levelRun && use.world===state.blocks &&
+        state.camMode===use.camMode && state.viewMode===use.viewMode && !keys.ShiftLeft && !keys.ShiftRight;
+    const hit=valid ? raycastBlocks() : null;
+    if (hit && hit.x===use.x && hit.y===use.y && hit.z===use.z && hit.block===use.id) {
+        setCrankActive(use.x,use.y,use.z,true);
+    } else {
+        state.handCrankIntent=null;
+        setCrankActive(0,0,0,false);
+    }
 }

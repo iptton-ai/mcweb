@@ -12,7 +12,7 @@ import { TEXTURE_TILES, atlasSize, occupiedTiles, freeTileRanges } from '../js/t
 
 const EXPECTED_IDS = [
     'ids', 'mining', 'world', 'redstone', 'piston', 'kinetic', 'logistics', 'elevator',
-    'survival', 'mobs', 'tnt', 'saves', 'modules', 'recipes', 'keys', 'media', 'edu',
+    'home', 'homestead', 'adventure', 'survival', 'mobs', 'tnt', 'saves', 'modules', 'recipes', 'keys', 'media', 'edu',
 ];
 
 // 空闲 tile 区间的渲染口径（与 knowledge.js / docs.js 文案生成保持同一格式）
@@ -31,6 +31,8 @@ test('结构：章节齐全有序，id 唯一，字段非空，单节体量可�
 
 test('检索：关键词查询命中正确章节且排在首位', () => {
     assert.equal(searchKnowledge('红石 时钟')[0].id, 'redstone');
+    assert.equal(searchKnowledge('地图 路标 浅矿洞')[0].id, 'adventure');
+    assert.equal(searchKnowledge('盾 护具 维修')[0].id, 'adventure');
     assert.equal(searchKnowledge('粉碎轮 应力')[0].id, 'kinetic');
     assert.equal(searchKnowledge('电梯 滑轮 卷绳')[0].id, 'elevator');
     assert.equal(searchKnowledge('传送带 投料器')[0].id, 'logistics');

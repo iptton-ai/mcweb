@@ -1,3 +1,4 @@
+import { isReverserId, reverserId, reverserAxis, reverserPowered } from './config.js';
 // ==================== redstone.js ====================
 // 有状态方块「红石组」（红石粉/红石火把/按钮/压力板/拉杆/红石灯）的高层逻辑，
 // 分层与 door.js 一致：config.js 把状态编码进方块 ID，本模块负责放置（按所点击面贴靠）、
@@ -86,7 +87,7 @@ import {
     starlightOpen,
 } from './config.js';
 import { isCreative, state } from './state.js';
-import { getBlock, getBlockIndex, setBlockSafe } from './world.js';
+import { getBlock, setBlockSafe } from './world.js';
 import { isSolid, rebuildChunk, refreshPropAt, removeTorchLightAt } from './chunk.js';
 import { playDoorSound, playLeverSound } from './audio.js';
 import { spawnTntEntity } from './tnt.js';
@@ -212,15 +213,15 @@ export function pressButtonAt(x, y, z) {
 // ==================== 破坏 ====================
 // 破坏红石元件：清格、撤灯光、清同格计时/延迟、生存模式返还物品；
 // 随后检查相邻元件是否失去支撑，是则连锁脱落（递归）。返回被清除的格子列表。
-export function breakRedstoneAt(x, y, z) {
+export function breakRedstoneAt(x, y, z, { drop = true } = {}) {
     const id = getBlock(x, y, z);
     if (!isRedstoneId(id)) return [];
     const cells = [{ x, y, z, id }];
-    state.blocks[getBlockIndex(x, y, z)] = 0;
+    cells.push(...(setBlockSafe(x, y, z, BlockTypes.AIR) || []));
     if (isLampId(id) && lampLit(id) === 1) removeTorchLightAt(x, y, z);
     if (isRTorchId(id) && rtorchLit(id) === 1) removeTorchLightAt(x, y, z);
     dropTimersAt(x, y, z);
-    if (!isCreative()) {
+    if (drop && !isCreative()) {
         const item = redstoneItemId(id);
         state.player.inventory[item] = (state.player.inventory[item] || 0) + 1;
     }
@@ -228,7 +229,7 @@ export function breakRedstoneAt(x, y, z) {
         const mx = x + nx, my = y + ny, mz = z + nz;
         const mid = getBlock(mx, my, mz);
         if (isRedstoneId(mid) && isSupportedBy(mid, x, y, z, mx, my, mz)) {
-            cells.push(...breakRedstoneAt(mx, my, mz));
+            cells.push(...breakRedstoneAt(mx, my, mz, { drop }));
         }
     }
     return cells;
@@ -238,13 +239,13 @@ export function breakRedstoneAt(x, y, z) {
 // 被拆方块正上方是传送带 → 带连锁弹落返还（G2 裁决 R3-12 改判：带=贴面道具，
 // 拆支撑弹落在红石粉/压力板有先例——TNT 路径不覆盖，与红石粉现状一致）。
 // 返回被清除的格子列表（调用方负责粒子与区块重建），既有 6 个调用点自动覆盖。
-export function popUnsupportedRedstone(x, y, z) {
+export function popUnsupportedRedstone(x, y, z, { drop = true } = {}) {
     const cells = [];
     for (const [nx, ny, nz] of FACING_NORMALS) {
         const mx = x + nx, my = y + ny, mz = z + nz;
         const mid = getBlock(mx, my, mz);
         if (isRedstoneId(mid) && isSupportedBy(mid, x, y, z, mx, my, mz)) {
-            cells.push(...breakRedstoneAt(mx, my, mz));
+            cells.push(...breakRedstoneAt(mx, my, mz, { drop }));
         }
     }
     // 传送带只贴实心方块顶面（支撑 = 正下方一格）：走 breakKineticAt 清格 + 生存
@@ -252,7 +253,7 @@ export function popUnsupportedRedstone(x, y, z) {
     // 逐格向上循环：连摞的带（AI 施工/快照可造出）整柱连锁弹落
     let by = y + 1;
     while (isBeltId(getBlock(x, by, z))) {
-        cells.push(...breakKineticAt(x, by, z));
+        cells.push(...breakKineticAt(x, by, z, { drop }));
         by++;
     }
     if (cells.length > 0) updateRedstoneNetwork();
@@ -344,7 +345,7 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
     const blocks = state.blocks;
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
-    const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [], keypads = [];
+    const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [], keypads = [], reversers = [];
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -353,13 +354,15 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
                 // 空气早退（2026-09-06 世界扩容 128 高后空气中格占 ~3/4，一次比较替掉整条
                 // else-if 链的空转；AIR 不匹配链上任何分支，语义不变）
                 if (id === 0) continue;
-                if (id >= DUST_BASE && id < LAMP_BASE + LAMP_COUNT) {
+                if (isRedstoneId(id)) {
                     if (isDustId(id)) dusts.push({ x, y, z, id });
                     else if (isRTorchId(id)) torches.push({ x, y, z, id });
                     else if (isButtonId(id)) buttons.push({ x, y, z, id });
                     else if (isPlateId(id)) plates.push({ x, y, z, id });
                     else if (isLeverId(id)) levers.push({ x, y, z, id });
                     else lamps.push({ x, y, z, id });
+                } else if (isReverserId(id)) {
+                    reversers.push({ x, y, z, id });
                 } else if (isDoorId(id)) {
                     doors.push({ x, y, z, id });
                 } else if (id === BlockTypes.TNT) {
@@ -394,7 +397,7 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
     if (dusts.length === 0 && torches.length === 0 && levers.length === 0 && buttons.length === 0 &&
         plates.length === 0 && lamps.length === 0 && doors.length === 0 && tnts.length === 0 &&
         pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0 &&
-        keypads.length === 0) {
+        keypads.length === 0 && reversers.length === 0) {
         if (captureOnly) return { doors: new Set() };
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
@@ -576,6 +579,15 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
         if (clutchEngaged(cl.id) !== engaged) {
             setBlockSafe(cl.x, cl.y, cl.z, clutchId(clutchAxis(cl.id), engaged));
             refreshPropAt(cl.x, cl.y, cl.z);
+            kineticDirty = true;
+        }
+    }
+
+    for (const c of reversers) {
+        const powered = isCellActive(c.x, c.y, c.z) ? 1 : 0;
+        if (reverserPowered(c.id) !== powered) {
+            setBlockSafe(c.x, c.y, c.z, reverserId(reverserAxis(c.id), powered));
+            refreshPropAt(c.x, c.y, c.z);
             kineticDirty = true;
         }
     }

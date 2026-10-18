@@ -439,7 +439,7 @@ export function handleKeydown(e) {
 }
 
 // ---------- 面板开关 ----------
-function openPanel() {
+function openPanel({ focusInput = true } = {}) {
     if (state.editorExitOpen || state.levelEdit?.exiting) return;
     els.panel.classList.remove('hidden');
     // 状态机负责让指针锁让位（鼠标归面板）；游戏状态不受影响，关闭后照常继续
@@ -447,8 +447,15 @@ function openPanel() {
     renderAll(getActiveSession());
     updateModelBadge();
     setTimeout(() => {
-        if (!state.editorExitOpen && !state.levelEdit?.exiting) els.input.focus();
+        if (focusInput && !state.editorExitOpen && !state.levelEdit?.exiting) els.input.focus();
     }, 50);
+}
+
+// 作品页复用已有助手/录像显隐规则，不抢走录像按钮焦点。
+export function showAssistantPanel(options = {}) {
+    if (!els.panel || state.editorExitOpen || state.levelEdit?.exiting) return false;
+    openPanel(options);
+    return true;
 }
 
 function closePanel() {

@@ -55,7 +55,7 @@ function makeFixture() {
     put(0, 1, 0, BlockTypes.GRASS);
     put(1, 0, 0, BlockTypes.STONE);
     put(0, 2, 1, BlockTypes.WATER);
-    put(1, 2, 1, 250); // 未登记方块：BlockInfo 无色 → '#888'
+    put(1, 2, 1, 63); // 未登记方块（250 已注册为围栏门）：BlockInfo 无色 → '#888'
     put(2, 0, 1, BlockTypes.BEDROCK);
     put(2, 2, 1, BlockTypes.LEAVES);
     return makeCard(r);

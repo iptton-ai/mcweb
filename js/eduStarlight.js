@@ -320,9 +320,10 @@ function openStarlight(x, y, z, picked, lvl) {
         localKey: lvl.localKey, cardName: lvl.cardName || '',
         degraded: false, message: '',
     };
-    ensurePanel();
-    panel.style.display = 'block';
-    renderPanel();
+    try {
+        ensurePanel(); panel.style.display = 'block'; renderPanel();
+        state.readingPanels['starlight'] = true;
+    } catch (error) { closeStarlightPanel(); throw error; }
 }
 
 function openDegraded(x, y, z, message, lvl) {
@@ -333,12 +334,14 @@ function openDegraded(x, y, z, message, lvl) {
         inLevel: !!lvl.active, frozen: !!lvl.frozen, localKey: null, cardName: '',
         degraded: true, message,
     };
-    ensurePanel();
-    panel.style.display = 'block';
-    renderPanel();
+    try {
+        ensurePanel(); panel.style.display = 'block'; renderPanel();
+        state.readingPanels['starlight'] = true;
+    } catch (error) { closeStarlightPanel(); throw error; }
 }
 
 export function closeStarlightPanel() {
+    delete state.readingPanels['starlight'];
     session = null;
     if (panel) panel.style.display = 'none';
 }

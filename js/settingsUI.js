@@ -1,3 +1,6 @@
+import {setSurvivalRules,canUseFreeBuild} from './survivalRules.js';
+import {grantFarmStarter} from './homestead.js';
+import {lifeData} from './lifeData.js';
 // ==================== settingsUI.js ====================
 // 游戏设置浮层（首屏 / Esc 暂停菜单的「⚙️ 设置」按钮进入）：
 //   🎵 音频 —— 配乐风格包 + 音乐/音效音量（原在助手面板设置中心，迁来统一管理，改动即刻生效）
@@ -8,6 +11,7 @@
 // 切世界/开新/删档等有副作用的动作经 initSettingsUI 注入的回调落到 main.js
 // （世界切换编排：clearBuildQueue / initRedstone / clearTransientEntities 都在那里）。
 
+import { claimWorkshopKit } from './ui.js';
 import { GameModes } from './config.js';
 import { state } from './state.js';
 import { closeSettingsState, getUIState, openSettingsState, syncPointerPolicy } from './uiModal.js';
@@ -158,12 +162,29 @@ export function initSettingsUI(injected) {
         <div class="gs-head">
           <h3>⚙️ 设置</h3>
           <div class="gs-tabs">
+            <button class="gs-tab" data-tab="home">🏠 生存</button>
             <button class="gs-tab" data-tab="audio">🎵 音频</button>
             <button class="gs-tab" data-tab="video">🎛 画面</button>
             <button class="gs-tab" data-tab="saves">💾 存档</button>
             <button class="gs-tab" data-tab="edu">📚 学习</button>
           </div>
           <button class="gs-close" title="关闭（Esc）">✕</button>
+        </div>
+        <div class="gs-body hidden" data-page="home">
+          <div class="gs-card"><h4>🏠 当前世界的生存规则</h4>
+            <p class="card-desc">新世界默认轻松生存。轻松：怪物仍会伤人，苦力怕不会炸坏房子；冒险：苦力怕也会破坏方块。自己点燃的 TNT 两种规则都会爆炸。</p>
+            <select class="gs-select" id="gs-survival-difficulty"><option value="gentle">🌿 轻松生存（推荐）</option><option value="adventure">⚔️ 冒险生存</option></select>
+            <p><label>玩法规则 <select class="gs-select" id="gs-survival-rules"><option value="standard">标准生存：自己采集与制作</option><option value="experiment">自由实验：允许 AI 免费建造</option></select></label></p>
+            <p class="gs-note">标准生存中 AI 给步骤与材料清单，禁止免费造物和改源码。切回标准会取消未完成施工，已有物品保留。学习奖励为纪念章，不刷钻石或食物。</p>
+            <p><button class="gs-btn" id="gs-farm-starter">领取一次种植包（8 种子、2 树苗）</button></p>
+            <p class="gs-note">种子也可挖草地获得，树苗可打树叶或用原木＋泥土制作。旧世界没有水？工作台用空桶＋4 沙＋2 原木集水，不改旧地形。</p>
+            <p><label><input type="checkbox" id="gs-home-guide"> 显示安家下一步提示</label></p>
+            <p class="gs-note">普通生存中，菜单、背包、题卡、说明、打字和离开窗口都会暂停世界。床边右键设家，夜晚可以睡到天亮。</p>
+          </div>
+          <div class="gs-card"><h4>🧰 想试试机械？</h4>
+            <p class="card-desc">可选实验包：活塞、水车、传送带、电梯和教学方块。每世界领取一次，安家不需要领取。</p>
+            <button class="gs-btn" id="gs-workshop-kit">领取一次性机械实验包</button>
+          </div>
         </div>
         <div class="gs-body" data-page="audio">
           <div class="gs-card">
@@ -281,6 +302,13 @@ export function initSettingsUI(injected) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeSettingsState();
     });
+    modal.querySelector('#gs-survival-difficulty').addEventListener('change', e => {
+        if(!state.levelRun && !state.levelEdit) state.survivalDifficulty=e.target.value==='gentle'?'gentle':'adventure';
+    });
+    modal.querySelector('#gs-survival-rules').addEventListener('change',e=>{if(!state.levelRun&&!state.levelEdit)setSurvivalRules(e.target.value);syncHomeSettings();});
+    modal.querySelector('#gs-farm-starter').addEventListener('click',()=>{grantFarmStarter();syncHomeSettings();});
+    modal.querySelector('#gs-home-guide').addEventListener('change', e => { state.homeGuideEnabled=!!e.target.checked; });
+    modal.querySelector('#gs-workshop-kit').addEventListener('click', () => { claimWorkshopKit(); syncHomeSettings(); });
     // 页签切换
     for (const btn of modal.querySelectorAll('.gs-tab')) {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -726,10 +754,21 @@ export function openGameSettings() {
     syncVolumeSliders();
     syncVideoSliders();
     renderSavesPage();
-    switchTab(localStorage.getItem(TAB_KEY) === 'video' ? 'video' : localStorage.getItem(TAB_KEY) === 'saves' ? 'saves' : 'audio');
+    syncHomeSettings();
+    switchTab(localStorage.getItem(TAB_KEY) === 'home' ? 'home' : localStorage.getItem(TAB_KEY) === 'video' ? 'video' : localStorage.getItem(TAB_KEY) === 'saves' ? 'saves' : 'audio');
     openSettingsState(); // 非 title/pause 下是 no-op，显隐统一由状态机驱动
 }
 
+function syncHomeSettings() {
+    const locked=!!(state.levelRun||state.levelEdit);
+    const select=els.modal.querySelector('#gs-survival-difficulty');select.value=state.survivalDifficulty;select.disabled=locked;
+    const rules=els.modal.querySelector('#gs-survival-rules');rules.value=state.survivalRules||'standard';rules.disabled=locked;
+    const farm=els.modal.querySelector('#gs-farm-starter');farm.disabled=locked||lifeData().starter;farm.textContent=lifeData().starter?'本世界种植包已领取':'领取一次种植包（8 种子、2 树苗）';
+    const guide=els.modal.querySelector('#gs-home-guide');guide.checked=state.homeGuideEnabled;guide.disabled=locked;
+    const kit=els.modal.querySelector('#gs-workshop-kit');
+    kit.disabled=!canUseFreeBuild()||locked||state.gameMode!==GameModes.SURVIVAL||state.starterWorkshopClaimed;
+    kit.textContent=!canUseFreeBuild()?'选择自由实验后可领取':state.starterWorkshopClaimed?'本世界已领取':state.gameMode!==GameModes.SURVIVAL?'进入生存模式后可领取':'领取一次性机械实验包';
+}
 // ---------- 音频页 ----------
 function buildStyleCards() {
     const grid = els.modal.querySelector('#gs-bgm-grid');

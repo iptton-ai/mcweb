@@ -1,0 +1,20 @@
+{
+  "commit": "e4a5aaa",
+  "results": [
+    {
+      "seed": 1,
+      "bytes": 8388608,
+      "sha256": "27d1b794d0384a9d606f73a555bfba4e8feb843bfcc2393e25aea2fb9c27f0c4"
+    },
+    {
+      "seed": 42,
+      "bytes": 8388608,
+      "sha256": "241265c5801af195a1e9198f17d492d7b3bc74cd0a586f315888779e2f8f78e5"
+    },
+    {
+      "seed": 2026,
+      "bytes": 8388608,
+      "sha256": "33769bac42d00900b2818052b1e3e0e848341836ebb58226d0fcbfeaa31af492"
+    }
+  ]
+}

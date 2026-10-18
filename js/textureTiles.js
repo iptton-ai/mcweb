@@ -1,3 +1,6 @@
+import { CRANK_ITEM_ID, LARGE_COG_ITEM_ID, REVERSER_ITEM_ID } from './config.js';
+import { AdventureItems, LADDER_BASE } from './config.js';
+import {LifeBlocks,LifeItems} from './config.js';
 // ==================== textureTiles.js ====================
 // 纹理图集 tile 分配表（纯数据，Node 可 import）：textures.js 的 tiles 数组与
 // atlasSize 常量下沉于此——textures.js 只消费这张表；知识库/系统提示词的
@@ -9,7 +12,7 @@
 
 import {
     BELT_ITEM_ID,
-    BlockTypes,
+    BlockTypes, BED_BASE,
     BUTTON_ITEM_ID,
     COGWHEEL_ITEM_ID,
     CRUSHER_ITEM_ID,
@@ -44,6 +47,9 @@ export const atlasSize = 16;
 // 与 textures.js generateAllTextures 的消费口径一致：top/side/bottom = 三面所用 tile
 // 索引，name 供 tileMap/blockUVs 与 TILE_OVERRIDES 定位。改这里 = 改游戏贴图分配。
 export const TEXTURE_TILES = [
+    { type: CRANK_ITEM_ID, top:115, side:115, bottom:115, name:'crank' },
+    { type: LARGE_COG_ITEM_ID, top:116, side:116, bottom:116, name:'large_cog' },
+    { type: REVERSER_ITEM_ID, top:117, side:117, bottom:117, name:'reverser' },
     { type: BlockTypes.GRASS, top: 0, side: 1, bottom: 2, name: 'grass_top' },
     { type: BlockTypes.DIRT, top: 2, side: 2, bottom: 2, name: 'dirt' },
     { type: BlockTypes.STONE, top: 3, side: 3, bottom: 3, name: 'stone' },
@@ -131,7 +137,14 @@ export const TEXTURE_TILES = [
     { type: STARLIGHT_BASE, top: 88, side: 88, bottom: 88, name: 'starlight_locked' },
     { type: STARLIGHT_BASE + 1, top: 89, side: 89, bottom: 89, name: 'starlight_open' },
     { type: PEN_ID, top: 90, side: 90, bottom: 90, name: 'pen_item' },
+    { type: BED_BASE, top: 91, side: 91, bottom: 12, name: 'bed_foot' },
+    { type: BED_BASE+4, top: 92, side: 91, bottom: 12, name: 'bed_head' },
 ];
+
+for(const [i,id]of [LifeBlocks.CHEST,LifeBlocks.FARMLAND,244,245,246,247,LifeBlocks.SAPLING,LifeBlocks.FENCE,LifeBlocks.GATE,LifeBlocks.GATE_OPEN,...Object.values(LifeItems)].entries())TEXTURE_TILES.push({type:id,top:93+i,side:93+i,bottom:93+i,name:'life_'+id});
+
+for (let f=0;f<4;f++) TEXTURE_TILES.push({type:LADDER_BASE+f,top:111,side:111,bottom:111,name:'adventure_ladder'});
+for(const [i,id] of Object.values(AdventureItems).entries()) TEXTURE_TILES.push({type:id,top:112+i,side:112+i,bottom:112+i,name:'adventure_'+id});
 
 // 图集里不走方块 ID 的「孤儿 tile」：门上半（door_upper 21，门板裁取/TILE_OVERRIDES 用）
 // 与活塞内面（piston_inner 37，活塞头背面专用）——textures.js 单独注册进 tileMap，

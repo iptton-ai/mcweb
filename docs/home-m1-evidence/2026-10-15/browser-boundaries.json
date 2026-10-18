@@ -1,0 +1,136 @@
+{
+  "kind": "browser-boundaries",
+  "checks": [
+    {
+      "name": "四向床放置 0",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "四向整床拆除 0",
+      "passed": true,
+      "evidence": 2
+    },
+    {
+      "name": "四向床放置 1",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "四向整床拆除 1",
+      "passed": true,
+      "evidence": 2
+    },
+    {
+      "name": "四向床放置 2",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "四向整床拆除 2",
+      "passed": true,
+      "evidence": 2
+    },
+    {
+      "name": "四向床放置 3",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "四向整床拆除 3",
+      "passed": true,
+      "evidence": 2
+    },
+    {
+      "name": "边界床拒绝",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "安家床放置",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "白天设家",
+      "passed": true,
+      "evidence": {
+        "ok": true,
+        "slept": false
+      }
+    },
+    {
+      "name": "夜间睡眠",
+      "passed": true,
+      "evidence": {
+        "ok": true,
+        "slept": true
+      }
+    },
+    {
+      "name": "睡眠保留饥饿",
+      "passed": true,
+      "evidence": 13
+    },
+    {
+      "name": "醒来位置有限且不在实心整格",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "保存新家状态",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "读档恢复",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "家常用栏规则回环",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "自定义常用栏读档保真",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "热重载保存",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "热重载恢复",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "热重载家字段回环",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "自定义常用栏热重载保真",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "轻松苦力怕保建筑",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "主动 TNT 仍破建筑",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "暂停谓词",
+      "passed": true,
+      "evidence": null
+    }
+  ]
+}

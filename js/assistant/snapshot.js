@@ -1,3 +1,7 @@
+import {captureLifeState,validateLifeState,restoreLifeState} from '../lifeData.js';
+import {restoreLivestock} from '../entities.js';
+import {flushLifeDrops} from '../homestead.js';
+import { captureHomeState, restoreHomeState } from '../homeSurvival.js';
 // ==================== assistant/snapshot.js ====================
 // 世界快照：热重载前保存世界与玩家状态到 sessionStorage，页面刷新后完整恢复，
 // 让「改游戏代码」对玩家无感（建筑、背包、位置都不丢）。
@@ -62,15 +66,19 @@ export function saveSnapshotForReload() {
                 yaw: p.yaw, pitch: p.pitch,
                 flying: p.flying, health: p.health,
                 selectedSlot: p.selectedSlot,
+                quickbar: p.quickbar,
                 inventory: p.inventory,
                 hunger: p.hunger, air: p.air, xp: p.xp,
                 toolWear: p.toolWear,
+                toolReserveWear:p.toolReserveWear||{},
             },
             worldSeed: state.worldSeed,
             gameMode: state.gameMode,
             viewMode: state.viewMode,
             time: state.time,
             spawn: { ...state.spawn },
+            ...captureHomeState(),
+            life:captureLifeState(),
         };
         sessionStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
         return true;
@@ -113,6 +121,8 @@ export function restoreSnapshotIfAny() {
             return false;
         }
     }
+    const lifeError=validateLifeState(snap.life,u8,undefined,snap.player||{});
+    if(lifeError){console.error(lifeError);return false;}
     if (state.blocks && u8.length === state.blocks.length) {
         if (!snap.v) migrateLegacyGears(u8); // 旧快照：齿轮 ID 区间已改作红石组，清为空气
         state.blocks.set(u8);
@@ -145,8 +155,10 @@ export function restoreSnapshotIfAny() {
         air: p.air ?? state.player.air,
         xp: p.xp ?? state.player.xp,
         toolWear: p.toolWear || {},
+        toolReserveWear:p.toolReserveWear||{},
         dead: false, onGround: false, fallStartY: null, inWater: false,
     });
+    restoreHomeState(snap);
     if (snap.gameMode) state.gameMode = snap.gameMode;
     if (typeof snap.time === 'number') state.time = snap.time;
     if (snap.spawn) state.spawn = snap.spawn;
@@ -157,6 +169,7 @@ export function restoreSnapshotIfAny() {
     clearItemDrops();
     clearTntEntities();
     clearParticles();
+    restoreLifeState(snap.life); restoreLivestock(); flushLifeDrops();
     initRedstone();
     initKinetic();
     camera.position.set(state.player.x, state.player.y + PLAYER_EYE_HEIGHT, state.player.z);
