@@ -17,7 +17,14 @@ import os
 import re
 import sys
 
-sys.path.insert(0, "/Users/zxnap/.agents/skills/browser-cdp/scripts")
+# browser-cdp skill 已归档（2026-10-19 发现）：优先取现役目录，回退归档目录
+for _p in (
+    "/Users/zxnap/.agents/skills/browser-cdp/scripts",
+    "/Users/zxnap/.agents/skills-archive/browser-cdp/scripts",
+):
+    if os.path.exists(_p):
+        sys.path.insert(0, _p)
+        break
 from cdp import Page  # noqa: E402
 
 BASE = os.environ.get("E2E_BASE", "http://127.0.0.1:8000")

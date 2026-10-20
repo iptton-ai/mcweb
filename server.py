@@ -308,7 +308,12 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
 
-    server = ThreadingHTTPServer((args.host, args.port), GameRequestHandler)
+    # 页面加载瞬间要拉 ~73 个模块文件，socketserver 默认 accept 积压队列(5)偏紧，
+    # 回环上队列满时 SYN 会被丢弃（表现为该连接多等 1s 重传）——放宽到 128 消掉这层抖动
+    class GameThreadingHTTPServer(ThreadingHTTPServer):
+        request_queue_size = 128
+
+    server = GameThreadingHTTPServer((args.host, args.port), GameRequestHandler)
     server.daemon_threads = True
     print(f"⛏ 我的世界 - 网页复刻版 服务器已启动")
     print(f"   游戏入口: http://{args.host}:{args.port}/")
