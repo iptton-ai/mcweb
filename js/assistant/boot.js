@@ -53,17 +53,83 @@ function showFatalOverlay(title, detail) {
 }
 
 // 页面加载完成后再拉起完整助手（此时游戏 main.js 已初始化完毕）
+// 失败现场取证（2026-10-19）：Chrome 对嵌套 import 失败一律只报根模块
+// "Failed to fetch dynamically imported module"，看不出断在哪一层。金丝雀 fetch
+// 判定传输层死活（⚠️ 必须用 import.meta.url 解析——fetch 的相对路径按页面而非
+// 本模块解析，第一版写 './index.js' 实际抓到了根路径 /index.js 的 404，乌龙取证）；
+// 资源时间线尾部看最后加载到哪个文件，定位断点
+async function diagnoseFailure() {
+    const lines = [];
+    try {
+        const t0 = performance.now();
+        const resp = await fetch(new URL('./index.js', import.meta.url).href, { cache: 'no-store' });
+        lines.push('金丝雀 fetch: HTTP ' + resp.status + '，' + Math.round(performance.now() - t0) + 'ms'
+            + '（成功而 import 失败 = 链上某模块被负缓存/内容问题，看下方尾部找断点）');
+    } catch (e) {
+        lines.push('金丝雀 fetch 同样失败: ' + (e?.message || e) + '（传输/请求管线问题）');
+    }
+    try {
+        const tail = performance.getEntriesByType('resource')
+            .filter((e) => e.name.includes('/js/'))
+            .slice(-10)
+            .map((e) => '  ' + e.name.split('/').pop() + ' ' + Math.round(e.duration) + 'ms'
+                + (e.responseStatus != null ? ' HTTP' + e.responseStatus : ''));
+        if (tail.length) lines.push('最后加载的模块:\n' + tail.join('\n'));
+    } catch { /* 无资源时间线则略 */ }
+    return lines.join('\n');
+}
+
+// 关键机制（2026-10-19 定案，实锤于真实事故的控制台：仅 1 条 ERR_CONNECTION_CLOSED
+// 却 4 次重试全败、全程零网络活动）：浏览器模块 map 对拉取失败的模块做「负缓存」——
+// 文档存活期内同一 import 不再真正发请求、直接秒败。所以就地重试只是走过场，
+// 真正的自愈是整页刷新（清空模块 map；pagehide 触发游戏自动存档，世界状态不丢）。
+// 刷新次数以 sessionStorage 计数防死循环，助手成功启动即清零。
+const RETRY_DELAYS = [1000, 3000, 8000];
+const AUTO_RELOAD_KEY = 'mcAssistant.autoReloads';
+const MAX_AUTO_RELOADS = 2;
+
+function clearAutoReloadCount() {
+    try { sessionStorage.removeItem(AUTO_RELOAD_KEY); } catch { /* 忽略 */ }
+}
+
+function autoReloadToRecover() {
+    let n = 0;
+    try { n = parseInt(sessionStorage.getItem(AUTO_RELOAD_KEY) || '0', 10) || 0; } catch { /* 忽略 */ }
+    if (n >= MAX_AUTO_RELOADS) return false;
+    try { sessionStorage.setItem(AUTO_RELOAD_KEY, String(n + 1)); } catch { /* 忽略 */ }
+    const tip = document.createElement('div');
+    tip.style.cssText = 'position:fixed;inset:auto 16px 16px 16px;z-index:200;background:rgba(30,42,18,.95);' +
+        'border:2px solid #6a8f3a;border-radius:10px;padding:12px 18px;color:#e4ffd0;font:13px/1.6 sans-serif;';
+    tip.textContent = '⚠ 助手模块一次瞬时加载失败已被浏览器缓存（重试无效），正在自动刷新恢复（第 '
+        + (n + 1) + '/' + MAX_AUTO_RELOADS + ' 次）…';
+    document.body.appendChild(tip);
+    setTimeout(() => location.reload(), 1200);
+    return true;
+}
+
+function loadAssistant(attempt = 0) {
+    import('./index.js')
+        .then((m) => m.initAssistant())
+        .then(() => clearAutoReloadCount())
+        .catch(async (err) => {
+            const diag = await diagnoseFailure();
+            // 控制台镜像完整错误与诊断：用户贴 console 即可定位，不必开浮层
+            console.error('[assistant/boot] 助手加载失败(第' + (attempt + 1) + '次):', err?.stack || err, '\n' + diag);
+            recordError('助手加载失败(第' + (attempt + 1) + '次): ' + (err?.message || err)
+                + ' | ' + diag.split('\n')[0]);
+            if (attempt < RETRY_DELAYS.length) {
+                setTimeout(() => loadAssistant(attempt + 1), RETRY_DELAYS[attempt]);
+                return;
+            }
+            if (autoReloadToRecover()) return;
+            showFatalOverlay(
+                'AI 助手 / 游戏模块加载失败（自动重试与自动刷新仍未成功。诊断说明：金丝雀 fetch 成功而 import 失败 ≈ 链上某模块被浏览器负缓存或内容问题，看「最后加载的模块」找断点；金丝雀也失败 ≈ 请求管线故障；刚改过代码则也可能是代码错误）',
+                (err?.stack || err) + '\n\n' + diag + '\n\n最近错误记录：\n' +
+                (sessionStorage.getItem(RUNTIME_ERR_KEY) || '无'),
+            );
+        });
+}
+
 window.addEventListener('load', () => {
-    setTimeout(() => {
-        import('./index.js')
-            .then((m) => m.initAssistant())
-            .catch((err) => {
-                recordError('助手加载失败: ' + (err?.message || err));
-                showFatalOverlay(
-                    'AI 助手 / 游戏模块加载失败（很可能是最近修改的代码有语法或引用错误）',
-                    (err?.stack || err) + '\n\n最近错误记录：\n' +
-                    (sessionStorage.getItem(RUNTIME_ERR_KEY) || '无'),
-                );
-            });
-    }, 0);
+    setTimeout(() => loadAssistant(), 0);
 });
