@@ -47,6 +47,7 @@ export const BGM_PACKS = [
     { id: 'pastoral', name: '静谧田园', icon: '🌾', desc: '舒缓钢琴与弦乐，田园诗般悠长的白天与夜晚' },
     { id: 'lofi', name: 'Lo-Fi 慢拍', icon: '☕', desc: '慢节奏 chill beats，爵士钢琴与黑胶颗粒感' },
     { id: 'ambient', name: '环境冥想', icon: '🌫️', desc: '氛围铺底极简舒缓，几乎无节奏，最不打扰' },
+    { id: 'orchestral', name: '管弦冒险', icon: '🎻', desc: 'YuE2 生成的管弦配乐：明亮白天、神秘黑夜、步步紧逼的张力与史诗战斗' },
 ];
 
 const STYLE_KEY = 'mcweb.bgm.style';

@@ -409,15 +409,15 @@ const SECTIONS = [
     {
         id: 'media',
         title: '录像·拍摄·配乐（三镜头/自动跟拍/BGM 态势/音量）',
-        keywords: ['录像', '录制', '拍摄', '镜头', 'BGM', '配乐', '音效', '音量', '自动取景', '跟拍', '宣传片', '音乐'],
+        keywords: ['录像', '录制', '拍摄', '镜头', 'BGM', '配乐', '音效', '音量', '自动取景', '跟拍', '宣传片', '音乐', '风格包', '管弦', 'YuE2'],
         sources: ['js/recording.js', 'js/cameraRig.js', 'js/audio.js', 'js/bgm.js', 'js/ui.js', 'js/settingsUI.js'],
         text: [
             '拍摄面板（ui.js，显隐跟随 AI 助手面板——助手开（T）才显示、助手关即整体隐藏，不再常驻；Tab 释放鼠标操作面板（施工继续），再按 Tab 回游戏）：R 开始录制/停止保存；三镜头=玩家视角 player/自动取景 build/手动调镜 free（C 键循环），切换镜头不断录像。手动调镜=从当前相机真实位姿无跳变接管：点击画面鼠标转向、WASD 移动、空格/Shift 升降、滚轮调速。录制本体不依赖面板可见性：面板隐藏时 R 键照常启停。',
             '📖 说明浮层（helpDocs.js，首屏/暂停菜单「📖 说明」按钮）：目录+iframe 嵌 docs/ 图解文档（首篇=红石能源系统图解，含信号源/开关/脉冲/时钟/火把塔交互演示）；Esc/Q 关闭、闯关中拒开；加新文档改 helpDocs.js 的 DOCS 表。红石速记：源（拉杆/按钮 1s/压力板/火把/观察者 0.2s 背面输出/已解锁答题机）15 级→粉每格-1；拉杆只充能自己贴的方块；粉充能脚下+水平四邻；火把充能正上方；被充能方块唯一用途=翻转贴附火把（不喂粉，与原版差异）；负载看 6 邻亮粉或激活源。',
             'AI 施工自动跟拍（cameraRig.js）：开工自动取景并开录（owner=cam）——按建筑八角包围盒+真实 FOV/aspect 框住宽/高/深，遮挡检测自动换机位；施工期间切镜不停录，等待 AI 下一轮工具调用不算完工；真正完工后展示 4s 只停 cam 会话；用户手动停过本次不再自动重开，用户/关卡的录像绝不被收尾停掉。「AI 施工自动录制」开关存 localStorage mcweb.buildAutoRecord（拍摄面板可关）。',
             '录像（recording.js）：独立画布 ≤1920×1080 偶数尺寸 30fps；编码显式锁定 H.264+AAC 的 mp4（QuickTime 全兼容——裸 video/mp4 会被浏览器协商出 VP9/Opus 弹「不兼容部分媒体」），不支持 AAC 的环境退 avc1+opus（音轨提示用 VLC/IINA），webm 仅兜底；音轨从 audio.js 主输出分轨 clone 合入；单段最长 10 分钟（到点自动停并保存）；停止后自动下载，被拦截可点「保存上一段」（入口保留到下一片完成或页面关闭）；启动失败明确反馈且不残留录制态。录像所有权三档：cam=施工跟拍/level=关卡宣传片（通关或退出自动保存，绝不碰用户会话）/user=手动（只能用户停）。',
-            'BGM（bgm.js）：白天 day/黑夜 night/怪物接近 approach/战斗 combat 四态势自动切换，优先级 战斗>接近>黑夜>白天；接近 18 格进 24 格出、战斗 8 进 12 出（迟滞防边界来回切歌），受伤保底战斗曲 4s；怪物从无到有叠放一次性警示句（20s 冷却）；候选稳定 1.2s 才切、非紧急曲最小间隔 8s；新曲 1.2s 淡入、旧曲 0.2s 快速淡出保证不叠歌。四风格包 classic/pastoral/lofi/ambient：文件名 bgm_<pack>_<mood>.m4a（经典包无包前缀 bgm_<mood>.m4a），新包单曲缺失回退经典包同名曲、再缺静默无配乐不报错；风格与音量存 localStorage（mcweb.bgm.style / mcweb.bgm.vol）。',
-            '音效与音量（audio.js/settingsUI.js）：音效走 sfxBus 总线、与 BGM 分开调音量（mcweb.sfx.vol），都汇主输出——录像分轨才带得走全部游戏声音；⚙️ 设置浮层「🎵 音频」页=风格包选择+音乐/音效音量滑块（即时生效）；教学音效 assets/audio/edu_*.wav 缺文件回退 WebAudio 合成音。',
+            'BGM（bgm.js）：白天 day/黑夜 night/怪物接近 approach/战斗 combat 四态势自动切换，优先级 战斗>接近>黑夜>白天；接近 18 格进 24 格出、战斗 8 进 12 出（迟滞防边界来回切歌），受伤保底战斗曲 4s；怪物从无到有叠放一次性警示句（20s 冷却）；候选稳定 1.2s 才切、非紧急曲最小间隔 8s；新曲 1.2s 淡入、旧曲 0.2s 快速淡出保证不叠歌。五风格包 classic/pastoral/lofi/ambient/orchestral：文件名 bgm_<pack>_<mood>.m4a（经典包无包前缀 bgm_<mood>.m4a），新包单曲缺失回退经典包同名曲、再缺静默无配乐不报错；orchestral（管弦冒险）=YuE2 本地生成的管弦配乐，重生成跑 python3 tools/gen_yue2_audio.py（需本机 ComfyUI 带 --gpu-only 跑 YuE2 bf16）；风格与音量存 localStorage（mcweb.bgm.style / mcweb.bgm.vol）。',
+            '音效与音量（audio.js/settingsUI.js）：音效走 sfxBus 总线、与 BGM 分开调音量（mcweb.sfx.vol），都汇主输出——录像分轨才带得走全部游戏声音；⚙️ 设置浮层「🎵 音频」页=风格包选择+音乐/音效音量滑块（即时生效）；教学音效 assets/audio/edu_{correct,wrong,unlock}.wav（YuE2 重制版 3s/32kHz/单声道，与 BGM 同出 tools/gen_yue2_audio.py）缺文件回退 WebAudio 合成音。',
         ].join('\n'),
     },
     {
