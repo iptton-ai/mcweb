@@ -255,6 +255,7 @@ export function updateItemDrops(dt) {
     if (beltBuckets) for (const d of state.itemDrops) syncBeltBucket(d, null);
     for (let i = state.itemDrops.length - 1; i >= 0; i--) {
         const d = state.itemDrops[i];
+        d.windTimer=Math.max(0,(d.windTimer||0)-dt);
         const oldBucket = beltBuckets ? beltBucketKey(d) : null;
         const prevY = d.py ?? d.y;
         d.py = d.y;
@@ -277,7 +278,7 @@ export function updateItemDrops(dt) {
         const dx = p.x - d.x, dy = p.y + 0.9 - d.y, dz = p.z - d.z;
         const dist = Math.hypot(dx, dy, dz);
         const thrown = d.pickupDelay > 0; // 玩家丢弃的实体：冷却内不可拾取，且永不磁吸（捡回需走近 1.5 格）
-        if (!p.dead && d.age >= d.pickupDelay && dist < ITEM_PICKUP_DIST) {
+        if (!p.dead && !d.windTimer && d.age >= d.pickupDelay && dist < ITEM_PICKUP_DIST) {
             if (!isCreative() || d.lifePersistent) {
                 const accepted=addInventoryStack({id:d.itemId,count:d.count,wear:d.toolWear||0});
                 d.count-=accepted;
@@ -288,7 +289,7 @@ export function updateItemDrops(dt) {
             removeDrop(i);
             continue;
         }
-        if (!p.dead && !thrown && !onBelt && dist < ITEM_MAGNET_DIST) {
+        if (!p.dead && !d.windTimer && !thrown && !onBelt && dist < ITEM_MAGNET_DIST) {
             // 机器产出磁吸：不用走过去捡（手感优先）
             const step = Math.min(6 * dt, dist);
             d.x += dx / dist * step;

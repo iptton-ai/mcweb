@@ -1282,6 +1282,19 @@ export function generateAllTextures() {
         ctx.fillStyle = '#ffdc79'; // 正轴端固定黄标，旋转时仍可认出换向端。
         ctx.fillRect(x + 12, y + 5, 2, 6);
     };
+    for(const tile of tiles.filter(t=>t.name.startsWith('physics_')))drawFunctions[tile.top]=(ctx,x,y,s)=>{
+        const n=Number(tile.name.slice(8)),q=[176,177,178,179,189].indexOf(n);
+        ctx.fillStyle='#193845';ctx.fillRect(x,y,s,s);ctx.fillStyle='#cba26b';ctx.fillRect(x+1,y+s-4,s-2,3);
+        ctx.strokeStyle='#c8d9d5';ctx.lineWidth=2;ctx.strokeRect(x+3,y+3,s-6,s-7);
+        if(q>=0){ctx.fillStyle='#50a9e2';ctx.fillRect(x+4,y+11-q*2,s-8,q*2);}
+        else if(n===223){ctx.fillStyle='#cfae73';ctx.fillRect(x+4,y+4,8,8);ctx.fillStyle='#6b5744';ctx.fillRect(x+7,y+7,2,5);}
+        else if(n===227){ctx.fillStyle='#ce6554';ctx.fillRect(x+3,y+3,10,9);ctx.fillStyle='#fff2d2';ctx.fillRect(x+3,y+6,10,3);}
+        else {ctx.strokeStyle=n===77?'#df9ac7':n===79||n===99?'#f2d994':'#70dcc2';ctx.beginPath();
+            if(n===75){ctx.moveTo(x+4,y+5);ctx.lineTo(x+11,y+11);}else if(n===76){ctx.moveTo(x+3,y+6);ctx.lineTo(x+13,y+6);ctx.moveTo(x+8,y+6);ctx.lineTo(x+8,y+12);}
+            else if(n===78){ctx.arc(x+6,y+6,2,0,Math.PI*2);ctx.moveTo(x+11,y+4);ctx.lineTo(x+11,y+11);}
+            else if(n===77){ctx.moveTo(x+5,y+11);for(let i=0;i<5;i++)ctx.lineTo(x+5+i%2*5,y+10-i);}
+            else {ctx.moveTo(x+4,y+4);ctx.lineTo(x+12,y+11);ctx.moveTo(x+12,y+4);ctx.lineTo(x+4,y+11);}ctx.stroke();}
+    };
     for (const tile of tiles) {
         const tx = (tile.top % atlasSize) * tileSize;
         const ty = Math.floor(tile.top / atlasSize) * tileSize;

@@ -1,0 +1,510 @@
+{
+  "samples": [
+    {
+      "name": "ramp-0",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.7999999999999989,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 277,
+      "info": {
+        "id": 75,
+        "config": {
+          "allowRun": false,
+          "slope": 0,
+          "surface": 0,
+          "mass": 1
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "摩擦停稳"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "ramp-1",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8260276270784921,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 268.0999999642372,
+      "info": {
+        "id": 75,
+        "config": {
+          "allowRun": false,
+          "slope": 1,
+          "surface": 0,
+          "mass": 1
+        },
+        "running": true,
+        "elapsed": 0.3250000000000002,
+        "distance": 0.11395795261212391,
+        "velocity": 0.7012797083823009,
+        "height": 0.3587340791768729,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "运行中"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "ramp-2",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8940372239689705,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 267.5999999642372,
+      "info": {
+        "id": 75,
+        "config": {
+          "allowRun": false,
+          "slope": 2,
+          "surface": 0,
+          "mass": 1
+        },
+        "running": true,
+        "elapsed": 0.3250000000000002,
+        "distance": 0.24085235907815267,
+        "velocity": 1.4821683635578615,
+        "height": 0.6295738204609236,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "运行中"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "ramp-3",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.9520392993048326,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 276.69999998807907,
+      "info": {
+        "id": 75,
+        "config": {
+          "allowRun": false,
+          "slope": 3,
+          "surface": 0,
+          "mass": 1
+        },
+        "running": true,
+        "elapsed": 0.33333333333333354,
+        "distance": 0.3695811443001687,
+        "velocity": 2.2174868658010114,
+        "height": 0.799326838446488,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "运行中"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-1-0",
+      "min": [
+        0.022313037893148646,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8757480105832105,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 281.89999997615814,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 1,
+          "leftMass": 4,
+          "rightMass": 0,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": -0.25,
+        "torque": -39.2,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "左侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-1-1",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8090001105304463,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 267.5,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 1,
+          "leftMass": 0,
+          "rightMass": 4,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0.35,
+        "torque": 117.60000000000001,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "右侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-2-0",
+      "min": [
+        0.023239911967891658,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8707217158724259,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 274.30000001192093,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 2,
+          "leftMass": 4,
+          "rightMass": 0,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": -0.35,
+        "torque": -78.4,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "左侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-2-1",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9767600880321083,
+        0.8707217158724259,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 275.19999998807907,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 2,
+          "leftMass": 0,
+          "rightMass": 4,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0.35,
+        "torque": 78.4,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "右侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-3-0",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.8090001105304463,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 290,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 3,
+          "leftMass": 4,
+          "rightMass": 0,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": -0.35,
+        "torque": -117.60000000000001,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "左侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "lever-3-1",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9776869621068514,
+        0.8757480105832105,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 287,
+      "info": {
+        "id": 76,
+        "config": {
+          "allowRun": false,
+          "pivot": 3,
+          "leftMass": 0,
+          "rightMass": 4,
+          "leftArm": 2,
+          "rightArm": 2
+        },
+        "running": false,
+        "elapsed": 0.008333333333333333,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0.25,
+        "torque": 39.2,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "右侧更重"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "pulley-four-ropes",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.9749999999999996,
+        0.9699999999999989
+      ],
+      "frames": 35,
+      "elapsedMs": 285.19999998807907,
+      "info": {
+        "id": 78,
+        "config": {
+          "allowRun": false,
+          "mass": 4,
+          "ropes": 2,
+          "travel": 3
+        },
+        "running": true,
+        "elapsed": 0.3416666666666669,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0.04270833333333336,
+        "angle": 0,
+        "torque": 0,
+        "force": 9.8,
+        "ropeDistance": 0.17083333333333345,
+        "stored": 0,
+        "blocked": false,
+        "status": "运行中"
+      },
+      "withinCell": true
+    },
+    {
+      "name": "fan",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.9951047377776447,
+        0.9699999999999989
+      ],
+      "frames": 934,
+      "elapsedMs": 8005.199999988079,
+      "info": {
+        "id": 79,
+        "config": {
+          "allowRun": false,
+          "dir": 1
+        },
+        "running": true,
+        "elapsed": 0,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "就绪",
+        "rpm": 8,
+        "targetRpm": 8,
+        "ratio": 1,
+        "direction": 1,
+        "capacity": 64,
+        "load": 8,
+        "reason": null,
+        "sourceRpm": 8
+      },
+      "withinCell": true
+    },
+    {
+      "name": "windmill",
+      "min": [
+        0.030000000000001137,
+        0,
+        0.030000000000001137
+      ],
+      "max": [
+        0.9699999999999989,
+        0.9951047377776447,
+        0.9699999999999989
+      ],
+      "frames": 981,
+      "elapsedMs": 8001.799999952316,
+      "info": {
+        "id": 99,
+        "config": {
+          "allowRun": false
+        },
+        "running": true,
+        "elapsed": 0,
+        "distance": 0,
+        "velocity": 0,
+        "height": 0,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "就绪",
+        "rpm": 8,
+        "targetRpm": 8,
+        "ratio": 1,
+        "direction": 1,
+        "capacity": 64,
+        "load": 0,
+        "reason": null,
+        "sourceRpm": 8
+      },
+      "withinCell": true
+    }
+  ],
+  "scope": "实际游戏场景prop、真实Three.Box3 precise=true、各姿态至少35个rAF帧；风扇风车各观察8秒覆盖8RPM完整旋转",
+  "outliers": []
+}

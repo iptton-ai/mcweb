@@ -471,7 +471,7 @@ for (const hz of [10, 30, 60, 120]) test(`P1-N08/P05: 24-entity 32 RPM corner qu
 
 test('P1-S01: old catalog indices stay fixed and all new byte IDs survive RLE long runs', () => {
     assert.deepEqual(C.HotbarBlocks.slice(0, OLD_HOTBAR.length), OLD_HOTBAR);
-    assert.deepEqual(C.HotbarBlocks.slice(OLD_HOTBAR.length), [63, 66, 69]);
+    assert.deepEqual(C.HotbarBlocks.slice(OLD_HOTBAR.length,OLD_HOTBAR.length+3), [63, 66, 69]);
     const data = new Uint8Array(70000 + 12);
     data.fill(63, 0, 70000); data.set(variants(), 70000);
     assert.deepEqual(rleDecode(rleEncode(data), data.length), data);

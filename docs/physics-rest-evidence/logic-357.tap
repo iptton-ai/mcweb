@@ -1,0 +1,2186 @@
+TAP version 13
+# Subtest: 1. 答题机答对→红石常供能开门全链；答错保持锁定无信号
+ok 1 - 1. 答题机答对→红石常供能开门全链；答错保持锁定无信号
+  ---
+  duration_ms: 190.232291
+  type: 'test'
+  ...
+# Subtest: 2. 答题机→红石灯：答对即亮（6 邻直贴无需布线）
+ok 2 - 2. 答题机→红石灯：答对即亮（6 邻直贴无需布线）
+  ---
+  duration_ms: 299.6445
+  type: 'test'
+  ...
+# Subtest: 3. 英语商人：答对发奖励掉落+分模式计数；答错无奖励
+ok 3 - 3. 英语商人：答对发奖励掉落+分模式计数；答错无奖励
+  ---
+  duration_ms: 134.022292
+  type: 'test'
+  ...
+# Subtest: 4. 奖励梯队：streak 8/5/3/0 四档掉落与累计里程碑
+ok 4 - 4. 奖励梯队：streak 8/5/3/0 四档掉落与累计里程碑
+  ---
+  duration_ms: 94.044583
+  type: 'test'
+  ...
+# Subtest: 5. 星辉门：超纲题答对开门供电；答错入错题本
+ok 5 - 5. 星辉门：超纲题答对开门供电；答错入错题本
+  ---
+  duration_ms: 286.543375
+  type: 'test'
+  ...
+# Subtest: 6. 从真实世界建卡→校验→嵌入新世界（区域快照逐格一致）
+ok 6 - 6. 从真实世界建卡→校验→嵌入新世界（区域快照逐格一致）
+  ---
+  duration_ms: 462.975083
+  type: 'test'
+  ...
+# Subtest: 7. reachabilityBFS：通卡全可达；终点旗被实心墙封死→missing
+ok 7 - 7. reachabilityBFS：通卡全可达；终点旗被实心墙封死→missing
+  ---
+  duration_ms: 308.816833
+  type: 'test'
+  ...
+# Subtest: 8. 闯关全链：进关→卡题作答→记账→结算星级→最佳成绩→退出恢复
+ok 8 - 8. 闯关全链：进关→卡题作答→记账→结算星级→最佳成绩→退出恢复
+  ---
+  duration_ms: 666.86125
+  type: 'test'
+  ...
+# Subtest: 9. 闯关中 TNT 保护：锁/旗/门免疫爆炸；非闯关对照全毁
+ok 9 - 9. 闯关中 TNT 保护：锁/旗/门免疫爆炸；非闯关对照全毁
+  ---
+  duration_ms: 784.30775
+  type: 'test'
+  ...
+# Subtest: 10. 我的题库×出题链：数据可达 eduKeypad 作者锁路径，坏数据被挡
+ok 10 - 10. 我的题库×出题链：数据可达 eduKeypad 作者锁路径，坏数据被挡
+  ---
+  duration_ms: 86.784958
+  type: 'test'
+  ...
+# Subtest: 致命伤害显示十颗空心，不把负血量画成超长心条
+ok 11 - 致命伤害显示十颗空心，不把负血量画成超长心条
+  ---
+  duration_ms: 137.528708
+  type: 'test'
+  ...
+# Subtest: 审查 R1：同层脚印跨床与整块，两个扫描顺序都先落到较高顶面
+ok 12 - 审查 R1：同层脚印跨床与整块，两个扫描顺序都先落到较高顶面
+  ---
+  duration_ms: 245.05275
+  type: 'test'
+  ...
+# Subtest: 审查 R2：真实挖红石灯/普通支撑都清双格并只返一床
+ok 13 - 审查 R2：真实挖红石灯/普通支撑都清双格并只返一床
+  ---
+  duration_ms: 332.168709
+  type: 'test'
+  ...
+# Subtest: 审查 R9：真实挖床任一半立即撤下开启拉杆、返挂件并让负载断电
+ok 14 - 审查 R9：真实挖床任一半立即撤下开启拉杆、返挂件并让负载断电
+  ---
+  duration_ms: 645.14725
+  type: 'test'
+  ...
+# Subtest: 审查 R9：AI拆支撑与爆炸半床撤挂件，环境清理不送物品进背包
+ok 15 - 审查 R9：AI拆支撑与爆炸半床撤挂件，环境清理不送物品进背包
+  ---
+  duration_ms: 508.881833
+  type: 'test'
+  ...
+# Subtest: 审查 R3：原木地板可睡觉/床重生/出生回退，不创建平台改坏建筑
+ok 16 - 审查 R3：原木地板可睡觉/床重生/出生回退，不创建平台改坏建筑
+  ---
+  duration_ms: 319.611959
+  type: 'test'
+  ...
+# Subtest: 审查 R4：真实制作前后按木板→工作台→放置→补料→床阶段提示
+ok 17 - 审查 R4：真实制作前后按木板→工作台→放置→补料→床阶段提示
+  ---
+  duration_ms: 143.285125
+  type: 'test'
+  ...
+# Subtest: 审查 R5：所有物品共用真实来源，水/草/矿石不虚构可采物品，实验包与领取清单一致
+ok 18 - 审查 R5：所有物品共用真实来源，水/草/矿石不虚构可采物品，实验包与领取清单一致
+  ---
+  duration_ms: 1.259459
+  type: 'test'
+  ...
+# Subtest: 审查 R7：旧空背包创造档首进生存可领一次；旧生存/非空创造不补发
+ok 19 - 审查 R7：旧空背包创造档首进生存可领一次；旧生存/非空创造不补发
+  ---
+  duration_ms: 1383.971375
+  type: 'test'
+  ...
+# Subtest: 审查 R8：二至四格高的平台敌人能走出边缘落到床边，应阻止睡觉
+ok 20 - 审查 R8：二至四格高的平台敌人能走出边缘落到床边，应阻止睡觉
+  ---
+  duration_ms: 214.876291
+  type: 'test'
+  ...
+# Subtest: 安家材料链：首次赠羊毛→木板→工作台→门床；切模式不会再送
+ok 21 - 安家材料链：首次赠羊毛→木板→工作台→门床；切模式不会再送
+  ---
+  duration_ms: 166.19075
+  type: 'test'
+  ...
+# Subtest: 四向双格床；边界/占用/无支撑/玩家重叠失败不写不扣
+ok 22 - 四向双格床；边界/占用/无支撑/玩家重叠失败不写不扣
+  ---
+  duration_ms: 442.987625
+  type: 'test'
+  ...
+# Subtest: 拆任一半只返一床；跨区块另一半也清掉，邻床不误删
+ok 23 - 拆任一半只返一床；跨区块另一半也清掉，邻床不误删
+  ---
+  duration_ms: 237.568916
+  type: 'test'
+  ...
+# Subtest: 床支撑被活塞移走自动清两格；直接推床不拆分
+ok 24 - 床支撑被活塞移走自动清两格；直接推床不拆分
+  ---
+  duration_ms: 435.983333
+  type: 'test'
+  ...
+# Subtest: AI单半覆盖、清区和原始单床写入均无孤床或物品复制
+ok 25 - AI单半覆盖、清区和原始单床写入均无孤床或物品复制
+  ---
+  duration_ms: 140.2835
+  type: 'test'
+  ...
+# Subtest: 轻松苦力怕保家，主动TNT和冒险苦力怕照常，双格爆炸无孤床
+ok 26 - 轻松苦力怕保家，主动TNT和冒险苦力怕照常，双格爆炸无孤床
+  ---
+  duration_ms: 345.744375
+  type: 'test'
+  ...
+# Subtest: 白天设家，夜晚安全睡醒且不补饥饿；床失效安全回退
+ok 27 - 白天设家，夜晚安全睡醒且不补饥饿；床失效安全回退
+  ---
+  duration_ms: 72.467542
+  type: 'test'
+  ...
+# Subtest: 屋内可达怪阻睡，封闭墙外怪不阻睡；起身全堵不能睡
+ok 28 - 屋内可达怪阻睡，封闭墙外怪不阻睡；起身全堵不能睡
+  ---
+  duration_ms: 137.068
+  type: 'test'
+  ...
+# Subtest: 矮床真实碰撞：脚落在9/16顶面，可横移且床侧不穿透
+ok 29 - 矮床真实碰撞：脚落在9/16顶面，可横移且床侧不穿透
+  ---
+  duration_ms: 100.485084
+  type: 'test'
+  ...
+# Subtest: 普通生存阅读/打字/失焦暂停，输入门同步，创造与临时世界不受影响
+ok 30 - 普通生存阅读/打字/失焦暂停，输入门同步，创造与临时世界不受影响
+  ---
+  duration_ms: 99.713084
+  type: 'test'
+  ...
+# Subtest: 首夜按有效时间缓冲；常用栏映射不修改目录索引
+ok 31 - 首夜按有效时间缓冲；常用栏映射不修改目录索引
+  ---
+  duration_ms: 67.871542
+  type: 'test'
+  ...
+# Subtest: 存档/切槽/快照往返新增字段；缺字段旧档默认冒险且不再赠物
+ok 32 - 存档/切槽/快照往返新增字段；缺字段旧档默认冒险且不再赠物
+  ---
+  duration_ms: 1221.917333
+  type: 'test'
+  ...
+# Subtest: 编辑世界禁止设家/跳夜，退出读回家和常用栏；临时世界热重载不覆盖
+ok 33 - 编辑世界禁止设家/跳夜，退出读回家和常用栏；临时世界热重载不覆盖
+  ---
+  duration_ms: 519.075541
+  type: 'test'
+  ...
+# Subtest: 新地形固定种子浅水可从安全出生地步行接近，旧版本仍无新增水
+ok 34 - 新地形固定种子浅水可从安全出生地步行接近，旧版本仍无新增水
+  ---
+  duration_ms: 1043.236625
+  type: 'test'
+  ...
+# Subtest: 真实入水→Space+W爬上一格岸，30/60/120Hz均可，离岸停止跳跃后能站稳
+ok 35 - 真实入水→Space+W爬上一格岸，30/60/120Hz均可，离岸停止跳跃后能站稳
+  ---
+  duration_ms: 436.257375
+  type: 'test'
+  ...
+# Subtest: 低顶盖住水与岸时Space+W不会穿顶或穿进岸墙，撤低顶后可上岸
+ok 36 - 低顶盖住水与岸时Space+W不会穿顶或穿进岸墙，撤低顶后可上岸
+  ---
+  duration_ms: 115.25675
+  type: 'test'
+  ...
+# Subtest: 两格高墙仍不能爬越；离水后持续按空格也不会无限空中跳
+ok 37 - 两格高墙仍不能爬越；离水后持续按空格也不会无限空中跳
+  ---
+  duration_ms: 81.55075
+  type: 'test'
+  ...
+# Subtest: 实机 seed 1287621887 岸前坐标回放：不改池几何即可用真实按键上岸
+ok 38 - 实机 seed 1287621887 岸前坐标回放：不改池几何即可用真实按键上岸
+  ---
+  duration_ms: 716.92925
+  type: 'test'
+  ...
+# Subtest: 1. 水车=动力源：顶面泡水 → 串联传动轴显示 8 RPM，抽水即停
+ok 39 - 1. 水车=动力源：顶面泡水 → 串联传动轴显示 8 RPM，抽水即停
+  ---
+  duration_ms: 228.725458
+  type: 'test'
+  ...
+# Subtest: 2. 应力容量与过载：两台粉碎轮恰好满载在转，第 3 台 → 整网停转带不运转
+ok 40 - 2. 应力容量与过载：两台粉碎轮恰好满载在转，第 3 台 → 整网停转带不运转
+  ---
+  duration_ms: 278.852125
+  type: 'test'
+  ...
+# Subtest: 3. 齿轮垂直啮合：一次换向的两水车对顶 → 转向冲突整网卡死，消除反向源恢复
+ok 41 - 3. 齿轮垂直啮合：一次换向的两水车对顶 → 转向冲突整网卡死，消除反向源恢复
+  ---
+  duration_ms: 237.009
+  type: 'test'
+  ...
+# Subtest: 4. 离合器红石通断：充能断开下游停/水车侧照转，断电恢复接合
+ok 42 - 4. 离合器红石通断：充能断开下游停/水车侧照转，断电恢复接合
+  ---
+  duration_ms: 481.127166
+  type: 'test'
+  ...
+# Subtest: 5. 传送带运物：1.5 格/秒沿带向移动、抵墙停留、断电原地停复电续走
+ok 43 - 5. 传送带运物：1.5 格/秒沿带向移动、抵墙停留、断电原地停复电续走
+  ---
+  duration_ms: 315.072083
+  type: 'test'
+  ...
+# Subtest: 6. 传送带需邻动力：孤立带不运转，带上物品原地不动
+ok 44 - 6. 传送带需邻动力：孤立带不运转，带上物品原地不动
+  ---
+  duration_ms: 119.465875
+  type: 'test'
+  ...
+# Subtest: 7. 粉碎轮四级链：石头→圆石→沙砾，产出走真物品实体；非配方方块投不进
+ok 45 - 7. 粉碎轮四级链：石头→圆石→沙砾，产出走真物品实体；非配方方块投不进
+  ---
+  duration_ms: 159.81475
+  type: 'test'
+  ...
+# Subtest: 8. 机械锯：锯切朝向格原木 → 变空气产出木板×4
+ok 46 - 8. 机械锯：锯切朝向格原木 → 变空气产出木板×4
+  ---
+  duration_ms: 115.396583
+  type: 'test'
+  ...
+# Subtest: 9. 投料器：捕获格的方块类物品变方块塞进朝向格；材料/食物不投
+ok 47 - 9. 投料器：捕获格的方块类物品变方块塞进朝向格；材料/食物不投
+  ---
+  duration_ms: 138.43225
+  type: 'test'
+  ...
+# Subtest: 10. 滑轮电梯：充能卷绳上升、行程端点停、断电放绳、无动力悬停
+ok 48 - 10. 滑轮电梯：充能卷绳上升、行程端点停、断电放绳、无动力悬停
+  ---
+  duration_ms: 451.257333
+  type: 'test'
+  ...
+# Subtest: 11. 平台载客：卷绳平台升一格，站顶玩家跟着 +1（carryRiders 跨模块）
+ok 49 - 11. 平台载客：卷绳平台升一格，站顶玩家跟着 +1（carryRiders 跨模块）
+  ---
+  duration_ms: 270.241459
+  type: 'test'
+  ...
+# Subtest: 12. 活塞推平台脱绑：推离绳路径卷绳不动，推回绳路径重新绑上可动
+ok 50 - 12. 活塞推平台脱绑：推离绳路径卷绳不动，推回绳路径重新绑上可动
+  ---
+  duration_ms: 624.160375
+  type: 'test'
+  ...
+# Subtest: E01：同起点三档摩擦得到光滑最远、粗糙最近，且物体不越实验轨道
+ok 51 - E01：同起点三档摩擦得到光滑最远、粗糙最近，且物体不越实验轨道
+  ---
+  duration_ms: 567.956083
+  type: 'test'
+  ...
+# Subtest: E01：摩擦档 0 在30/60/120Hz结果一致
+ok 52 - E01：摩擦档 0 在30/60/120Hz结果一致
+  ---
+  duration_ms: 396.437375
+  type: 'test'
+  ...
+# Subtest: E01：摩擦档 1 在30/60/120Hz结果一致
+ok 53 - E01：摩擦档 1 在30/60/120Hz结果一致
+  ---
+  duration_ms: 322.892084
+  type: 'test'
+  ...
+# Subtest: E01：摩擦档 2 在30/60/120Hz结果一致
+ok 54 - E01：摩擦档 2 在30/60/120Hz结果一致
+  ---
+  duration_ms: 372.496958
+  type: 'test'
+  ...
+# Subtest: E01：水平面从静止开始不会无输入自行加速
+ok 55 - E01：水平面从静止开始不会无输入自行加速
+  ---
+  duration_ms: 76.364584
+  type: 'test'
+  ...
+# Subtest: E01：仅改变标准物体质量不会改变同一斜坡的摩擦滑行距离
+ok 56 - E01：仅改变标准物体质量不会改变同一斜坡的摩擦滑行距离
+  ---
+  duration_ms: 191.501209
+  type: 'test'
+  ...
+# Subtest: E01：一键复位可重复相同实验，不增加背包或真实掉落物
+ok 57 - E01：一键复位可重复相同实验，不增加背包或真实掉落物
+  ---
+  duration_ms: 104.570208
+  type: 'test'
+  ...
+# Subtest: E02：等质量等力臂的杠杆保持平衡
+ok 58 - E02：等质量等力臂的杠杆保持平衡
+  ---
+  duration_ms: 126.110417
+  type: 'test'
+  ...
+# Subtest: E02：交换左右负载会同时反转转矩与倾斜
+ok 59 - E02：交换左右负载会同时反转转矩与倾斜
+  ---
+  duration_ms: 132.496834
+  type: 'test'
+  ...
+# Subtest: E02：两倍质量配半长力臂可平衡，单改力臂即可打破平衡
+ok 60 - E02：两倍质量配半长力臂可平衡，单改力臂即可打破平衡
+  ---
+  duration_ms: 98.912291
+  type: 'test'
+  ...
+# Subtest: E02：移动支点改变转矩，左右对称的支点位置得到相反结果
+ok 61 - E02：移动支点改变转矩，左右对称的支点位置得到相反结果
+  ---
+  duration_ms: 121.573667
+  type: 'test'
+  ...
+# Subtest: E02：虚拟砝码与杠杆不搬动台上的玩家，不变成可拾取物品
+ok 62 - E02：虚拟砝码与杠杆不搬动台上的玩家，不变成可拾取物品
+  ---
+  duration_ms: 95.103042
+  type: 'test'
+  ...
+# Subtest: E03：未压缩的弹簧不能直接弹射
+ok 63 - E03：未压缩的弹簧不能直接弹射
+  ---
+  duration_ms: 113.866916
+  type: 'test'
+  ...
+# Subtest: E03：手动压缩3档比1档弹高，且更重物体的弹高更低
+ok 64 - E03：手动压缩3档比1档弹高，且更重物体的弹高更低
+  ---
+  duration_ms: 245.145625
+  type: 'test'
+  ...
+# Subtest: E03：释放后反复按开始不会凭空恢复压缩能量
+ok 65 - E03：释放后反复按开始不会凭空恢复压缩能量
+  ---
+  duration_ms: 161.441416
+  type: 'test'
+  ...
+# Subtest: E03：复位清除已手动储存的弹簧能量
+ok 66 - E03：复位清除已手动储存的弹簧能量
+  ---
+  duration_ms: 85.739
+  type: 'test'
+  ...
+# Subtest: E03：弹簧在30/60/120Hz的峰值与落地状态一致
+ok 67 - E03：弹簧在30/60/120Hz的峰值与落地状态一致
+  ---
+  duration_ms: 241.589917
+  type: 'test'
+  ...
+# Subtest: E03：外部低顶实际限制弹射高度，碰顶不能穿过或再次增能
+ok 68 - E03：外部低顶实际限制弹射高度，碰顶不能穿过或再次增能
+  ---
+  duration_ms: 179.808625
+  type: 'test'
+  ...
+# Subtest: E04：三种教学滑轮提升相同高度，拉力与费距离同步体现1/2/4倍率
+ok 69 - E04：三种教学滑轮提升相同高度，拉力与费距离同步体现1/2/4倍率
+  ---
+  duration_ms: 269.671708
+  type: 'test'
+  ...
+# Subtest: E04：教学滑轮的手拉动作确实提升虚拟物体
+ok 70 - E04：教学滑轮的手拉动作确实提升虚拟物体
+  ---
+  duration_ms: 82.839833
+  type: 'test'
+  ...
+# Subtest: E04：滑轮在30/60/120Hz的提升与拉绳读数一致
+ok 71 - E04：滑轮在30/60/120Hz的提升与拉绳读数一致
+  ---
+  duration_ms: 264.731875
+  type: 'test'
+  ...
+# Subtest: S02：关卡未声明allowRun时，逻辑API拒绝手动开始与复位
+ok 72 - S02：关卡未声明allowRun时，逻辑API拒绝手动开始与复位
+  ---
+  duration_ms: 85.842209
+  type: 'test'
+  ...
+# Subtest: S02：关卡已声明allowRun仅开放开始/复位，参数写入仍被API拒绝
+ok 73 - S02：关卡已声明allowRun仅开放开始/复位，参数写入仍被API拒绝
+  ---
+  duration_ms: 85.668667
+  type: 'test'
+  ...
+# Subtest: S02：关卡未声明allowRun时，压缩和拉绳API同样被拒绝
+ok 74 - S02：关卡未声明allowRun时，压缩和拉绳API同样被拒绝
+  ---
+  duration_ms: 171.726417
+  type: 'test'
+  ...
+# Subtest: S02/G2新增：声明allowRun的关卡弹簧可手动压缩再释放，不修改配置或库存
+ok 75 - S02/G2新增：声明allowRun的关卡弹簧可手动压缩再释放，不修改配置或库存
+  ---
+  duration_ms: 107.970667
+  type: 'test'
+  ...
+# Subtest: S02/G2新增：声明allowRun的关卡教学滑轮可手拉，参数写入仍拒绝
+ok 76 - S02/G2新增：声明allowRun的关卡教学滑轮可手拉，参数写入仍拒绝
+  ---
+  duration_ms: 91.154125
+  type: 'test'
+  ...
+# Subtest: S02：拆除运行中的装置立即失效，重新放回同类没有遗留速度或压缩能量
+ok 77 - S02：拆除运行中的装置立即失效，重新放回同类没有遗留速度或压缩能量
+  ---
+  duration_ms: 87.2175
+  type: 'test'
+  ...
+# Subtest: S02：切换到新世界后，旧装置和读数不会继续存在
+ok 78 - S02：切换到新世界后，旧装置和读数不会继续存在
+  ---
+  duration_ms: 179.083041
+  type: 'test'
+  ...
+# Subtest: S02：普通生存暂停与失焦期间实验不推进，恢复后续跑
+ok 79 - S02：普通生存暂停与失焦期间实验不推进，恢复后续跑
+  ---
+  duration_ms: 86.430875
+  type: 'test'
+  ...
+# Subtest: E01–E04：非法参数被原子拒绝，不把已有配置改到半完成状态
+ok 80 - E01–E04：非法参数被原子拒绝，不把已有配置改到半完成状态
+  ---
+  duration_ms: 337.009333
+  type: 'test'
+  ...
+# Subtest: E05：30Hz下真实键盘步行穿测速门得到实际速度
+ok 81 - E05：30Hz下真实键盘步行穿测速门得到实际速度
+  ---
+  duration_ms: 86.131583
+  type: 'test'
+  ...
+# Subtest: E05：60Hz下真实键盘步行穿测速门得到实际速度
+ok 82 - E05：60Hz下真实键盘步行穿测速门得到实际速度
+  ---
+  duration_ms: 90.371541
+  type: 'test'
+  ...
+# Subtest: E05：120Hz下真实键盘步行穿测速门得到实际速度
+ok 83 - E05：120Hz下真实键盘步行穿测速门得到实际速度
+  ---
+  duration_ms: 83.923709
+  type: 'test'
+  ...
+# Subtest: E05：单帧高速跨过两平面也测得真实帧耗时，不按实验子步误报12倍速度
+ok 84 - E05：单帧高速跨过两平面也测得真实帧耗时，不按实验子步误报12倍速度
+  ---
+  duration_ms: 81.375709
+  type: 'test'
+  ...
+# Subtest: E05：真实掉落物单帧穿过两平面也能计时测速
+ok 85 - E05：真实掉落物单帧穿过两平面也能计时测速
+  ---
+  duration_ms: 89.990958
+  type: 'test'
+  ...
+# Subtest: E06：风扇必须后接真实轴动力才推动掉落物，基础负载计入动力网
+ok 86 - E06：风扇必须后接真实轴动力才推动掉落物，基础负载计入动力网
+  ---
+  duration_ms: 198.746167
+  type: 'test'
+  ...
+# Subtest: E06：实心墙遮住风程，撤墙后同一物品继续被风推动
+ok 87 - E06：实心墙遮住风程，撤墙后同一物品继续被风推动
+  ---
+  duration_ms: 109.095833
+  type: 'test'
+  ...
+# Subtest: E06：超过六格风程的物品不被风推动
+ok 88 - E06：超过六格风程的物品不被风推动
+  ---
+  duration_ms: 103.422417
+  type: 'test'
+  ...
+# Subtest: E06：风中掉落不被身边玩家抢吸，停机后恢复正常拾取且数量守恒
+ok 89 - E06：风中掉落不被身边玩家抢吸，停机后恢复正常拾取且数量守恒
+  ---
+  duration_ms: 112.538458
+  type: 'test'
+  ...
+# Subtest: E06：运转传送带优先接管物品，横向风不能把带上物品吹出轨道
+ok 90 - E06：运转传送带优先接管物品，横向风不能把带上物品吹出轨道
+  ---
+  duration_ms: 131.250875
+  type: 'test'
+  ...
+# Subtest: G3/E05：按真实主循环顺序，帧长变化不会把上一帧掉落位移除以本帧耗时
+ok 91 - G3/E05：按真实主循环顺序，帧长变化不会把上一帧掉落位移除以本帧耗时
+  ---
+  duration_ms: 89.0575
+  type: 'test'
+  ...
+# Subtest: G3/E01：调整坡度会改变真实斜坡模型，水平档不能仍画成斜面
+ok 92 - G3/E01：调整坡度会改变真实斜坡模型，水平档不能仍画成斜面
+  ---
+  duration_ms: 81.289583
+  type: 'test'
+  ...
+# Subtest: G3/E02：移动砝码槽位会改变模型中的实际力臂，砝码不能只改变读数
+ok 93 - G3/E02：移动砝码槽位会改变模型中的实际力臂，砝码不能只改变读数
+  ---
+  duration_ms: 81.813208
+  type: 'test'
+  ...
+# Subtest: G3/E04：定滑轮与四段承重绳的模型绳路必须不同，不能仅改拉力读数
+ok 94 - G3/E04：定滑轮与四段承重绳的模型绳路必须不同，不能仅改拉力读数
+  ---
+  duration_ms: 83.880625
+  type: 'test'
+  ...
+# Subtest: G3/E06：风扇正面必须朝配置的真实风向，不能模型与送物方向相差90度
+ok 95 - G3/E06：风扇正面必须朝配置的真实风向，不能模型与送物方向相差90度
+  ---
+  duration_ms: 129.618208
+  type: 'test'
+  ...
+# Subtest: G3/E05：斜向进入时，两道测速面的真实交点都要在测量范围内
+ok 96 - G3/E05：斜向进入时，两道测速面的真实交点都要在测量范围内
+  ---
+  duration_ms: 164.730209
+  type: 'test'
+  ...
+# Subtest: G3/E06：逆风不能顺向加速斜坡小车，横风不能变成轴向推力
+ok 97 - G3/E06：逆风不能顺向加速斜坡小车，横风不能变成轴向推力
+  ---
+  duration_ms: 200.548333
+  type: 'test'
+  ...
+# Subtest: G3/E06：风路穿入上一层时，该层挡板必须遮风
+ok 98 - G3/E06：风路穿入上一层时，该层挡板必须遮风
+  ---
+  duration_ms: 100.616291
+  type: 'test'
+  ...
+# Subtest: G3/E06：停机传送带不接管物品，风扇仍可吹动带上掉落
+ok 99 - G3/E06：停机传送带不接管物品，风扇仍可吹动带上掉落
+  ---
+  duration_ms: 107.739459
+  type: 'test'
+  ...
+# Subtest: A01：三格宽平台在 30Hz 载边缘乘客到端点并由红石回程
+ok 100 - A01：三格宽平台在 30Hz 载边缘乘客到端点并由红石回程
+  ---
+  duration_ms: 479.247125
+  type: 'test'
+  ...
+# Subtest: A01：三格宽平台在 60Hz 载边缘乘客到端点并由红石回程
+ok 101 - A01：三格宽平台在 60Hz 载边缘乘客到端点并由红石回程
+  ---
+  duration_ms: 428.358959
+  type: 'test'
+  ...
+# Subtest: A01：三格宽平台在 120Hz 载边缘乘客到端点并由红石回程
+ok 102 - A01：三格宽平台在 120Hz 载边缘乘客到端点并由红石回程
+  ---
+  duration_ms: 389.776459
+  type: 'test'
+  ...
+# Subtest: A01：三格目的足迹仅一格有墙也整体停机，撤墙后恢复
+ok 103 - A01：三格目的足迹仅一格有墙也整体停机，撤墙后恢复
+  ---
+  duration_ms: 153.131584
+  type: 'test'
+  ...
+# Subtest: A01：平台前方低顶先挡住乘客扫掠，不能把人推进墙
+ok 104 - A01：平台前方低顶先挡住乘客扫掠，不能把人推进墙
+  ---
+  duration_ms: 162.207292
+  type: 'test'
+  ...
+# Subtest: A01：前方站在导轨地板上的旁观者挡停整组，不被当乘客推走
+ok 105 - A01：前方站在导轨地板上的旁观者挡停整组，不被当乘客推走
+  ---
+  duration_ms: 175.527416
+  type: 'test'
+  ...
+# Subtest: A01：断动力悬停、恢复续走，平台数量始终守恒
+ok 106 - A01：断动力悬停、恢复续走，平台数量始终守恒
+  ---
+  duration_ms: 229.574959
+  type: 'test'
+  ...
+# Subtest: A01：最后合法世界列可作行程端点，越界参数拒绝且不改现有配置
+ok 107 - A01：最后合法世界列可作行程端点，越界参数拒绝且不改现有配置
+  ---
+  duration_ms: 199.5295
+  type: 'test'
+  ...
+# Subtest: A01/S01：中途普通存读保存真实偏移与三块足迹，读后继续同方向
+ok 108 - A01/S01：中途普通存读保存真实偏移与三块足迹，读后继续同方向
+  ---
+  duration_ms: 619.0835
+  type: 'test'
+  ...
+# Subtest: A01/S01：篡改移动平台偏移的存档拒绝导入，保留当前槽与世界
+ok 109 - A01/S01：篡改移动平台偏移的存档拒绝导入，保留当前槽与世界
+  ---
+  duration_ms: 461.7955
+  type: 'test'
+  ...
+# Subtest: A02：开阔风车固定Y轴8RPM/64SU，真实驱动轴与传送带
+ok 110 - A02：开阔风车固定Y轴8RPM/64SU，真实驱动轴与传送带
+  ---
+  duration_ms: 154.821041
+  type: 'test'
+  ...
+# Subtest: A02：普通石块在遮挡体积角落加挡撤挡均更新供能，体积外不影响
+ok 111 - A02：普通石块在遮挡体积角落加挡撤挡均更新供能，体积外不影响
+  ---
+  duration_ms: 191.088334
+  type: 'test'
+  ...
+# Subtest: A02：风车应力超载停网，拆除负载后恢复
+ok 112 - A02：风车应力超载停网，拆除负载后恢复
+  ---
+  duration_ms: 170.387791
+  type: 'test'
+  ...
+# Subtest: A03：实验落块在 30Hz 落地守恒，旧沙砾与旧TNT保持悬空
+ok 113 - A03：实验落块在 30Hz 落地守恒，旧沙砾与旧TNT保持悬空
+  ---
+  duration_ms: 120.988584
+  type: 'test'
+  ...
+# Subtest: A03：实验落块在 60Hz 落地守恒，旧沙砾与旧TNT保持悬空
+ok 114 - A03：实验落块在 60Hz 落地守恒，旧沙砾与旧TNT保持悬空
+  ---
+  duration_ms: 168.589417
+  type: 'test'
+  ...
+# Subtest: A03：实验落块在 120Hz 落地守恒，旧沙砾与旧TNT保持悬空
+ok 115 - A03：实验落块在 120Hz 落地守恒，旧沙砾与旧TNT保持悬空
+  ---
+  duration_ms: 125.069875
+  type: 'test'
+  ...
+# Subtest: A03：普通水交换不吞水，实验落块仍可落至水下地面
+ok 116 - A03：普通水交换不吞水，实验落块仍可落至水下地面
+  ---
+  duration_ms: 105.711667
+  type: 'test'
+  ...
+# Subtest: A03/W01：湿槽挡住落块，不能交换或消失容器及水量
+ok 117 - A03/W01：湿槽挡住落块，不能交换或消失容器及水量
+  ---
+  duration_ms: 106.819708
+  type: 'test'
+  ...
+# Subtest: A03：落块遇玩家身体停落，玩家离开后恢复落地
+ok 118 - A03：落块遇玩家身体停落，玩家离开后恢复落地
+  ---
+  duration_ms: 108.83975
+  type: 'test'
+  ...
+# Subtest: A03：世界底部没有支撑也不能把实验落块移出界
+ok 119 - A03：世界底部没有支撑也不能把实验落块移出界
+  ---
+  duration_ms: 122.535959
+  type: 'test'
+  ...
+# Subtest: A03/S01：运动TNT随落点迁配置，普通存读保留剩余引信并在现址爆炸
+ok 120 - A03/S01：运动TNT随落点迁配置，普通存读保留剩余引信并在现址爆炸
+  ---
+  duration_ms: 437.190208
+  type: 'test'
+  ...
+# Subtest: A03/S01：临近引爆的运动TNT热重载不重置计时，也不重复爆炸
+ok 121 - A03/S01：临近引爆的运动TNT热重载不重置计时，也不重复爆炸
+  ---
+  duration_ms: 291.570167
+  type: 'test'
+  ...
+# Subtest: A03：原TNT点燃后仍在原格倒计时，新运动规则不迁移旧TNT
+ok 122 - A03：原TNT点燃后仍在原格倒计时，新运动规则不迁移旧TNT
+  ---
+  duration_ms: 103.197083
+  type: 'test'
+  ...
+# Subtest: G3-A01：运行途中拆掉一块宽平台后仍能保存整个普通世界
+ok 123 - G3-A01：运行途中拆掉一块宽平台后仍能保存整个普通世界
+  ---
+  duration_ms: 420.184458
+  type: 'test'
+  ...
+# Subtest: G3-A01：平台离开后顶部红石粉按既有支撑规则脱落
+ok 124 - G3-A01：平台离开后顶部红石粉按既有支撑规则脱落
+  ---
+  duration_ms: 220.401541
+  type: 'test'
+  ...
+# Subtest: G3-A03：实验落块离开后顶部红石粉也必须失去支撑
+ok 125 - G3-A03：实验落块离开后顶部红石粉也必须失去支撑
+  ---
+  duration_ms: 155.289708
+  type: 'test'
+  ...
+# Subtest: G3-S01：非TNT实验不能通过armed布尔字段绕过配置白名单
+ok 126 - G3-S01：非TNT实验不能通过armed布尔字段绕过配置白名单
+  ---
+  duration_ms: 167.835208
+  type: 'test'
+  ...
+# Subtest: G3-S01：导入缺字段的实验配置应拒绝或补齐默认值，不能产生NaN
+ok 127 - G3-S01：导入缺字段的实验配置应拒绝或补齐默认值，不能产生NaN
+  ---
+  duration_ms: 320.055708
+  type: 'test'
+  ...
+# Subtest: G3-E：复位不应把持续高电平误判成新的启动上升沿
+ok 128 - G3-E：复位不应把持续高电平误判成新的启动上升沿
+  ---
+  duration_ms: 153.501083
+  type: 'test'
+  ...
+# Subtest: G3-P01：风扇不能绕过32台活动实验上限启动第33台坡台
+ok 129 - G3-P01：风扇不能绕过32台活动实验上限启动第33台坡台
+  ---
+  duration_ms: 113.815708
+  type: 'test'
+  ...
+# Subtest: G3/S02：拆除最后一个红石源必须清除新物理负载的供能缓存
+ok 130 - G3/S02：拆除最后一个红石源必须清除新物理负载的供能缓存
+  ---
+  duration_ms: 128.65075
+  type: 'test'
+  ...
+# Subtest: G3/S02：边界装置不能读取相邻行折返的远处信号
+ok 131 - G3/S02：边界装置不能读取相邻行折返的远处信号
+  ---
+  duration_ms: 100.929458
+  type: 'test'
+  ...
+# Subtest: G3/A03：实验落块移走水车顶水后，真实动力网立即停机
+ok 132 - G3/A03：实验落块移走水车顶水后，真实动力网立即停机
+  ---
+  duration_ms: 125.699833
+  type: 'test'
+  ...
+# Subtest: G3/L01：不同位置反复建拆风车不会残留风力缓存
+ok 133 - G3/L01：不同位置反复建拆风车不会残留风力缓存
+  ---
+  duration_ms: 139.745542
+  type: 'test'
+  ...
+# Subtest: G3/E05：带的邻接不能绕过风扇、水泵、宽平台的后接口
+ok 134 - G3/E05：带的邻接不能绕过风扇、水泵、宽平台的后接口
+  ---
+  duration_ms: 348.548791
+  type: 'test'
+  ...
+# Subtest: G3/A03：落块封住红石下坡通路后，真实主循环立即更新灯与信号
+ok 135 - G3/A03：落块封住红石下坡通路后，真实主循环立即更新灯与信号
+  ---
+  duration_ms: 205.984291
+  type: 'test'
+  ...
+# Subtest: G3/S01：导出旗标区域截断运动中平台时返回明确错误
+ok 136 - G3/S01：导出旗标区域截断运动中平台时返回明确错误
+  ---
+  duration_ms: 161.684417
+  type: 'test'
+  ...
+# Subtest: G3/A02：实心实验台直接换风车后，普通遮挡写入仍能触发停转与恢复
+ok 137 - G3/A02：实心实验台直接换风车后，普通遮挡写入仍能触发停转与恢复
+  ---
+  duration_ms: 138.688167
+  type: 'test'
+  ...
+# Subtest: G3/A02：床另一半被覆盖而连带清除风车范围内床半，也刷新遮挡
+ok 138 - G3/A02：床另一半被覆盖而连带清除风车范围内床半，也刷新遮挡
+  ---
+  duration_ms: 128.476125
+  type: 'test'
+  ...
+# Subtest: P1-E01: every new family places along all three axes and breaks into its representative
+ok 139 - P1-E01: every new family places along all three axes and breaks into its representative
+  ---
+  duration_ms: 667.814167
+  type: 'test'
+  ...
+# Subtest: P1-N01: redstone never converts IDs 63..74 into lamps; old dust/lamp still work
+ok 140 - P1-N01: redstone never converts IDs 63..74 into lamps; old dust/lamp still work
+  ---
+  duration_ms: 377.252625
+  type: 'test'
+  ...
+# Subtest: P1-E04: 1 speed-up stages honor 2..32 RPM
+ok 141 - P1-E04: 1 speed-up stages honor 2..32 RPM
+  ---
+  duration_ms: 170.346959
+  type: 'test'
+  ...
+# Subtest: P1-E04: 2 speed-up stages honor 2..32 RPM
+ok 142 - P1-E04: 2 speed-up stages honor 2..32 RPM
+  ---
+  duration_ms: 118.635
+  type: 'test'
+  ...
+# Subtest: P1-E04: 3 speed-up stages honor 2..32 RPM
+ok 143 - P1-E04: 3 speed-up stages honor 2..32 RPM
+  ---
+  duration_ms: 97.784875
+  type: 'test'
+  ...
+# Subtest: P1-E04: 1 reduction stages honor 2..32 RPM
+ok 144 - P1-E04: 1 reduction stages honor 2..32 RPM
+  ---
+  duration_ms: 127.59025
+  type: 'test'
+  ...
+# Subtest: P1-E04: 2 reduction stages honor 2..32 RPM
+ok 145 - P1-E04: 2 reduction stages honor 2..32 RPM
+  ---
+  duration_ms: 111.309083
+  type: 'test'
+  ...
+# Subtest: P1-E04: 3 reduction stages honor 2..32 RPM
+ok 146 - P1-E04: 3 reduction stages honor 2..32 RPM
+  ---
+  duration_ms: 112.154375
+  type: 'test'
+  ...
+# Subtest: P1-E11: large/large parallel is equal-speed with the specified direction
+ok 147 - P1-E11: large/large parallel is equal-speed with the specified direction
+  ---
+  duration_ms: 90.246041
+  type: 'test'
+  ...
+# Subtest: P1-E11: large/large perpendicular is equal-speed with the specified direction
+ok 148 - P1-E11: large/large perpendicular is equal-speed with the specified direction
+  ---
+  duration_ms: 145.711958
+  type: 'test'
+  ...
+# Subtest: P1-E11: large/large coaxial is equal-speed with the specified direction
+ok 149 - P1-E11: large/large coaxial is equal-speed with the specified direction
+  ---
+  duration_ms: 92.958125
+  type: 'test'
+  ...
+# Subtest: P1-E04/E11: coaxial large/small is 1:1; parallel old small/small stays disconnected
+ok 150 - P1-E04/E11: coaxial large/small is 1:1; parallel old small/small stays disconnected
+  ---
+  duration_ms: 84.915417
+  type: 'test'
+  ...
+# Subtest: P1-E05: powered reverser flips once with source on - port
+ok 151 - P1-E05: powered reverser flips once with source on - port
+  ---
+  duration_ms: 251.717333
+  type: 'test'
+  ...
+# Subtest: P1-E05: powered reverser flips once with source on + port
+ok 152 - P1-E05: powered reverser flips once with source on + port
+  ---
+  duration_ms: 242.057959
+  type: 'test'
+  ...
+# Subtest: P1-E05: two powered reversers in series cancel
+ok 153 - P1-E05: two powered reversers in series cancel
+  ---
+  duration_ms: 143.9445
+  type: 'test'
+  ...
+# Subtest: P1-E07/E10: odd mesh conflicts with a second source; reverser fixes phase and sums capacity
+ok 154 - P1-E07/E10: odd mesh conflicts with a second source; reverser fixes phase and sums capacity
+  ---
+  duration_ms: 222.346375
+  type: 'test'
+  ...
+# Subtest: P1-E07: belts join capacity and absolute speed without imposing shaft phase
+ok 155 - P1-E07: belts join capacity and absolute speed without imposing shaft phase
+  ---
+  duration_ms: 101.693333
+  type: 'test'
+  ...
+# Subtest: P1-E07: two differently geared sources joined by a belt report speed conflict
+ok 156 - P1-E07: two differently geared sources joined by a belt report speed conflict
+  ---
+  duration_ms: 173.659167
+  type: 'test'
+  ...
+# Subtest: P1-E08: 16 RPM doubles crusher load; a second compatible source restores production
+ok 157 - P1-E08: 16 RPM doubles crusher load; a second compatible source restores production
+  ---
+  duration_ms: 123.447916
+  type: 'test'
+  ...
+# Subtest: P1-E06: 16 RPM changes real saw completion time
+ok 158 - P1-E06: 16 RPM changes real saw completion time
+  ---
+  duration_ms: 184.165167
+  type: 'test'
+  ...
+# Subtest: P1-E06: 4 RPM changes real saw completion time
+ok 159 - P1-E06: 4 RPM changes real saw completion time
+  ---
+  duration_ms: 129.284541
+  type: 'test'
+  ...
+# Subtest: P1-N02: same-cell machine replacement never inherits saw progress
+ok 160 - P1-N02: same-cell machine replacement never inherits saw progress
+  ---
+  duration_ms: 96.010542
+  type: 'test'
+  ...
+# Subtest: P1-N02: same-cell material replacement never inherits saw progress
+ok 161 - P1-N02: same-cell material replacement never inherits saw progress
+  ---
+  duration_ms: 91.234417
+  type: 'test'
+  ...
+# Subtest: P1-E06: saw preserves completed-cycle remainder across refill and a powerless frame
+ok 162 - P1-E06: saw preserves completed-cycle remainder across refill and a powerless frame
+  ---
+  duration_ms: 110.480083
+  type: 'test'
+  ...
+# Subtest: P1-E06: crusher preserves completed-cycle remainder across refill and a powerless frame
+ok 163 - P1-E06: crusher preserves completed-cycle remainder across refill and a powerless frame
+  ---
+  duration_ms: 109.795667
+  type: 'test'
+  ...
+# Subtest: P1-E02/N06: hand crank starts/stops; same-cell demolition and axis replacement cancel its source
+ok 164 - P1-E02/N06: hand crank starts/stops; same-cell demolition and axis replacement cancel its source
+  ---
+  duration_ms: 181.755959
+  type: 'test'
+  ...
+# Subtest: P1-N06: every new axis/state is piston-pop, returning exactly one representative
+ok 165 - P1-N06: every new axis/state is piston-pop, returning exactly one representative
+  ---
+  duration_ms: 1044.890667
+  type: 'test'
+  ...
+# Subtest: P1-N05: side belt cannot steal a bound platform or an unbound platform
+ok 166 - P1-N05: side belt cannot steal a bound platform or an unbound platform
+  ---
+  duration_ms: 271.2425
+  type: 'test'
+  ...
+# Subtest: P1-N03/N07: low ceiling rejects the entire lift step, then removing it resumes safely
+ok 167 - P1-N03/N07: low ceiling rejects the entire lift step, then removing it resumes safely
+  ---
+  duration_ms: 186.475208
+  type: 'test'
+  ...
+# Subtest: P1-N07: two adjacent lifts never carry their shared passenger twice in one frame
+ok 168 - P1-N07: two adjacent lifts never carry their shared passenger twice in one frame
+  ---
+  duration_ms: 176.961791
+  type: 'test'
+  ...
+# Subtest: P1-N07: a downward step moves its passenger with the platform without self-collision
+ok 169 - P1-N07: a downward step moves its passenger with the platform without self-collision
+  ---
+  duration_ms: 166.792959
+  type: 'test'
+  ...
+# Subtest: P1-N03: an obstructed sheep blocks the platform transaction
+ok 170 - P1-N03: an obstructed sheep blocks the platform transaction
+  ---
+  duration_ms: 118.211625
+  type: 'test'
+  ...
+# Subtest: P1-N03: an obstructed item blocks the platform transaction
+ok 171 - P1-N03: an obstructed item blocks the platform transaction
+  ---
+  duration_ms: 120.888708
+  type: 'test'
+  ...
+# Subtest: P1-N03: sheep whose actual 0.35 half-width overlaps only the platform edge is carried
+ok 172 - P1-N03: sheep whose actual 0.35 half-width overlaps only the platform edge is carried
+  ---
+  duration_ms: 117.17025
+  type: 'test'
+  ...
+# Subtest: P1-N07: a second blocked fast-lift substep preserves only the first completed step
+ok 173 - P1-N07: a second blocked fast-lift substep preserves only the first completed step
+  ---
+  duration_ms: 117.823708
+  type: 'test'
+  ...
+# Subtest: P1-E06: actual 32 RPM belt transport travels 0.6 cells in a 0.1-second frame
+ok 174 - P1-E06: actual 32 RPM belt transport travels 0.6 cells in a 0.1-second frame
+  ---
+  duration_ms: 100.389459
+  type: 'test'
+  ...
+# Subtest: P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 10Hz
+ok 175 - P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 10Hz
+  ---
+  duration_ms: 116.764083
+  type: 'test'
+  ...
+# Subtest: P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 30Hz
+ok 176 - P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 30Hz
+  ---
+  duration_ms: 113.267666
+  type: 'test'
+  ...
+# Subtest: P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 60Hz
+ok 177 - P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 60Hz
+  ---
+  duration_ms: 114.563041
+  type: 'test'
+  ...
+# Subtest: P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 120Hz
+ok 178 - P1-N04/N08: 32 RPM turn/full chest/partial intake/power cycle conserves stock at 120Hz
+  ---
+  duration_ms: 111.28175
+  type: 'test'
+  ...
+# Subtest: P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 10Hz
+ok 179 - P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 10Hz
+  ---
+  duration_ms: 115.9345
+  type: 'test'
+  ...
+# Subtest: P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 30Hz
+ok 180 - P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 30Hz
+  ---
+  duration_ms: 113.66775
+  type: 'test'
+  ...
+# Subtest: P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 60Hz
+ok 181 - P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 60Hz
+  ---
+  duration_ms: 113.947042
+  type: 'test'
+  ...
+# Subtest: P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 120Hz
+ok 182 - P1-N08/P05: 24-entity 32 RPM corner queue conserves count and spacing at 120Hz
+  ---
+  duration_ms: 118.760041
+  type: 'test'
+  ...
+# Subtest: P1-S01: old catalog indices stay fixed and all new byte IDs survive RLE long runs
+ok 183 - P1-S01: old catalog indices stay fixed and all new byte IDs survive RLE long runs
+  ---
+  duration_ms: 1.4735
+  type: 'test'
+  ...
+# Subtest: P1-S01/S02: all variants survive save and snapshot; field sets and selectedSlot stay compatible
+ok 184 - P1-S01/S02: all variants survive save and snapshot; field sets and selectedSlot stay compatible
+  ---
+  duration_ms: 478.95375
+  type: 'test'
+  ...
+# Subtest: P1-S01: current level-card format round-trips all twelve component variants
+ok 185 - P1-S01: current level-card format round-trips all twelve component variants
+  ---
+  duration_ms: 166.508708
+  type: 'test'
+  ...
+# Subtest: P1-E09: hand-transport prefab actually carries stock into its chest and stops on release
+ok 186 - P1-E09: hand-transport prefab actually carries stock into its chest and stops on release
+  ---
+  duration_ms: 130.182083
+  type: 'test'
+  ...
+# Subtest: P1-E09: speed-comparison prefab realizes 16/4 RPM, fourfold distance and distinct saw durations
+ok 187 - P1-E09: speed-comparison prefab realizes 16/4 RPM, fourfold distance and distinct saw durations
+  ---
+  duration_ms: 100.329833
+  type: 'test'
+  ...
+# Subtest: P1-E09: lift-lab prefab lever wiring raises and lowers an actual passenger
+ok 188 - P1-E09: lift-lab prefab lever wiring raises and lowers an actual passenger
+  ---
+  duration_ms: 134.3545
+  type: 'test'
+  ...
+# Subtest: P1-E09/E10: phase-merge prefab jams until its real lever is on, then produces planks
+ok 189 - P1-E09/E10: phase-merge prefab jams until its real lever is on, then produces planks
+  ---
+  duration_ms: 158.104958
+  type: 'test'
+  ...
+# 物理配置与地形不匹配
+# Subtest: W-F0：五种非连续水量 ID 可选择、回收，材料物品不误认作水槽
+ok 190 - W-F0：五种非连续水量 ID 可选择、回收，材料物品不误认作水槽
+  ---
+  duration_ms: 164.696125
+  type: 'test'
+  ...
+# Subtest: W01：30Hz 分流守恒、槽外密闭、普通静水保持
+ok 191 - W01：30Hz 分流守恒、槽外密闭、普通静水保持
+  ---
+  duration_ms: 197.134792
+  type: 'test'
+  ...
+# Subtest: W01：60Hz 分流守恒、槽外密闭、普通静水保持
+ok 192 - W01：60Hz 分流守恒、槽外密闭、普通静水保持
+  ---
+  duration_ms: 209.978125
+  type: 'test'
+  ...
+# Subtest: W01：120Hz 分流守恒、槽外密闭、普通静水保持
+ok 193 - W01：120Hz 分流守恒、槽外密闭、普通静水保持
+  ---
+  duration_ms: 152.739208
+  type: 'test'
+  ...
+# Subtest: W01：高槽流向相邻低一格槽，满槽和无接收槽时水不消失
+ok 194 - W01：高槽流向相邻低一格槽，满槽和无接收槽时水不消失
+  ---
+  duration_ms: 161.429375
+  type: 'test'
+  ...
+# Subtest: W01：手动闸隔绝两端，开闸输水，闭闸保留当前水量
+ok 195 - W01：手动闸隔绝两端，开闸输水，闭闸保留当前水量
+  ---
+  duration_ms: 227.455875
+  type: 'test'
+  ...
+# Subtest: W01：红石模式水闸使用真实供能，手动动作不能绕过控制模式
+ok 196 - W01：红石模式水闸使用真实供能，手动动作不能绕过控制模式
+  ---
+  duration_ms: 302.624041
+  type: 'test'
+  ...
+# Subtest: W01：生存整桶往返与库存守恒，部分满槽和库存不足均拒绝
+ok 197 - W01：生存整桶往返与库存守恒，部分满槽和库存不足均拒绝
+  ---
+  duration_ms: 95.9165
+  type: 'test'
+  ...
+# Subtest: W01：输出桶库存已满时，注水和取水事务都不能先改槽
+ok 198 - W01：输出桶库存已满时，注水和取水事务都不能先改槽
+  ---
+  duration_ms: 164.7105
+  type: 'test'
+  ...
+# Subtest: W01：挖回部分满槽后从背包重新放置，水量和物品数量不变
+ok 199 - W01：挖回部分满槽后从背包重新放置，水量和物品数量不变
+  ---
+  duration_ms: 117.461958
+  type: 'test'
+  ...
+# Subtest: W02：30Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+ok 200 - W02：30Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+  ---
+  duration_ms: 262.249542
+  type: 'test'
+  ...
+# Subtest: W02：60Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+ok 201 - W02：60Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+  ---
+  duration_ms: 150.688625
+  type: 'test'
+  ...
+# Subtest: W02：120Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+ok 202 - W02：120Hz 真轴驱动水泵搬运已有水，计16SU，断轴悬停后恢复
+  ---
+  duration_ms: 256.053334
+  type: 'test'
+  ...
+# Subtest: W02：16/8/4RPM改变真实流量和折算SU，泵不获得免费动力
+ok 203 - W02：16/8/4RPM改变真实流量和折算SU，泵不获得免费动力
+  ---
+  duration_ms: 491.466958
+  type: 'test'
+  ...
+# Subtest: W02：无水与满槽时泵不造水、不吞水，并有可理解状态
+ok 204 - W02：无水与满槽时泵不造水、不吞水，并有可理解状态
+  ---
+  duration_ms: 388.752791
+  type: 'test'
+  ...
+# Subtest: W02：标准浮块轻浮重沉，排水后下降，复位不改变水量或背包
+ok 205 - W02：标准浮块轻浮重沉，排水后下降，复位不改变水量或背包
+  ---
+  duration_ms: 104.278208
+  type: 'test'
+  ...
+# Subtest: S01：槽q变体改变后浮块配置仍能捕获、验证、恢复，初始化不复位水量
+ok 206 - S01：槽q变体改变后浮块配置仍能捕获、验证、恢复，初始化不复位水量
+  ---
+  duration_ms: 238.864709
+  type: 'test'
+  ...
+# Subtest: S01：旧档缺physics兼容；坏版本、键坐标、ID、未知字段与非有限配置拒绝
+ok 207 - S01：旧档缺physics兼容；坏版本、键坐标、ID、未知字段与非有限配置拒绝
+  ---
+  duration_ms: 1615.817583
+  type: 'test'
+  ...
+# Subtest: S01：超512装置的保存数据拒绝，不能借每槽默认值绕过上限
+ok 208 - S01：超512装置的保存数据拒绝，不能借每槽默认值绕过上限
+  ---
+  duration_ms: 89.672125
+  type: 'test'
+  ...
+# Subtest: S01：六个普通槽分别保存水量和阀参数，读取不串槽
+ok 209 - S01：六个普通槽分别保存水量和阀参数，读取不串槽
+  ---
+  duration_ms: 1607.588458
+  type: 'test'
+  ...
+# Subtest: S01：文件导入先验证physics；坏数据不覆盖目标槽或当前世界
+ok 210 - S01：文件导入先验证physics；坏数据不覆盖目标槽或当前世界
+  ---
+  duration_ms: 495.437666
+  type: 'test'
+  ...
+# Subtest: S01：热重载恢复水量和配置；坏快照在改世界之前拒绝
+ok 211 - S01：热重载恢复水量和配置；坏快照在改世界之前拒绝
+  ---
+  duration_ms: 325.718083
+  type: 'test'
+  ...
+# Subtest: S01：卡片配置局部坐标往返，q状态与浮块参数保留，改参数改变hash
+ok 212 - S01：卡片配置局部坐标往返，q状态与浮块参数保留，改参数改变hash
+  ---
+  duration_ms: 196.187292
+  type: 'test'
+  ...
+# Subtest: S02：关卡拒绝桶和改参数，覆盖与切世界清除旧装置配置
+ok 213 - S02：关卡拒绝桶和改参数，覆盖与切世界清除旧装置配置
+  ---
+  duration_ms: 161.852041
+  type: 'test'
+  ...
+# Subtest: G3/S01：省略可选physics字段不能绕过装置与水槽上限
+ok 214 - G3/S01：省略可选physics字段不能绕过装置与水槽上限
+  ---
+  duration_ms: 1.109292
+  type: 'test'
+  ...
+# Subtest: G3/S01：公开机械放置入口在512装置时返回错误且不写目标格
+ok 215 - G3/S01：公开机械放置入口在512装置时返回错误且不写目标格
+  ---
+  duration_ms: 108.013833
+  type: 'test'
+  ...
+# Subtest: G3/W01：普通实验组件库存满时挖掘转为真掉落，不丢失回收物
+ok 216 - G3/W01：普通实验组件库存满时挖掘转为真掉落，不丢失回收物
+  ---
+  duration_ms: 110.764291
+  type: 'test'
+  ...
+# Subtest: G3/W01：普通世界直接把湿槽换成空槽也保留原水量回收物
+ok 217 - G3/W01：普通世界直接把湿槽换成空槽也保留原水量回收物
+  ---
+  duration_ms: 81.82375
+  type: 'test'
+  ...
+# Subtest: 1. 信号衰减：拉杆 + 16 格粉线，第 15 格仍亮（剩 1 级）、第 16 格断路、远端灯不亮
+ok 218 - 1. 信号衰减：拉杆 + 16 格粉线，第 15 格仍亮（剩 1 级）、第 16 格断路、远端灯不亮
+  ---
+  duration_ms: 665.207875
+  type: 'test'
+  ...
+# Subtest: 2. 断路与连锁脱落：拆中间一格粉下游全灭；拆支撑方块贴面元件弹落
+ok 219 - 2. 断路与连锁脱落：拆中间一格粉下游全灭；拆支撑方块贴面元件弹落
+  ---
+  duration_ms: 741.324
+  type: 'test'
+  ...
+# Subtest: 3. 火把反相器：充能方块熄灭侧贴火把，两只串联还原信号（末端粉与拉杆同相）
+ok 220 - 3. 火把反相器：充能方块熄灭侧贴火把，两只串联还原信号（末端粉与拉杆同相）
+  ---
+  duration_ms: 373.079333
+  type: 'test'
+  ...
+# Subtest: 4. 火把时钟：输出粉绕回挂靠方块，持续泵进后火把至少翻转 2 次（振荡）
+ok 221 - 4. 火把时钟：输出粉绕回挂靠方块，持续泵进后火把至少翻转 2 次（振荡）
+  ---
+  duration_ms: 489.425417
+  type: 'test'
+  ...
+# Subtest: 5. 压力板：玩家/怪物踩板 → 板按下门开，离开 → 弹起门关
+ok 222 - 5. 压力板：玩家/怪物踩板 → 板按下门开，离开 → 弹起门关
+  ---
+  duration_ms: 288.271875
+  type: 'test'
+  ...
+# Subtest: 6. 观察者：正前方方块变化 → 背面输出脉冲 0.2s 点亮粉与灯，随后自动熄灭
+ok 223 - 6. 观察者：正前方方块变化 → 背面输出脉冲 0.2s 点亮粉与灯，随后自动熄灭
+  ---
+  duration_ms: 402.684458
+  type: 'test'
+  ...
+# Subtest: 7. TNT 引爆链：拉杆上升沿点燃邻格 TNT，2.5s 引信后爆炸毁格
+ok 224 - 7. TNT 引爆链：拉杆上升沿点燃邻格 TNT，2.5s 引信后爆炸毁格
+  ---
+  duration_ms: 282.060541
+  type: 'test'
+  ...
+# Subtest: 8. TNT×活塞孤儿修复：炸掉活塞头 → 底座自动收回；底座没了 → 孤头被摘除
+ok 225 - 8. TNT×活塞孤儿修复：炸掉活塞头 → 底座自动收回；底座没了 → 孤头被摘除
+  ---
+  duration_ms: 383.439125
+  type: 'test'
+  ...
+# Subtest: 9. 粘液块拖拽：粘性活塞伸出拖走粘着的石头，收回连石头一起拉回
+ok 226 - 9. 粘液块拖拽：粘性活塞伸出拖走粘着的石头，收回连石头一起拉回
+  ---
+  duration_ms: 157.101958
+  type: 'test'
+  ...
+# Subtest: 10. 推动上限：13 格石头推不动（不伸出），12 格恰好成功
+ok 227 - 10. 推动上限：13 格石头推不动（不伸出），12 格恰好成功
+  ---
+  duration_ms: 189.513541
+  type: 'test'
+  ...
+# Subtest: 11. 压碎贴面道具：推动路径上的门/红石粉被压碎，生存模式返还物品进背包
+ok 228 - 11. 压碎贴面道具：推动路径上的门/红石粉被压碎，生存模式返还物品进背包
+  ---
+  duration_ms: 209.05225
+  type: 'test'
+  ...
+# Subtest: 12. 活塞载客：站在被推石头顶上的玩家随方块平移一格
+ok 229 - 12. 活塞载客：站在被推石头顶上的玩家随方块平移一格
+  ---
+  duration_ms: 125.306083
+  type: 'test'
+  ...
+# Subtest: 13. 火把塔竖直传信号：亮火把强充能正上方方块→翻转贴附火把（每级反相）；被充能方块不直接喂粉（本作与原版差异）
+ok 230 - 13. 火把塔竖直传信号：亮火把强充能正上方方块→翻转贴附火把（每级反相）；被充能方块不直接喂粉（本作与原版差异）
+  ---
+  duration_ms: 422.117458
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：拉杆→红石粉点亮→远端灯亮
+ok 231 - 底座冒烟：拉杆→红石粉点亮→远端灯亮
+  ---
+  duration_ms: 505.221792
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：红石信号上升沿自动开门、下降沿自动关门
+ok 232 - 底座冒烟：红石信号上升沿自动开门、下降沿自动关门
+  ---
+  duration_ms: 275.737916
+  type: 'test'
+  ...
+# Subtest: 底座冒烟：按钮脉冲 → 活塞 0.15s 延迟伸出
+ok 233 - 底座冒烟：按钮脉冲 → 活塞 0.15s 延迟伸出
+  ---
+  duration_ms: 514.4145
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：竖着放（B2 压 F1 头顶）F2 = NOT F1，两拍级联
+ok 234 - 火把双级反相：竖着放（B2 压 F1 头顶）F2 = NOT F1，两拍级联
+  ---
+  duration_ms: 547.706792
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：平铺（B2 与 F1 水平相邻）F2 不受 F1 影响——火把不充能水平方块
+ok 235 - 火把双级反相：平铺（B2 与 F1 水平相邻）F2 不受 F1 影响——火把不充能水平方块
+  ---
+  duration_ms: 283.7375
+  type: 'test'
+  ...
+# Subtest: 火把双级反相：平铺正解——F1 与 B2 之间垫一格红石粉接力充能
+ok 236 - 火把双级反相：平铺正解——F1 与 B2 之间垫一格红石粉接力充能
+  ---
+  duration_ms: 483.565208
+  type: 'test'
+  ...
+# Subtest: 玩家准星近战能命中前方实体，墙挡住后不扣血
+ok 237 - 玩家准星近战能命中前方实体，墙挡住后不扣血
+  ---
+  duration_ms: 167.637875
+  type: 'test'
+  ...
+# Subtest: 玩家近战按实体碰撞盒命中，四格外目标不受伤
+ok 238 - 玩家近战按实体碰撞盒命中，四格外目标不受伤
+  ---
+  duration_ms: 132.59475
+  type: 'test'
+  ...
+# Subtest: 第三人称准星跳过身后实体，仍能攻击前方且受墙遮挡
+ok 239 - 第三人称准星跳过身后实体，仍能攻击前方且受墙遮挡
+  ---
+  duration_ms: 164.091375
+  type: 'test'
+  ...
+# Subtest: 僵尸隔墙近战不扣血，移走墙后同距离可以攻击
+ok 240 - 僵尸隔墙近战不扣血，移走墙后同距离可以攻击
+  ---
+  duration_ms: 92.491708
+  type: 'test'
+  ...
+# Subtest: 第三人称可攻击跨眼睛平面的贴脸目标，完全身后的仍不可攻击
+ok 241 - 第三人称可攻击跨眼睛平面的贴脸目标，完全身后的仍不可攻击
+  ---
+  duration_ms: 115.394583
+  type: 'test'
+  ...
+# Subtest: 零距离生物追击与受击不会污染坐标
+ok 242 - 零距离生物追击与受击不会污染坐标
+  ---
+  duration_ms: 126.207792
+  type: 'test'
+  ...
+# Subtest: 合成备用工具保留活动工具磨损，用坏后备用工具满耐久
+ok 243 - 合成备用工具保留活动工具磨损，用坏后备用工具满耐久
+  ---
+  duration_ms: 144.493041
+  type: 'test'
+  ...
+# Subtest: 丢弃并拾回最后一把工具保留磨损，库存清零后新合成工具满耐久
+ok 244 - 丢弃并拾回最后一把工具保留磨损，库存清零后新合成工具满耐久
+  ---
+  duration_ms: 118.187208
+  type: 'test'
+  ...
+# Subtest: 有备用工具时丢弃一把不洗活动工具耐久，拾回旧工具取较大磨损
+ok 245 - 有备用工具时丢弃一把不洗活动工具耐久，拾回旧工具取较大磨损
+  ---
+  duration_ms: 187.9935
+  type: 'test'
+  ...
+# Subtest: 无锚点保存失败保留世界和旧稿，明确继续后可再次编辑
+ok 246 - 无锚点保存失败保留世界和旧稿，明确继续后可再次编辑
+  ---
+  duration_ms: 826.136958
+  type: 'test'
+  ...
+# Subtest: 缺起点旗保存失败保留世界和旧稿，明确继续后可再次编辑
+ok 247 - 缺起点旗保存失败保留世界和旧稿，明确继续后可再次编辑
+  ---
+  duration_ms: 809.145667
+  type: 'test'
+  ...
+# Subtest: 缺终点旗保存失败保留世界和旧稿，明确继续后可再次编辑
+ok 248 - 缺终点旗保存失败保留世界和旧稿，明确继续后可再次编辑
+  ---
+  duration_ms: 546.314708
+  type: 'test'
+  ...
+# Subtest: 区域超范围保存失败保留世界和旧稿，明确继续后可再次编辑
+ok 249 - 区域超范围保存失败保留世界和旧稿，明确继续后可再次编辑
+  ---
+  duration_ms: 454.774917
+  type: 'test'
+  ...
+# Subtest: 继续编辑修正缺旗后正常保存退出，新稿包含修改且原世界精确恢复
+ok 250 - 继续编辑修正缺旗后正常保存退出，新稿包含修改且原世界精确恢复
+  ---
+  duration_ms: 863.54725
+  type: 'test'
+  ...
+# Subtest: 明确放弃失败末稿才恢复原世界，原锁题和持久草稿不丢失
+ok 251 - 明确放弃失败末稿才恢复原世界，原锁题和持久草稿不丢失
+  ---
+  duration_ms: 381.262917
+  type: 'test'
+  ...
+# Subtest: 持久写异常降级仅会话时退出等待选择，继续后恢复写入才正常退出
+ok 252 - 持久写异常降级仅会话时退出等待选择，继续后恢复写入才正常退出
+  ---
+  duration_ms: 394.570209
+  type: 'test'
+  ...
+# Subtest: 写请求成功后事务中止不能宣称持久保存，保留备份并等待玩家选择
+ok 253 - 写请求成功后事务中止不能宣称持久保存，保留备份并等待玩家选择
+  ---
+  duration_ms: 394.752
+  type: 'test'
+  ...
+# Subtest: 存稿意外异常捕获具体原因，继续后解除保存锁并可重试
+ok 254 - 存稿意外异常捕获具体原因，继续后解除保存锁并可重试
+  ---
+  duration_ms: 382.761584
+  type: 'test'
+  ...
+# Subtest: 重复失败退出合并末稿与同一个待决选择，取消后下一次退出重新保存
+ok 255 - 重复失败退出合并末稿与同一个待决选择，取消后下一次退出重新保存
+  ---
+  duration_ms: 370.98575
+  type: 'test'
+  ...
+# Subtest: 退出先排空在途保存；不补存明确放弃可结束已有待决选择
+ok 256 - 退出先排空在途保存；不补存明确放弃可结束已有待决选择
+  ---
+  duration_ms: 371.1295
+  type: 'test'
+  ...
+# Subtest: 末稿保存请求在途时共享盖章入口拒写，继续编辑后组件可正常放置
+ok 257 - 末稿保存请求在途时共享盖章入口拒写，继续编辑后组件可正常放置
+  ---
+  duration_ms: 419.572791
+  type: 'test'
+  ...
+# 世界快照编码损坏，放弃恢复
+# Subtest: 读档重置临时压力板/动力注册表与落地摔落状态
+ok 258 - 读档重置临时压力板/动力注册表与落地摔落状态
+  ---
+  duration_ms: 652.579166
+  type: 'test'
+  ...
+# Subtest: 热重载恢复生存/种子与机关，清施工、怪物、掉落、引信和粒子
+ok 259 - 热重载恢复生存/种子与机关，清施工、怪物、掉落、引信和粒子
+  ---
+  duration_ms: 722.565875
+  type: 'test'
+  ...
+# Subtest: 坏 base64 快照失败且不改世界、生存与瞬态
+ok 260 - 坏 base64 快照失败且不改世界、生存与瞬态
+  ---
+  duration_ms: 106.172
+  type: 'test'
+  ...
+# Subtest: 续编显式零次双通过保持零次，正式导出继续拦
+ok 261 - 续编显式零次双通过保持零次，正式导出继续拦
+  ---
+  duration_ms: 710.001292
+  type: 'test'
+  ...
+# Subtest: 草稿缺 verifiedPasses 续编保持零次，不借旧正式卡兼容绕过验证
+ok 262 - 草稿缺 verifiedPasses 续编保持零次，不借旧正式卡兼容绕过验证
+  ---
+  duration_ms: 520.641667
+  type: 'test'
+  ...
+# Subtest: 草稿作为模板使用创建新稿身份，编辑后保留原草稿
+ok 263 - 草稿作为模板使用创建新稿身份，编辑后保留原草稿
+  ---
+  duration_ms: 524.271209
+  type: 'test'
+  ...
+# Subtest: 持久 put 失败保留旧稿，重复会话降级不积累，恢复持久写后安全替换
+ok 264 - 持久 put 失败保留旧稿，重复会话降级不积累，恢复持久写后安全替换
+  ---
+  duration_ms: 386.22775
+  type: 'test'
+  ...
+# Subtest: 同身份写入降级时显示最新会话内容，持久成功后清除会话标记
+ok 265 - 同身份写入降级时显示最新会话内容，持久成功后清除会话标记
+  ---
+  duration_ms: 94.117042
+  type: 'test'
+  ...
+# Subtest: 同身份降级草稿退出后续编仍保留持久备份，恢复写入才替换
+ok 266 - 同身份降级草稿退出后续编仍保留持久备份，恢复写入才替换
+  ---
+  duration_ms: 574.3765
+  type: 'test'
+  ...
+# Subtest: 异步取锁时几何采用同一快照，切世界则拒绝混合卡
+ok 267 - 异步取锁时几何采用同一快照，切世界则拒绝混合卡
+  ---
+  duration_ms: 102.655083
+  type: 'test'
+  ...
+# Subtest: 正式卡改副本保留源卡；普通退出追加末稿且退出后拒收新保存
+ok 268 - 正式卡改副本保留源卡；普通退出追加末稿且退出后拒收新保存
+  ---
+  duration_ms: 363.189625
+  type: 'test'
+  ...
+# Subtest: 草稿串行保存保持单条身份与规则；不补存退出排空在途、并发退出合并
+ok 269 - 草稿串行保存保持单条身份与规则；不补存退出排空在途、并发退出合并
+  ---
+  duration_ms: 346.721625
+  type: 'test'
+  ...
+# Subtest: 到达限时同帧踩终点判超时零星，限时前仍可通关
+ok 270 - 到达限时同帧踩终点判超时零星，限时前仍可通关
+  ---
+  duration_ms: 78.997542
+  type: 'test'
+  ...
+# Subtest: 机关恢复：按下按钮复位并熄灭负载，旧计时不能提前弹出新脉冲
+ok 271 - 机关恢复：按下按钮复位并熄灭负载，旧计时不能提前弹出新脉冲
+  ---
+  duration_ms: 421.891
+  type: 'test'
+  ...
+# Subtest: 按钮恢复下降沿：此前由按钮打开的门关闭、伸出的活塞延迟收回
+ok 272 - 按钮恢复下降沿：此前由按钮打开的门关闭、伸出的活塞延迟收回
+  ---
+  duration_ms: 528.785
+  type: 'test'
+  ...
+# Subtest: 红石初始化幂等：重复恢复不能丢失待收回活塞，也不能丢失合法伸出动作
+ok 273 - 红石初始化幂等：重复恢复不能丢失待收回活塞，也不能丢失合法伸出动作
+  ---
+  duration_ms: 491.269292
+  type: 'test'
+  ...
+# Subtest: 按钮恢复基线不执行机关：无电手动门保持，按钮旁 TNT 不误点燃，拉杆 TNT 照常点燃
+ok 274 - 按钮恢复基线不执行机关：无电手动门保持，按钮旁 TNT 不误点燃，拉杆 TNT 照常点燃
+  ---
+  duration_ms: 276.653375
+  type: 'test'
+  ...
+# Subtest: 自动投料：石头替换另一条动力线的水车顶水后，水车与带立即停转
+ok 275 - 自动投料：石头替换另一条动力线的水车顶水后，水车与带立即停转
+  ---
+  duration_ms: 251.298166
+  type: 'test'
+  ...
+# Subtest: TNT 点燃守卫：空气不能点燃，同位置重复点燃不复制或重置引信
+ok 276 - TNT 点燃守卫：空气不能点燃，同位置重复点燃不复制或重置引信
+  ---
+  duration_ms: 162.783375
+  type: 'test'
+  ...
+# Subtest: TNT 引信取消：点燃方块被替换后不炸替代块或周围结构
+ok 277 - TNT 引信取消：点燃方块被替换后不炸替代块或周围结构
+  ---
+  duration_ms: 96.69925
+  type: 'test'
+  ...
+# Subtest: TNT 爆心重合：玩家和怪物位置与速度保持有限数值
+ok 278 - TNT 爆心重合：玩家和怪物位置与速度保持有限数值
+  ---
+  duration_ms: 100.925958
+  type: 'test'
+  ...
+# Subtest: 孤立 TNT：引信移除唯一方块后仍刷新爆心区块及相邻区块
+ok 279 - 孤立 TNT：引信移除唯一方块后仍刷新爆心区块及相邻区块
+  ---
+  duration_ms: 99.615625
+  type: 'test'
+  ...
+# Subtest: 部分覆盖头部的高墙阻止 X/Z 方向移动
+ok 280 - 部分覆盖头部的高墙阻止 X/Z 方向移动
+  ---
+  duration_ms: 236.914541
+  type: 'test'
+  ...
+# Subtest: 高速下落扫过薄平台，并在整个脚印中选择最先触及的一层
+ok 281 - 高速下落扫过薄平台，并在整个脚印中选择最先触及的一层
+  ---
+  duration_ms: 94.287333
+  type: 'test'
+  ...
+# Subtest: 高速上升按头部扫掠顺序停在最先触及的薄天花板下
+ok 282 - 高速上升按头部扫掠顺序停在最先触及的薄天花板下
+  ---
+  duration_ms: 82.041125
+  type: 'test'
+  ...
+# Subtest: 扫掠落到粘液薄平台仍反弹、清旧落差且不扣血
+ok 283 - 扫掠落到粘液薄平台仍反弹、清旧落差且不扣血
+  ---
+  duration_ms: 73.804084
+  type: 'test'
+  ...
+# Subtest: 普通平台扫掠落地结算摔伤，落地后不会重复扣血
+ok 284 - 普通平台扫掠落地结算摔伤，落地后不会重复扣血
+  ---
+  duration_ms: 73.728458
+  type: 'test'
+  ...
+# Subtest: 水中落地继续使用游泳阻尼并豁免原摔落伤害
+ok 285 - 水中落地继续使用游泳阻尼并豁免原摔落伤害
+  ---
+  duration_ms: 102.417417
+  type: 'test'
+  ...
+# Subtest: 运转传送带仍载玩家水平移动，垂直扫掠保持脚下支撑
+ok 286 - 运转传送带仍载玩家水平移动，垂直扫掠保持脚下支撑
+  ---
+  duration_ms: 242.761125
+  type: 'test'
+  ...
+# Subtest: 向上活塞载玩家升一格，下一物理帧仍站在被推平台上
+ok 287 - 向上活塞载玩家升一格，下一物理帧仍站在被推平台上
+  ---
+  duration_ms: 174.547375
+  type: 'test'
+  ...
+# Subtest: 飞行 Ctrl+W 同样疾跑：水平 ×1.5，垂直升降仍按 FLY_SPEED
+ok 288 - 飞行 Ctrl+W 同样疾跑：水平 ×1.5，垂直升降仍按 FLY_SPEED
+  ---
+  duration_ms: 104.984041
+  type: 'test'
+  ...
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:26:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:230:22)
+#     at enterLevelImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:172:37)
+#     at async enterLevel (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:147:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:28:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:26:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:230:22)
+#     at enterLevelEditorImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:127:37)
+#     at async enterLevelEditor (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:116:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation-review.test.mjs:32:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: 落盘失败在真实进关/编辑入口显示存储原因，退出入口互斥锁
+ok 289 - 落盘失败在真实进关/编辑入口显示存储原因，退出入口互斥锁
+  ---
+  duration_ms: 373.175709
+  type: 'test'
+  ...
+# Subtest: 异步临时世界入口互斥，快速编辑/进关只允许第一请求进入
+ok 290 - 异步临时世界入口互斥，快速编辑/进关只允许第一请求进入
+  ---
+  duration_ms: 662.398208
+  type: 'test'
+  ...
+# Subtest: 正式导出入口保留源卡限时与考核锁，作者修改考核锁仍生效
+ok 291 - 正式导出入口保留源卡限时与考核锁，作者修改考核锁仍生效
+  ---
+  duration_ms: 776.220709
+  type: 'test'
+  ...
+# Subtest: 损坏世界导入保留原槽位与索引
+ok 292 - 损坏世界导入保留原槽位与索引
+  ---
+  duration_ms: 479.255291
+  type: 'test'
+  ...
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:42:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:230:22)
+#     at enterLevelImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:172:37)
+#     at async enterLevel (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelRun.js:147:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:44:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# 存档保存失败： Error: QuotaExceededError
+#     at localStorage.setItem (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:42:42)
+#     at Module.saveGame (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/saveGame.js:230:22)
+#     at enterLevelEditorImpl (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:127:37)
+#     at async enterLevelEditor (file:///Users/zxnap/code/MyWorks/yltech.edu/game/js/levelEditor.js:116:18)
+#     at async TestContext.<anonymous> (file:///Users/zxnap/code/MyWorks/yltech.edu/game/tests/gamelogic/remediation.test.mjs:45:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: 落盘失败拒绝进入关卡与编辑器且保留当前世界
+ok 293 - 落盘失败拒绝进入关卡与编辑器且保留当前世界
+  ---
+  duration_ms: 401.189958
+  type: 'test'
+  ...
+# Subtest: 编辑世界热重载不序列化方块、不覆盖启动恢复的原世界
+ok 294 - 编辑世界热重载不序列化方块、不覆盖启动恢复的原世界
+  ---
+  duration_ms: 94.5235
+  type: 'test'
+  ...
+# Subtest: 导入后 pagehide 兜底存档不再覆盖刚导入的档，loadGame 解除保护（竞态回归）
+ok 295 - 导入后 pagehide 兜底存档不再覆盖刚导入的档，loadGame 解除保护（竞态回归）
+  ---
+  duration_ms: 665.430791
+  type: 'test'
+  ...
+# Subtest: 导出→导入→loadGame 回环：方块字节级一致 + 种子/模式/玩家位置还原
+ok 296 - 导出→导入→loadGame 回环：方块字节级一致 + 种子/模式/玩家位置还原
+  ---
+  duration_ms: 397.763292
+  type: 'test'
+  ...
+# Subtest: M2 审查：创造模式拾回拆箱物资，保留两把工具磨损
+ok 297 - M2 审查：创造模式拾回拆箱物资，保留两把工具磨损
+  ---
+  duration_ms: 358.828541
+  type: 'test'
+  ...
+# Subtest: M2 审查：创造模式背包满时，拆箱持久掉落留在世界
+ok 298 - M2 审查：创造模式背包满时，拆箱持久掉落留在世界
+  ---
+  duration_ms: 79.222667
+  type: 'test'
+  ...
+# Subtest: M2 审查：连续击退不穿围栏或关门，开门允许通过
+ok 299 - M2 审查：连续击退不穿围栏或关门，开门允许通过
+  ---
+  duration_ms: 153.097417
+  type: 'test'
+  ...
+# Subtest: M2 审查：挖支撑即时清除成熟麦与树苗，重复清理不重复退款
+ok 300 - M2 审查：挖支撑即时清除成熟麦与树苗，重复清理不重复退款
+  ---
+  duration_ms: 311.6815
+  type: 'test'
+  ...
+# Subtest: M2 审查：爆炸或活塞移走支撑不会留下悬空植物
+ok 301 - M2 审查：爆炸或活塞移走支撑不会留下悬空植物
+  ---
+  duration_ms: 364.874333
+  type: 'test'
+  ...
+# Subtest: M2 审查：成长入口再次核对支撑，坏旧世界不长悬空植物
+ok 302 - M2 审查：成长入口再次核对支撑，坏旧世界不长悬空植物
+  ---
+  duration_ms: 87.509458
+  type: 'test'
+  ...
+# Subtest: M2 审查：编辑器删除植物和拆支撑无奖励，闯关不能收获
+ok 303 - M2 审查：编辑器删除植物和拆支撑无奖励，闯关不能收获
+  ---
+  duration_ms: 80.50975
+  type: 'test'
+  ...
+# Subtest: M2 审查：围栏与关门上半格可选中开门，墙体仍遮挡
+ok 304 - M2 审查：围栏与关门上半格可选中开门，墙体仍遮挡
+  ---
+  duration_ms: 72.601042
+  type: 'test'
+  ...
+# Subtest: M2 审查：坏工具当前/备用磨损与数量导入不能覆盖好档
+ok 305 - M2 审查：坏工具当前/备用磨损与数量导入不能覆盖好档
+  ---
+  duration_ms: 513.864959
+  type: 'test'
+  ...
+# Subtest: M2 审查：家畜上限与野生数量独立，认领十只后仍补野生羊
+ok 306 - M2 审查：家畜上限与野生数量独立，认领十只后仍补野生羊
+  ---
+  duration_ms: 76.4805
+  type: 'test'
+  ...
+# Subtest: M2 审查：取消部分施工保留已应用动作并结算红石，剩余不写入
+ok 307 - M2 审查：取消部分施工保留已应用动作并结算红石，剩余不写入
+  ---
+  duration_ms: 490.772167
+  type: 'test'
+  ...
+# Subtest: M2 审查：取水和放水自动切换手中桶及原常用栏位置
+ok 308 - M2 审查：取水和放水自动切换手中桶及原常用栏位置
+  ---
+  duration_ms: 130.649667
+  type: 'test'
+  ...
+# Subtest: M2 审查：真实区块道具构建包含农作物与围栏，清除后无幽灵模型
+ok 309 - M2 审查：真实区块道具构建包含农作物与围栏，清除后无幽灵模型
+  ---
+  duration_ms: 88.941458
+  type: 'test'
+  ...
+# Subtest: M2 工具两把不同磨损存取／丢捡／损坏保持每把耐久
+ok 310 - M2 工具两把不同磨损存取／丢捡／损坏保持每把耐久
+  ---
+  duration_ms: 105.344041
+  type: 'test'
+  ...
+# Subtest: M2 满箱部分接收、不吞来源与工具备用磨损
+ok 311 - M2 满箱部分接收、不吞来源与工具备用磨损
+  ---
+  duration_ms: 92.098417
+  type: 'test'
+  ...
+# Subtest: M2 所有世界写入口拒绝物品／越界／小数，不截断新ID
+ok 312 - M2 所有世界写入口拒绝物品／越界／小数，不截断新ID
+  ---
+  duration_ms: 81.503375
+  type: 'test'
+  ...
+# Subtest: M2 箱子销毁同步摘除，立即保存与热重载不丢不复制内容
+ok 313 - M2 箱子销毁同步摘除，立即保存与热重载不丢不复制内容
+  ---
+  duration_ms: 536.012542
+  type: 'test'
+  ...
+# Subtest: M2 炉子原木烧炭：原料燃料独立、输出、未完拆炉退款
+ok 314 - M2 炉子原木烧炭：原料燃料独立、输出、未完拆炉退款
+  ---
+  duration_ms: 78.286459
+  type: 'test'
+  ...
+# Subtest: M2 炉子加工中普通档／文件导入／快照回环
+ok 315 - M2 炉子加工中普通档／文件导入／快照回环
+  ---
+  duration_ms: 515.299417
+  type: 'test'
+  ...
+# Subtest: M2 输出满暂停消耗，旧即时熔炉配方不能绕过
+ok 316 - M2 输出满暂停消耗，旧即时熔炉配方不能绕过
+  ---
+  duration_ms: 80.222334
+  type: 'test'
+  ...
+# Subtest: M2 有效生产时钟：生活面板／暂停不走，跳天空不补算，大dt有界
+ok 317 - M2 有效生产时钟：生活面板／暂停不走，跳天空不补算，大dt有界
+  ---
+  duration_ms: 81.795875
+  type: 'test'
+  ...
+# Subtest: M2 坏生活存档在写槽与覆盖世界前拒绝
+ok 318 - M2 坏生活存档在写槽与覆盖世界前拒绝
+  ---
+  duration_ms: 196.070166
+  type: 'test'
+  ...
+# Subtest: M2 老档缺生活字段与工具备用耐久安全默认
+ok 319 - M2 老档缺生活字段与工具备用耐久安全默认
+  ---
+  duration_ms: 351.007625
+  type: 'test'
+  ...
+# Subtest: M2 耕种四期成熟返种，未熟返种，三麦面包
+ok 320 - M2 耕种四期成熟返种，未熟返种，三麦面包
+  ---
+  duration_ms: 69.713667
+  type: 'test'
+  ...
+# Subtest: M2 256株成长相同，不因数量变慢；无水冻结
+ok 321 - M2 256株成长相同，不因数量变慢；无水冻结
+  ---
+  duration_ms: 112.051583
+  type: 'test'
+  ...
+# Subtest: M2 树苗全空间预检，不覆盖屋顶；拆障后完整长树
+ok 322 - M2 树苗全空间预检，不覆盖屋顶；拆障后完整长树
+  ---
+  duration_ms: 64.747416
+  type: 'test'
+  ...
+# Subtest: M2 水桶取放守恒、稳定种子树苗来源、一次种植包
+ok 323 - M2 水桶取放守恒、稳定种子树苗来源、一次种植包
+  ---
+  duration_ms: 123.240625
+  type: 'test'
+  ...
+# Subtest: M2 羊喂养命名剪毛再生，远距／普通死亡／保存重进保持
+ok 324 - M2 羊喂养命名剪毛再生，远距／普通死亡／保存重进保持
+  ---
+  duration_ms: 280.396125
+  type: 'test'
+  ...
+# Subtest: M2 动物射线遮挡：墙后不可打开喂养面板
+ok 325 - M2 动物射线遮挡：墙后不可打开喂养面板
+  ---
+  duration_ms: 75.949417
+  type: 'test'
+  ...
+# Subtest: M2 围栏真实跳跃碰撞与开门通过
+ok 326 - M2 围栏真实跳跃碰撞与开门通过
+  ---
+  duration_ms: 67.116667
+  type: 'test'
+  ...
+# Subtest: M2 标准生存队列入口与消费守卫、自由实验切回取消
+ok 327 - M2 标准生存队列入口与消费守卫、自由实验切回取消
+  ---
+  duration_ms: 66.407625
+  type: 'test'
+  ...
+# Subtest: M2 学习统计保留，重复奖励不产钻铁或主食
+ok 328 - M2 学习统计保留，重复奖励不产钻铁或主食
+  ---
+  duration_ms: 65.99725
+  type: 'test'
+  ...
+# Subtest: M2 爆炸箱仅一次退款，输出与输入持久化完整
+ok 329 - M2 爆炸箱仅一次退款，输出与输入持久化完整
+  ---
+  duration_ms: 85.874709
+  type: 'test'
+  ...
+# Subtest: M2 临时编辑世界隔离，退回完整箱炉动物与工具
+ok 330 - M2 临时编辑世界隔离，退回完整箱炉动物与工具
+  ---
+  duration_ms: 325.368542
+  type: 'test'
+  ...
+# Subtest: M2 AI标准生存执行前拦脚本副作用、文件写入和生成草稿
+ok 331 - M2 AI标准生存执行前拦脚本副作用、文件写入和生成草稿
+  ---
+  duration_ms: 89.128916
+  type: 'test'
+  ...
+# Subtest: M2 关门挡住持麦引诱的羊，开门才通过
+ok 332 - M2 关门挡住持麦引诱的羊，开门才通过
+  ---
+  duration_ms: 71.917
+  type: 'test'
+  ...
+# Subtest: M3 审查：锯切产物离机首帧存读档，原料与四木板到入箱全程守恒
+ok 333 - M3 审查：锯切产物离机首帧存读档，原料与四木板到入箱全程守恒
+  ---
+  duration_ms: 636.886
+  type: 'test'
+  ...
+# Subtest: M3 审查：粉碎轮产物弹出首帧存读档也不会丢失或再次加工
+ok 334 - M3 审查：粉碎轮产物弹出首帧存读档也不会丢失或再次加工
+  ---
+  duration_ms: 359.024792
+  type: 'test'
+  ...
+# Subtest: M3 审查：四向梯子被普通或粘性活塞推压只返一梯，不留下悬空可爬梯
+ok 335 - M3 审查：四向梯子被普通或粘性活塞推压只返一梯，不留下悬空可爬梯
+  ---
+  duration_ms: 1126.096083
+  type: 'test'
+  ...
+# Subtest: M3 审查：只有原料的新玩家收到制作指引，远处营地工作台不被说成亲手放置
+ok 336 - M3 审查：只有原料的新玩家收到制作指引，远处营地工作台不被说成亲手放置
+  ---
+  duration_ms: 62.982916
+  type: 'test'
+  ...
+# Subtest: M3 审查：未打开 J 时 HUD 已安装定位样式，首次开面板不重复安装且暂停隐藏
+ok 337 - M3 审查：未打开 J 时 HUD 已安装定位样式，首次开面板不重复安装且暂停隐藏
+  ---
+  duration_ms: 65.894625
+  type: 'test'
+  ...
+# Subtest: M3 审查：作品录像调用助手入口，初始化前安全拒绝、初始化后可见
+ok 338 - M3 审查：作品录像调用助手入口，初始化前安全拒绝、初始化后可见
+  ---
+  duration_ms: 67.195625
+  type: 'test'
+  ...
+# Subtest: M3 v1/v2 eight full-world SHA256 remain byte-identical
+ok 339 - M3 v1/v2 eight full-world SHA256 remain byte-identical
+  ---
+  duration_ms: 2039.852083
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 1: real walking/jumping mine roundtrip, tower climb and camp
+ok 340 - M3 v3 seed 1: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 353.00625
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 42: real walking/jumping mine roundtrip, tower climb and camp
+ok 341 - M3 v3 seed 42: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 331.374625
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 2026: real walking/jumping mine roundtrip, tower climb and camp
+ok 342 - M3 v3 seed 2026: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 305.417042
+  type: 'test'
+  ...
+# Subtest: M3 v3 seed 1287621887: real walking/jumping mine roundtrip, tower climb and camp
+ok 343 - M3 v3 seed 1287621887: real walking/jumping mine roundtrip, tower climb and camp
+  ---
+  duration_ms: 315.831791
+  type: 'test'
+  ...
+# Subtest: M3 ladder placement support removal refunds once and no dangling climb
+ok 344 - M3 ladder placement support removal refunds once and no dangling climb
+  ---
+  duration_ms: 72.165667
+  type: 'test'
+  ...
+# Subtest: M3 closing the assistant also releases hidden recording controls for keyboard play
+ok 345 - M3 closing the assistant also releases hidden recording controls for keyboard play
+  ---
+  duration_ms: 68.789208
+  type: 'test'
+  ...
+# Subtest: M3 armor and facing shield protect explicit combat only, consume wear and break
+ok 346 - M3 armor and facing shield protect explicit combat only, consume wear and break
+  ---
+  duration_ms: 70.358209
+  type: 'test'
+  ...
+# Subtest: M3 shield requires held key and clears on panel; old level-run combat bypasses gear
+ok 347 - M3 shield requires held key and clears on panel; old level-run combat bypasses gear
+  ---
+  duration_ms: 78.359291
+  type: 'test'
+  ...
+# Subtest: M3 four-tier repair costs, no-charge failures, active only and reserve wear preserved
+ok 348 - M3 four-tier repair costs, no-charge failures, active only and reserve wear preserved
+  ---
+  duration_ms: 67.432625
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 30Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 349 - M3 saw→belt→chest 30Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 341.921375
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 60Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 350 - M3 saw→belt→chest 60Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 207.147708
+  type: 'test'
+  ...
+# Subtest: M3 saw→belt→chest 120Hz: 20 logs→80 planks outside pickup, no loss on full/off
+ok 351 - M3 saw→belt→chest 120Hz: 20 logs→80 planks outside pickup, no loss on full/off
+  ---
+  duration_ms: 217.2835
+  type: 'test'
+  ...
+# Subtest: M3 reversed belt never reports delivery and partial chest capacity preserves remainder
+ok 352 - M3 reversed belt never reports delivery and partial chest capacity preserves remainder
+  ---
+  duration_ms: 187.334917
+  type: 'test'
+  ...
+# Subtest: M3 exploration/markers/equipment/projects survive save, snapshot and temporary editor isolation
+ok 353 - M3 exploration/markers/equipment/projects survive save, snapshot and temporary editor isolation
+  ---
+  duration_ms: 697.406458
+  type: 'test'
+  ...
+# Subtest: M3 farm goal only counts mature harvest and chosen sites; project names kept when switching
+ok 354 - M3 farm goal only counts mature harvest and chosen sites; project names kept when switching
+  ---
+  duration_ms: 73.391459
+  type: 'test'
+  ...
+# Subtest: M3 lift goal requires real powered movement in its project region
+ok 355 - M3 lift goal requires real powered movement in its project region
+  ---
+  duration_ms: 199.608958
+  type: 'test'
+  ...
+# Subtest: M3 persisted exploration fields are bounded and reject out-of-world markers
+ok 356 - M3 persisted exploration fields are bounded and reject out-of-world markers
+  ---
+  duration_ms: 73.564584
+  type: 'test'
+  ...
+# Subtest: M3 装备、梯子及生活工具来源说明不出现未定义攻击数据
+ok 357 - M3 装备、梯子及生活工具来源说明不出现未定义攻击数据
+  ---
+  duration_ms: 0.552625
+  type: 'test'
+  ...
+1..357
+# tests 357
+# suites 0
+# pass 357
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11140.111416

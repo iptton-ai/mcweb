@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>把物理实验搭进世界 · 我的世界物理组件</title>
+<style>
+:root{color-scheme:dark;--bg:#131c22;--panel:#1e2b32;--deep:#142128;--line:#3c525c;--text:#edf4ef;--muted:#a8bcc1;--gold:#f3c675;--mint:#91d6ba;--blue:#84c9ed;--red:#ffa79a}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.85 system-ui,"PingFang SC","Microsoft YaHei",sans-serif}main{max-width:960px;margin:auto;padding:32px 24px 48px}h1,h2,h3,p{margin:0}h1{font-size:clamp(28px,5vw,42px);line-height:1.3;margin:9px 0 14px}h2{font-size:24px;line-height:1.45;margin:36px 0 15px;scroll-margin-top:20px}h3{font-size:18px;line-height:1.6;margin-bottom:8px}p+p{margin-top:9px}a{color:var(--mint);text-underline-offset:4px}a:hover{color:var(--gold)}.eyebrow{color:var(--mint);font-size:12px;letter-spacing:.14em}.lead,.muted{color:var(--muted)}.lead{max-width:720px}.nav{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}.nav a{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:5px 13px;font-size:13px;text-decoration:none}.card,.note,.lab,.steps{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}.note{border-left:4px solid var(--gold);margin:16px 0}.note p{color:var(--muted)}.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card p{color:var(--muted);font-size:14px}.card+.card{margin-top:0}.mark{display:inline-block;color:var(--gold);font-size:12px;margin:10px 0 0}.steps{margin:0;padding-left:42px}.steps li{padding:4px 0}.steps li+li{margin-top:9px}.steps strong,strong{color:var(--gold)}kbd{font:inherit;font-size:.85em;background:#30424b;border:1px solid #62747c;border-radius:5px;padding:1px 5px;white-space:nowrap}.figure{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:12px;margin:16px 0}.figure svg{display:block;width:100%;max-width:430px;height:auto;margin:auto}.figure figcaption{margin-top:10px;color:var(--muted);font-size:13px;text-align:center}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.two .figure{margin:0}.label{fill:var(--text);font-family:system-ui,"PingFang SC",sans-serif;font-size:15px}.small{font-size:12px;fill:var(--muted)}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;background:var(--panel);font-size:14px}th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--line)}th{color:var(--mint);font-weight:600}tbody tr:last-child td{border-bottom:0}.lab{margin-top:16px}.badge{display:inline-block;font-size:12px;color:var(--mint);border:1px solid #587b70;padding:3px 9px;border-radius:20px;margin-bottom:12px}.controls{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin:16px 0}.controls label{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:14px}select,input,button{font:inherit}select{border:1px solid #697c84;background:var(--deep);color:var(--text);border-radius:7px;padding:7px 10px}input[type=range]{accent-color:var(--gold);width:128px}a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.meters{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.meter{background:var(--deep);border:1px solid #304852;padding:13px 12px;border-radius:10px}.meter span{display:block;color:var(--muted);font-size:12px}.meter output{font-size:22px;font-weight:650;color:var(--gold)}.formula{color:var(--blue);font-size:14px;margin-top:12px}.split-caption{font-size:13px;color:var(--muted);margin:10px 0 0}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{background:var(--deep);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px}.end{border-top:1px solid var(--line);padding-top:17px;margin-top:30px;color:var(--muted);font-size:13px}details{margin-top:14px}summary{cursor:pointer;color:var(--mint)}details p{color:var(--muted);font-size:14px;padding-top:9px}.checklist{padding-left:22px;margin:10px 0 0}.checklist li{margin-top:6px}.mini-list{margin:0;padding-left:22px;color:var(--muted);font-size:14px}.mini-list li+li{margin-top:7px}
+@media(max-width:640px){main{padding:22px 15px 36px}.cards,.two{grid-template-columns:1fr;gap:14px}.card,.lab,.note{padding:17px}.nav{gap:7px}.nav a{padding:5px 11px}.meters{grid-template-columns:1fr}.meter{display:flex;align-items:center;justify-content:space-between;gap:10px}.meter output{font-size:21px}.table-wrap th,.table-wrap td{padding:10px;font-size:13px}.controls{align-items:stretch}.controls label{width:100%;justify-content:space-between}.figure{padding:9px}.steps{padding-left:36px}h2{font-size:22px;margin-top:29px}.chips{gap:6px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{:root{color-scheme:light;--bg:#fff;--panel:#fff;--deep:#f4f6f7;--line:#bac5ca;--text:#162931;--muted:#3b525b;--gold:#72501b;--mint:#245e4c;--blue:#255b78}main{max-width:none;padding:10mm}.nav{display:none}.card,.note,.figure,.lab,table{break-inside:avoid}h2{break-after:avoid}.controls input{display:none}a{color:inherit}.table-wrap{overflow:visible}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">搭机关 · 比变量 · 看结果</p>
+  <h1>把物理实验搭进世界</h1>
+  <p class="lead">让同一个物体滑过不同表面，用不同绳路抬起同一个重物，再把水送到高处。先预测，再运行；每次只改一个条件，最后解释你看到的变化。</p>
+  <nav class="nav" aria-label="本页目录">
+    <a href="#start">怎么开始</a><a href="#mechanics">力学实验台</a><a href="#pulley">教学滑轮</a>
+    <a href="#water">水路与浮力</a><a href="#motion">动力与移动</a><a href="#trouble">不动时检查</a>
+  </nav>
+</header>
+
+<div class="note">
+  <h3>先认识实验范围</h3>
+  <p>斜坡、杠杆、弹簧、教学滑轮和浮块都使用装置内的标准试验物体；模型留在所属格内，<strong>不承载玩家，也不能捡回背包</strong>。需要搭真正的载人机关时，使用宽平台或已有滑轮电梯。</p>
+  <p>读数使用<strong>游戏模型单位</strong>。模型便于比较坡度、摩擦、力臂和绳程，不表示所有真实材料、空气和水的连续行为；SU 是游戏负载预算。</p>
+</div>
+
+<section aria-labelledby="start">
+<h2 id="start">先做一次完整实验</h2>
+<ol class="steps">
+  <li><strong>摆装置：</strong>创造或编辑器按 <kbd>B</kbd>，在物理实验中选择模板，对准地面放下。生存可在工作台按 <kbd>E</kbd> 查组件配方和材料。</li>
+  <li><strong>设一个条件：</strong>对准装置按右键或纯键盘 <kbd>X</kbd> 打开面板，选择坡度、表面、砝码或方向等参数。要贴着装置放其他方块，按住 <kbd>Shift</kbd> 再右键。</li>
+  <li><strong>开始并观察：</strong>点“开始”后收起面板看模型运动，再对准装置查看读数。弹簧先压缩、滑轮先拉绳；它们都需要对应的输入。</li>
+  <li><strong>复位再比较：</strong>记录结果，只改变一个条件后再做。<kbd>E</kbd>、<kbd>Esc</kbd>、<kbd>Q</kbd> 可收起面板；复位不增加物品，也不恢复已经搬走的水。</li>
+</ol>
+<p class="split-caption">普通生存的阅读、菜单和失焦沿用安全暂停规则；不补算离线时间。关卡内只能操作作者允许的实验动作，参数、桶和自由放拆保持锁定。</p>
+</section>
+
+<section aria-labelledby="mechanics">
+<h2 id="mechanics">四种力学实验，分别改什么</h2>
+<div class="cards">
+  <article class="card">
+    <h3>① 斜坡与摩擦</h3>
+    <svg viewBox="0 0 360 118" role="img" aria-label="标准物体从斜坡滑到水平轨道" style="width:100%;height:auto">
+      <path d="M28 31L157 93H330" fill="none" stroke="#91d6ba" stroke-width="8" stroke-linecap="round"/>
+      <rect x="62" y="37" width="25" height="23" rx="3" fill="#f3c675" transform="rotate(26 74 48)"/>
+      <path d="M189 70H282m-10-8 10 8-10 8" fill="none" stroke="#84c9ed" stroke-width="3"/>
+      <text class="small" x="33" y="106">坡度</text><text class="small" x="198" y="108">水平段比较滑行距离</text>
+    </svg>
+    <p>保持质量和起点相同，先比较<strong>光滑／普通／粗糙</strong>三档表面；再固定表面，比较坡度。坡底接水平段，物体减速后停稳，碰墙就停。</p>
+    <span class="mark">观察：滑行距离、速度和计时；普通地面手感不受影响。</span>
+  </article>
+  <article class="card">
+    <h3>② 杠杆与砝码槽</h3>
+    <svg viewBox="0 0 360 118" role="img" aria-label="五个砝码槽的杠杆与可移动支点" style="width:100%;height:auto">
+      <path d="M153 103L180 61L207 103Z" fill="#5a8186"/>
+      <path d="M35 61H325" stroke="#cda666" stroke-width="9" stroke-linecap="round"/>
+      <g fill="#f3c675"><rect x="48" y="35" width="26" height="22" rx="3"/><rect x="286" y="35" width="26" height="22" rx="3"/></g>
+      <g fill="#91d6ba"><circle cx="61" cy="61" r="4"/><circle cx="120" cy="61" r="4"/><circle cx="180" cy="61" r="4"/><circle cx="240" cy="61" r="4"/><circle cx="299" cy="61" r="4"/></g>
+      <text class="small" x="43" y="22">质量 × 力臂</text><text class="small" x="247" y="22">质量 × 力臂</text>
+    </svg>
+    <p>五槽可放标准砝码，支点可移动。两边比较<strong>质量 × 到支点的距离</strong>：总力矩相等时平衡，大的一边下沉。</p>
+    <span class="mark">观察：支点、倾角和力矩；只是有限角度实验，不是载人跷跷板。</span>
+  </article>
+  <article class="card">
+    <h3>③ 弹簧与弹射</h3>
+    <p>先选质量，再把弹簧压到一档、两档或三档，输入手动做功后释放。相同质量下，压缩更多通常弹得更高；相同压缩量下，较重的物体弹得更低。</p>
+    <p>每次释放都会用掉当前储能。想再弹一次需要重新压缩，不能连续空按获得越来越大的高度；低顶会挡住上升。</p>
+    <span class="mark">观察：压缩档、弹起高度与质量；复位后从初始状态再做。</span>
+  </article>
+  <article class="card">
+    <h3>④ 测速、计时与测力</h3>
+    <p>实验台读数跟随实际模型状态；测速门还能观察真实玩家或掉落物经过测量区。先复位计时，从入口穿过出口，再比较距离和用时。</p>
+    <p><strong>平均速度＝经过的距离 ÷ 用时。</strong>要比较两次结果，保持测量区和起步方式一致。没有走完一次测量时，不把空读数当成已经测得的速度。</p>
+    <span class="mark">观察：经过时间、距离和速度；力的读数来自对应实验模型。</span>
+  </article>
+</div>
+</section>
+
+<section aria-labelledby="pulley">
+<h2 id="pulley">教学滑轮：省力，也要多拉绳</h2>
+<p class="lead">选择定滑轮、动滑轮或滑轮组，比较支承重物的绳段数。这里是理想化绳路模型，和已有的动力卷扬电梯分别命名、分别操作。</p>
+<div class="lab">
+  <span class="badge">数值示意 · 不操作游戏世界</span>
+  <h3>同一个重物，提升同样高度</h3>
+  <div class="controls">
+    <label>支承绳段 <select id="rope-count"><option value="1">1 段 · 定滑轮</option><option value="2">2 段 · 动滑轮</option><option value="4">4 段 · 滑轮组</option></select></label>
+    <label>提升高度 <input id="lift-height" type="range" min="0.25" max="2" step="0.25" value="1"><output id="lift-label">1 单位</output></label>
+  </div>
+  <div class="meters" aria-live="polite">
+    <div class="meter"><span>所需拉力（模型力）</span><output id="pull-force">—</output></div>
+    <div class="meter"><span>需要拉过的绳程</span><output id="rope-length">—</output></div>
+    <div class="meter"><span>输入功（模型功）</span><output id="pull-work">—</output></div>
+  </div>
+  <p class="formula">拉力＝重力 ÷ 支承绳段数；绳程＝提升高度 × 支承绳段数。</p>
+  <p class="split-caption" id="pulley-explain">支承绳段从 1 变成 2 或 4 时，拉力变为一半或四分之一，拉绳距离同时变为两倍或四倍。</p>
+</div>
+<div class="table-wrap" style="margin-top:15px"><table>
+  <thead><tr><th>模型</th><th>拉力比较</th><th>绳程比较</th><th>在游戏里做什么</th></tr></thead>
+  <tbody>
+    <tr><td>定滑轮</td><td>1 倍</td><td>1 倍</td><td>改变用力方向；同高提升仍需同样大小的拉力。</td></tr>
+    <tr><td>动滑轮</td><td>½</td><td>2 倍</td><td>用较小的力，拉更长的绳。</td></tr>
+    <tr><td>滑轮组</td><td>¼</td><td>4 倍</td><td>继续比较省力与费距离；手动“拉绳”提供提升输入。</td></tr>
+  </tbody>
+</table></div>
+<p class="split-caption">理想模型忽略绳子质量和轮轴摩擦；相同质量提升相同高度，输入功不会因为多绕几根绳就凭空减少。</p>
+</section>
+
+<section aria-labelledby="water">
+<h2 id="water">把四份水送到该去的地方</h2>
+<div class="two">
+  <figure class="figure">
+    <svg viewBox="0 0 380 220" role="img" aria-labelledby="water-title water-desc">
+      <title id="water-title">一桶水等于四份槽水</title><desc id="water-desc">左边水桶装满四份水，右边实验水槽显示四个等量份额。</desc>
+      <path d="M36 74L48 161H115L128 74Z" fill="#3d809f" stroke="#b2cbd0" stroke-width="4"/>
+      <path d="M49 70C49 23 114 23 114 70" fill="none" stroke="#b2cbd0" stroke-width="5"/>
+      <path d="M145 116H192m-11-9 11 9-11 9" fill="none" stroke="#f3c675" stroke-width="4"/>
+      <path d="M216 65V162H346V65" fill="none" stroke="#84c9ed" stroke-width="5"/>
+      <g fill="#358fb8"><rect x="224" y="139" width="114" height="16"/><rect x="224" y="117" width="114" height="16"/><rect x="224" y="95" width="114" height="16"/><rect x="224" y="73" width="114" height="16"/></g>
+      <text class="label" x="49" y="193">1 满桶</text><text class="label" x="234" y="193">4 份槽水</text>
+    </svg>
+    <figcaption>水只在专用槽内搬运，普通湖水维持原来的静水规则。</figcaption>
+  </figure>
+  <article class="card">
+    <h3>水槽、分流与水闸</h3>
+    <ul class="mini-list">
+      <li>每格槽最多装四份。相邻同层槽会均衡，邻近低一格槽可接住高处来水；没有接收槽时不会漏到空气里。</li>
+      <li>水闸独占一格，两端各放一格槽，形成“槽—闸—槽”。开闸允许输水，闭闸保留两侧已有的水。</li>
+      <li>闸可选手动或红石控制。红石模式跟随电路信号，手动按钮不能绕过该模式。</li>
+    </ul>
+  </article>
+</div>
+<div class="note">
+  <h3>桶只交换整整四份</h3>
+  <p><strong>满桶 → 空槽</strong>，留下一个空桶；<strong>空桶 → 满槽</strong>，得到一个满桶。部分满槽先让水汇满，不能把一份或两份当成一整桶取走。库存不足或装不下新桶时，原槽和背包都保持原样。</p>
+  <p>生存挖回湿槽时保留它的实际份数，再放下仍是这些水。普通世界覆盖或换成另一只槽，也会返还原来的含水槽；槽内流动和桶取放只搬已有水。只有空槽有合成配方；复位浮块不会把已经排空的槽重新加满。</p>
+</div>
+
+<h3 style="margin-top:25px">机械泵怎么摆：轴在后，水从侧面来</h3>
+<div class="two">
+  <figure class="figure">
+    <svg viewBox="0 0 380 265" role="img" aria-labelledby="pump-title pump-desc">
+      <title id="pump-title">朝东机械泵的俯视接线</title><desc id="pump-desc">西侧接东西向传动轴，南侧槽作为进水口，东侧槽作为出水口；出水槽可按扬程设置抬高零到四格。</desc>
+      <defs><marker id="water-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#84c9ed"/></marker></defs>
+      <rect x="143" y="72" width="74" height="70" rx="9" fill="#416c85" stroke="#a9c4c8" stroke-width="2"/>
+      <text class="label" x="164" y="115">水泵</text>
+      <path d="M35 108H141" stroke="#cda666" stroke-width="13"/>
+      <text class="label" x="38" y="69">后方接轴</text>
+      <rect x="146" y="193" width="68" height="52" rx="5" fill="#276483" stroke="#84c9ed" stroke-width="2"/>
+      <text class="label" x="164" y="225">进水</text>
+      <path d="M180 190V148" fill="none" stroke="#84c9ed" stroke-width="4" marker-end="url(#water-arrow)"/>
+      <rect x="286" y="81" width="65" height="52" rx="5" fill="#276483" stroke="#84c9ed" stroke-width="2"/>
+      <text class="label" x="302" y="113">出水</text>
+      <path d="M221 107H279" fill="none" stroke="#84c9ed" stroke-width="4" marker-end="url(#water-arrow)"/>
+      <text class="label" x="289" y="52">东 →</text><text class="small" x="229" y="164">出水槽可抬高</text>
+      <text class="small" x="31" y="260">示例为朝东；朝向改变时，三种接口一起转。</text>
+    </svg>
+    <figcaption>进水在泵侧面，不与后方传动轴抢同一格。</figcaption>
+  </figure>
+  <article class="card">
+    <h3>先通水，再通动力</h3>
+    <p>示例朝东：泵后面接东西向轴，南侧放进水槽，东侧放出水槽。面板设置出水扬程 <strong>0～4 格</strong>，出水槽高度要和设置一致。</p>
+    <p>每次只把已有的一份水从入口搬到出口。缺水、出口满、槽位置不对或断动力都会停止；泵不会凭空造水。</p>
+    <p class="formula" id="pump-spec">基准转速、搬运节拍与负载见游戏读数。</p>
+    <p>要比较快慢，改变接入的齿轮倍率，观察同样时间内真正搬过去的份数，同时检查负载预算。</p>
+  </article>
+</div>
+
+<article class="card" style="margin-top:16px">
+  <h3>浮块与配重：先浮起来，再加重</h3>
+  <p>在槽面板启用标准浮块，保持水量相同，把配重从零逐档加到四档。轻载浮在水面，足够重时沉到底部；让泵抽走水，再看轻浮块随水面下降。</p>
+  <p>浮块是附在槽上的试验模型，不占真实掉落物，也不是可以乘坐的小船。这个模型没有模拟任意船体、波浪或精确排水形状。</p>
+</article>
+</section>
+
+<section aria-labelledby="motion">
+<h2 id="motion">从实验台走向真正的机关</h2>
+<div class="cards">
+  <article class="card">
+    <h3>机械风扇：把掉落物送出去</h3>
+    <p>后方接与朝向相同轴线的传动轴，让前方风道留空。把物品丢在前面，比较动力转速与运输效果；放一面墙，再验证墙后不继续受风。</p>
+    <p class="formula" id="fan-spec">有限风程与基础负载见游戏读数。</p>
+    <span class="mark">这是有遮挡的定向推力，不是整个世界的空气流场，也不把玩家或生物吹飞。</span>
+  </article>
+  <article class="card">
+    <h3>风车：给轴网另一种动力</h3>
+    <p>风车使用固定竖轴，从下方接立轴。上方<strong>5×5 范围连续三层</strong>留空；方块遮住开阔区后停转，撤去障碍再恢复。</p>
+    <p class="formula" id="windmill-spec">转速与容量见游戏读数。</p>
+    <span class="mark">使用明确的游戏恒定风档；不根据真实天气或空气流场求风速。多动力源仍要检查旋向和负载。</span>
+  </article>
+</div>
+
+<h3 style="margin-top:26px">宽平台：给人站的位置，也给路过的人留位置</h3>
+<div class="two">
+  <figure class="figure">
+    <svg viewBox="0 0 380 220" role="img" aria-labelledby="platform-title platform-desc">
+      <title id="platform-title">三格宽直线平台布局</title><desc id="platform-desc">驱动器后接轴，平台在驱动器上方一层，横向一格或三格，沿朝向做直线往返。整个行程需要地板导轨和乘客净空。</desc>
+      <g stroke="#49616b" fill="#253d46" stroke-width="2"><rect x="101" y="34" width="55" height="147"/><rect x="157" y="34" width="55" height="147"/><rect x="213" y="34" width="55" height="147"/></g>
+      <g fill="#b4bfc2" stroke="#e5e7d4" stroke-width="2"><rect x="104" y="126" width="49" height="48"/><rect x="160" y="126" width="49" height="48"/><rect x="216" y="126" width="49" height="48"/></g>
+      <path d="M184 113V55m-8 10 8-10 8 10" fill="none" stroke="#f3c675" stroke-width="4"/>
+      <text class="label" x="19" y="148">3 格宽</text><text class="small" x="278" y="75">直线行程</text>
+      <text class="small" x="55" y="205">平台在驱动器上方；下方整条路线铺导轨。</text>
+    </svg>
+    <figcaption>俯视示意。乘客站在真实平台方块顶面。</figcaption>
+  </figure>
+  <article class="card">
+    <h3>摆好足迹，再设行程</h3>
+    <p>驱动器后接轴，平台位于它上方一层。宽度选 <strong>1 或 3 格</strong>，行程选 <strong>1～8 格</strong>，方向和地板导轨保持一致。</p>
+    <p>红石信号控制往返方向。停电时悬停；遇墙、低顶、世界边界，或目的格有人挡路时，整个平台停下，清除障碍再继续。</p>
+    <p class="formula" id="platform-spec">移动速度和基础负载见游戏读数。</p>
+    <p>不仅留出平台的空位，还要给边缘乘客的身体与头顶留空间。平台不会把途中的旁观者强行带走。</p>
+  </article>
+</div>
+
+<div class="cards" style="margin-top:16px">
+  <article class="card">
+    <h3>实验落块：撤掉支撑看它落下</h3>
+    <p>只对“实验落块”启用新的重力行为。撤掉支撑后向下落，遇地面停住；有人挡住时停落，不把人埋进方块。</p>
+    <p>落入普通水时减速，并把被占用的水移到腾出的格子。专用实验水槽会挡住落块，不把槽里的四份水吞掉。</p>
+    <span class="mark">普通沙子、沙砾和旧世界的静态建筑保持原来的规则。</span>
+  </article>
+  <article class="card">
+    <h3>运动 TNT：在实际落点爆炸</h3>
+    <p>这是独立于普通 TNT 的组件。放在空中会落下；操作面板点燃后，引信继续计时，最终按它<strong>当时所在的位置</strong>爆炸。</p>
+    <p class="formula" id="tnt-spec">引信时长见游戏读数。</p>
+    <p>普通存档保存剩余引信，不能靠保存刷新重新获得完整倒计时。已点燃的运动 TNT 不能导出为关卡起始状态，闯关玩家不能手动点燃它。</p>
+    <span class="mark">旧 TNT 的原位置倒计时与爆炸规则继续保留。</span>
+  </article>
+</div>
+</section>
+
+<section aria-labelledby="trouble">
+<h2 id="trouble">机关不动时，按这个顺序检查</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>看到的现象</th><th>先检查什么</th></tr></thead>
+  <tbody>
+    <tr><td>实验没有开始</td><td>是否按了对应动作？弹簧先压缩、教学滑轮先拉绳。关卡需要作者允许手动操作。</td></tr>
+    <tr><td>几次结果不一样</td><td>先复位；保持质量、起点和表面一致，每次只改一个变量。别用一次实验同时验证坡度和摩擦。</td></tr>
+    <tr><td>槽有水，桶取不走</td><td>是否满四份？空桶只从满槽取整桶；部分满槽要先汇水。再看背包能否容纳换回的桶。</td></tr>
+    <tr><td>泵不搬水</td><td>先看侧方进水槽和前方出水槽高度，再看入口是否有水、出口是否满，最后查后方传动轴与 SU 预算。</td></tr>
+    <tr><td>水闸按钮没有效果</td><td>两端是否各有槽？若选了红石控制，检查真正的电路信号，手动按钮不会代替电路。</td></tr>
+    <tr><td>风扇后面的物品没走</td><td>把物品放在风扇前方；检查风道中间是否被墙挡住，动力是否接到背面，网络是否过载。</td></tr>
+    <tr><td>风车突然停了</td><td>检查上方开阔区，新放的方块或树冠可能遮挡；同时检查整个轴网的转速、旋向和应力。</td></tr>
+    <tr><td>平台停在半路</td><td>检查全部宽度内的导轨、目标空间、乘客头顶、侧墙和路上的人。撤掉障碍后观察是否恢复。</td></tr>
+  </tbody>
+</table></div>
+<details>
+  <summary>保存、复位与关卡重试分别保留什么？</summary>
+  <p>普通存档保留装置参数和实际槽水量；力学试验物体读档回初始姿态，速度和本次测量重新开始。宽平台保留实际位置，已点燃运动 TNT 保留剩余引信。</p>
+  <p>复位只重置本台的虚拟试验状态，不撤销桶取放，不把水搬回入口，也不增加砝码或物品。作者导出关卡时带走装置参数和槽水，关卡重试从卡片保存的起点重新开始。</p>
+</details>
+</section>
+
+<footer class="end">继续做传动实验，可阅读 <a href="physics-components-guide.html">《让机关转起来》</a>。做比较时记下三件事：我只改变了什么、实际测到了什么、下一次怎样复验。</footer>
+</main>
+<script type="module">
+import { PHYSICS, WHEEL_RPM } from '../js/config.js';
+const el = id => document.getElementById(id);
+const pretty = value => Number(value.toFixed(3));
+el('pump-spec').textContent = `${WHEEL_RPM} RPM 时每 ${PHYSICS.pumpSeconds} 秒搬一份；基础负载 ${PHYSICS.pumpLoad} SU，流量和折算负载随转速倍率改变。`;
+el('fan-spec').textContent = `风程最多 ${PHYSICS.windRange} 格；基础负载 ${PHYSICS.fanLoad} SU。`;
+el('windmill-spec').textContent = `开阔时输出 ${PHYSICS.windRpm} RPM，每台提供 ${PHYSICS.windCapacity} SU 容量。`;
+el('platform-spec').textContent = `基准移动速度 ${PHYSICS.carriageSpeed} 格/秒；驱动器基础负载 ${PHYSICS.carriageLoad} SU，接入转速会改变移动速度和折算负载。`;
+el('tnt-spec').textContent = `点燃后引信 ${PHYSICS.fuse} 秒；在运动中的实际位置爆炸。`;
+function renderPulley() {
+  const n = Number(el('rope-count').value), h = Number(el('lift-height').value);
+  const mass = 1, weight = mass * PHYSICS.gravity, force = weight / n, length = n * h;
+  el('lift-label').textContent = `${pretty(h)} 单位`;
+  el('pull-force').textContent = `${pretty(force)}`;
+  el('rope-length').textContent = `${pretty(length)} 单位`;
+  el('pull-work').textContent = `${pretty(force * length)}`;
+  el('pulley-explain').textContent = `这里固定质量为 ${mass} 模型单位，重力为 ${pretty(weight)}。${n} 段绳支承，提升 ${pretty(h)} 单位，需要拉过 ${pretty(length)} 单位绳；理想输入功＝${pretty(weight)} × ${pretty(h)}＝${pretty(weight * h)}。`;
+}
+el('rope-count').addEventListener('change', renderPulley);
+el('lift-height').addEventListener('input', renderPulley);
+renderPulley();
+</script>
+</body>
+</html>

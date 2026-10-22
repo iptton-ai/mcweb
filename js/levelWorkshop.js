@@ -43,7 +43,9 @@ import {
     starlightOpen,
 } from './config.js';
 import { state } from './state.js';
-import { getBlockIndex } from './world.js';
+import { capturePhysicsState, validatePhysicsState, restorePhysicsState, normalizePhysicsConfig } from './physicsData.js';
+// 区域编解码必须保持纯数据可直测，不能为一个索引公式拉入世界/渲染依赖图。
+const getBlockIndex=(x,y,z)=>x+z*WORLD_WIDTH+y*WORLD_WIDTH*WORLD_DEPTH;
 import { rleDecode, rleEncode } from './rle.js';
 
 // ==================== 契约常量（docs/edu-workshop-impl-contract.md §3.1）====================
@@ -287,6 +289,7 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
     // ---- 扫描 region：旗归类（起点/检查点/终点）、答题机问锁题 ----
     // 旗、锁与 RLE 都读这份区域副本；自定义异步提供者等待期间继续施工也不会混合几何。
     const blocks = copyRegionBlocks(region, world);
+    const physicsSnapshot=capturePhysicsState(region);
     const flags = { start: null, checkpoints: [], goal: null };
     const questions = [];
     for (let ly = 0; ly < region.h; ly++) {
@@ -379,6 +382,13 @@ export async function buildLevelCard({ name, author, lockMetaProvider, questionP
     if (draft) meta.draft = true;
     if (generator) meta.generator = generator;
     if (Object.keys(meta).length) card.meta = meta;
+    const physics=physicsSnapshot;
+    if(Object.keys(physics.devices).length) {
+        const error=validatePhysicsState(physics,blocks,[region.w,region.h,region.d]);
+        if(error)return {error:`${error}；请调整旗标，让导出区域包含完整装置与当前平台`};
+        if(Object.values(physics.devices).some(d=>d.id===227&&d.config.armed))return {error:'请等运动 TNT 熄灭或爆炸后再导出关卡'};
+        card.physics=physics;
+    }
     return card;
 }
 
@@ -424,7 +434,12 @@ export function validateLevelCard(card) {
     } else {
         const decoded = decodeRegionBlocks(card);
         if (decoded.error) errors.push(decoded.error);
-        else region = r;
+        else {
+            region = r;
+            const e=validatePhysicsState(card.physics,decoded.blocks,[r.w,r.h,r.d]);
+            if(e)errors.push(e);
+            if(Object.values(card.physics?.devices||{}).some(d=>d?.id===227&&d.config?.armed))errors.push('关卡不能携带已点燃的运动 TNT');
+        }
     }
 
     // ---- 题目 schema ----
@@ -621,11 +636,17 @@ export function reachabilityBFS(card) {
 
 // djb2 over 稳定 JSON（region.blocks + questions + rules + flags 依构造序 stringify）→ 16 进制
 export function cardHash(card) {
+    const physics=card.physics?.devices&&Object.keys(card.physics.devices).length?{physics:{v:1,devices:Object.fromEntries(Object.keys(card.physics.devices).sort().map(k=>{
+        const d=card.physics.devices[k],config=normalizePhysicsConfig(d.id,d.config);
+        for(const flag of ['allowRun','armed'])if(Object.hasOwn(config,flag))config[flag]=!!config[flag];
+        return [k,{id:d.id,config:Object.fromEntries(Object.keys(config).sort().map(key=>[key,config[key]]))}];
+    }))}}:{};
     const stable = JSON.stringify({
         region: card.region && card.region.blocks,
         questions: card.questions || [],
         rules: card.rules || null,
         flags: card.flags || null,
+        ...physics,
     });
     let h = 5381;
     for (let i = 0; i < stable.length; i++) {
@@ -895,9 +916,13 @@ export function embedLevelToWorld(card) {
     if (dec.error) return { error: dec.error };
     const blocks = dec.blocks;
     const r = card.region;
+    const physicsError=validatePhysicsState(card.physics,blocks,[r.w,r.h,r.d]);
+    if(physicsError)return {error:physicsError};
+    if(Object.values(card.physics?.devices||{}).some(d=>d?.id===227&&d.config?.armed))return {error:'关卡不能携带已点燃的运动 TNT'};
     const ox = LEVEL_EMBED_OFFSET.x;
     const oy = LEVEL_EMBED_OFFSET.y;
     const oz = LEVEL_EMBED_OFFSET.z;
+    restorePhysicsState(card.physics,{x:ox,y:oy,z:oz});
     let k = 0;
     for (let ly = 0; ly < r.h; ly++) {
         const yBase = (oy + ly) * WORLD_WIDTH * WORLD_DEPTH;

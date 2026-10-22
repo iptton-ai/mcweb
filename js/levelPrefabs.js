@@ -1,4 +1,5 @@
 import { crankId, largeCogId, reverserId, shaftId, cogId, beltId, sawId, leverId, LifeBlocks } from './config.js';
+import { PhysicsBlocks as PB, troughId } from './config.js';
 // ==================== levelPrefabs.js ====================
 // 关卡工坊·预设组件库（2026-09-16）：一键盖出的「半成品关卡零件」——旗标、答题门、
 // 星辉门、答题滑轮电梯、城堡塔楼、检查点小屋等。组件只是几何（放完的答题机仍要
@@ -312,6 +313,44 @@ PREFABS.push(
 
 // ==================== 查询与纯几何展开 ====================
 
+PREFABS.push(
+    {id:'physics_friction_lab',name:'🛝 三种摩擦对照台',cat:'物理实验',w:7,h:3,d:5,grounded:true,anchor:{x:3,y:0,z:3},
+        desc:'三台相同坡度、不同表面。右键/X开始或复位；比较滑行距离，标准物体不会进背包。',
+        physics:[0,1,2].map((surface,i)=>({x:1+i*2,y:1,z:2,config:{slope:1,surface}})),
+        build:physicsScene(7,3,5,put=>{for(const x of [1,3,5])put(x,1,2,PB.RAMP);})},
+    {id:'physics_lever_lab',name:'⚖️ 杠杆与支点实验',cat:'物理实验',w:5,h:3,d:5,grounded:true,anchor:{x:2,y:0,z:3},
+        desc:'移支点、换砝码、比较力臂；左重右重与净力矩使用同一个模型。虚拟台只载标准砝码。',
+        build:physicsScene(5,3,5,put=>put(2,1,2,PB.LEVER))},
+    {id:'physics_spring_lab',name:'🌀 弹簧压缩实验',cat:'物理实验',w:7,h:4,d:5,grounded:true,anchor:{x:3,y:0,z:3},
+        desc:'先选压缩档，点击手动压缩，再释放观察；另一台顶部有挡板可比较撞顶。每次释放都消耗本次输入。',
+        build:physicsScene(7,4,5,put=>{put(2,1,2,PB.SPRING);put(4,1,2,PB.SPRING);put(4,2,2,GLASS);})},
+    {id:'physics_teaching_pulleys',name:'🪢 定动滑轮对照台',cat:'物理实验',w:7,h:3,d:5,grounded:true,anchor:{x:3,y:0,z:3},
+        desc:'定滑轮、动滑轮、四段承重绳组合。拉同样高度，比较拉力与拉绳距离；与载人电梯分开。',
+        physics:[0,1,2].map((ropes,i)=>({x:1+i*2,y:1,z:2,config:{ropes}})),
+        build:physicsScene(7,3,5,put=>{for(const x of [1,3,5])put(x,1,2,PB.TEACHING_PULLEY);})},
+    {id:'physics_fan_lab',name:'🌬️ 风道运输与测速',cat:'物理实验',w:10,h:4,d:5,grounded:true,anchor:{x:4,y:0,z:3},
+        desc:'水车驱动东向风扇，Z丢物观察运输；测速门要右键开始，途中加一堵墙比较遮风。',
+        build:physicsScene(10,4,5,put=>{put(1,1,2,waterwheelId(0));put(1,2,2,WATER);put(2,1,2,shaftId(0));put(3,1,2,PB.FAN);put(6,1,2,PB.SENSOR);})},
+    {id:'physics_water_gate',name:'💧 定量水路与水闸',cat:'物理实验',w:9,h:4,d:5,grounded:true,anchor:{x:4,y:0,z:3},
+        desc:'左侧4份水、右侧空槽，中间闸门。右键开闸看分流，再用整桶取放；拆湿槽保留水量。',
+        build:physicsScene(9,4,5,put=>{put(2,1,2,troughId(4));put(3,1,2,PB.VALVE);for(let x=4;x<=7;x++)put(x,1,2,troughId(0));})},
+    {id:'physics_pump_float',name:'🚰 抽水与浮块实验',cat:'物理实验',w:8,h:5,d:6,grounded:true,anchor:{x:4,y:0,z:4},
+        desc:'侧方满槽供水，水泵背后接轴，前方抬高1格出水；浮块加配重观察轻浮重沉，不复位水量。',
+        physics:[{x:5,y:2,z:2,config:{float:1}},{x:4,y:1,z:3,config:{float:1}}],
+        build:physicsScene(8,5,6,put=>{put(2,1,2,waterwheelId(0));put(2,2,2,WATER);put(3,1,2,shaftId(0));put(4,1,2,PB.PUMP);put(4,1,3,troughId(4));put(5,2,2,troughId(0));})},
+    {id:'physics_wide_bridge',name:'🌉 三格宽往返平台',cat:'物理实验',w:10,h:6,d:7,grounded:true,anchor:{x:3,y:0,z:5},
+        desc:'踏上三格平台，沿轨道载人前进；机头下方拉杆有电回程。低顶或前方站人会停机，撤障恢复。',
+        build:physicsScene(10,6,7,put=>{put(1,2,3,waterwheelId(0));put(1,3,3,WATER);put(2,2,3,shaftId(0));put(3,2,3,PB.CARRIAGE);
+            for(let x=3;x<=7;x++)for(let z=2;z<=4;z++)if(x!==3||z!==3)put(x,2,z,STONE);
+            for(let z=2;z<=4;z++)put(3,3,z,PLATFORM_BASE);put(3,1,3,leverId(1,0));
+            for(let x=2;x<=3;x++)put(x,x-1,5,PLANKS);})},
+    {id:'physics_wind_station',name:'🍃 风车动力站',cat:'物理实验',w:7,h:7,d:7,grounded:true,anchor:{x:3,y:0,z:5},
+        desc:'风车下接竖轴与传送带，开阔时8RPM；在风车上方5×5范围加实心遮挡看停机，撤挡恢复。',
+        build:physicsScene(7,7,7,put=>{put(3,3,3,PB.WINDMILL);put(3,2,3,shaftId(1));put(3,1,3,beltId(1));for(let x=4;x<=5;x++)put(x,1,3,beltId(1));})},
+    {id:'physics_falling_lab',name:'⬇️ 落块与运动 TNT',cat:'物理实验',w:9,h:9,d:6,grounded:true,anchor:{x:4,y:0,z:4},
+        desc:'两组实验块坐在高处支撑，拆支撑观察下落。独立运动TNT可右键点燃；普通沙砾与TNT规则不变。',
+        build:physicsScene(9,9,6,put=>{for(const x of [2,6]){for(let y=1;y<=5;y++)put(x-1,y,2,STONE);put(x,5,2,PLANKS);}put(2,6,2,PB.FALLING);put(6,6,2,PB.MOTION_TNT);put(2,1,2,WATER);})},
+);
 const PREFAB_MAP = new Map(PREFABS.map((p) => [p.id, p]));
 
 export function getPrefab(id) {

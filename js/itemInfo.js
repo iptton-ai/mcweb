@@ -1,4 +1,5 @@
 import { AdventureItems, ADVENTURE, LADDER_BASE } from './config.js';
+import { PhysicsBlocks as PB, PHYSICS as PH, TROUGH_IDS } from './config.js';
 import { materialSource } from './itemSources.js';
 // ==================== itemInfo.js ====================
 // 物品说明条（屏幕底部对话式）：鼠标悬停 E 面板的物品格/配方行，或指针自由时的手持胶囊，
@@ -88,6 +89,19 @@ const SPECIAL_HINTS = {
 
 // 合成关系反查（懒构建）：某物品被哪些配方当材料 / 本身可由哪条配方产出
 let usageMap = null;   // id -> Set<产物名>
+for(const id of [PB.RAMP,PB.LEVER,PB.SPRING,PB.TEACHING_PULLEY])SPECIAL_HINTS[id]=[
+    '右键 / X 配置单格微缩实验，开始后收面板观察；E / Esc / Q 关闭',
+    id===PB.SPRING?'先手动压缩再释放，每次释放都清储能':id===PB.TEACHING_PULLEY?'定 / 动 / 组合滑轮：省力同时费拉绳距离':'标准物体与砝码不进入背包，复位不兑换物资；只改一个变量比较',
+];
+SPECIAL_HINTS[PB.FAN]=[`背后接轴，前方${PH.windRange}格吹动真掉落物；墙挡风，带运输优先`];
+SPECIAL_HINTS[PB.SENSOR]=['开始后沿朝向穿过两道测面，读实际格 / 秒与时间；可测玩家和掉落物'];
+SPECIAL_HINTS[PB.VALVE]=['两端隔槽由中间水闸连接；手动开关或红石有电开，不消耗两端水'];
+SPECIAL_HINTS[PB.PUMP]=[`后接轴、侧方进水、前方扬程0～4格出水；${WHEEL_RPM}RPM每${PH.pumpSeconds}秒搬1份水`];
+SPECIAL_HINTS[PB.CARRIAGE]=['上方摆1或3格宽电梯平台，沿朝向铺导轨地板；红石有电回程、无电去程', '前方有人、乘客低顶或目的格受阻会整体停机；断动力悬停'];
+SPECIAL_HINTS[PB.WINDMILL]=[`固定竖轴，下接轴；上方3层5×5开阔时${PH.windRpm}RPM / ${PH.windCapacity}SU（简化风档）`];
+SPECIAL_HINTS[PB.FALLING]=['独立实验落块：失支撑下落、落水减速、下方有人停落；普通沙砾不变'];
+SPECIAL_HINTS[PB.MOTION_TNT]=[`会下落的独立TNT；右键面板点燃${PH.fuse}秒后在现址爆炸，引信随存档保存`];
+for(const id of TROUGH_IDS)SPECIAL_HINTS[id]=['4份水=1桶；满桶只注空槽，空桶只取满槽；部分水量随槽回收和放置', '右键放标准浮块与配重，复位不恢复水量；槽外密闭，普通水不变'];
 let sourceMap = null;  // id -> { label: 站点名, text: '材料 → 产物 ×N' }
 
 function buildRecipeMaps() {

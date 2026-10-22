@@ -1,4 +1,5 @@
 import { ADVENTURE, AdventureItems, LADDER_BASE } from '../config.js';
+import { PhysicsBlocks as PB, PHYSICS as PH, TROUGH_IDS } from '../config.js';
 import {LifeBlocks,LifeItems,LIFE} from '../config.js';
 // ==================== assistant/knowledge.js ====================
 // 游戏知识库：把散在各源码里的机制规则、数值、方块 ID、配方与「常见修改步骤」
@@ -117,6 +118,46 @@ function renderFoods() {
 // 每节 {id, title, keywords, text}：keywords 是检索命中的词表（查询词命中 title/keywords 得分最高）。
 
 const SECTIONS = [
+    {
+        id:'physics',title:'力学实验（斜坡摩擦/杠杆/弹簧/教学滑轮/测速）',
+        keywords:['物理实验','实验台','试验物体','砝码','斜坡','摩擦','光滑','粗糙','杠杆','支点','力臂','转矩','弹簧','压缩','弹射','教学滑轮','定滑轮','动滑轮','滑轮组','测力','测速','计时','复位'],
+        sources:['js/config.js','js/physicsData.js','js/physicsLab.js','js/physicsUI.js','js/levelPrefabs.js'],
+        text:[
+            `组件：斜坡台${PB.RAMP}、杠杆台${PB.LEVER}、弹簧台${PB.SPRING}、教学滑轮台${PB.TEACHING_PULLEY}、测速门${PB.SENSOR}。工作台合成，创造/编辑器B→物理实验放模板。右键或纯键盘X打开条件面板，开始后自动收起观察；E/Esc/Q关闭，Shift绕过交互建造。`,
+            `实验台是单格微缩模型，不承载玩家。标准物体与砝码不进入背包/掉落物，复位不兑换物资。游戏重力${PH.gravity}、质量/长度/力为模型单位，不能当真实仪器。固定${PH.step}秒小步，仅有效游玩推进。`,
+            `斜坡：坡度${PH.slopes.join('/')}度，摩擦系数${PH.friction.join('/')}对应光滑/普通/粗糙。同物体同起点只改一个变量比较；a=g(sinθ−μcosθ)，摩擦足够则停稳，坡底转水平，轨道长${PH.trackLength}。`,
+            `杠杆：五槽0..4，左槽2-leftArm、右槽2+rightArm、支点pivot=1..3；净力矩Σm*g*(槽位−支点)，正=右沉、负=左沉，零=平衡；有限角度，虚拟砝码不压玩家。`,
+            `弹簧：先选压缩档并点击手动压缩，再释放。k=${PH.springK}，压缩${PH.springCompression.slice(1).join('/')}，释放速度√(k/m)*压缩量*${PH.springLoss}；释放/复位清储能，再弹必须重新输入。台内上限3，外部封顶时限1，撞顶停上升。`,
+            `教学定/动/组合滑轮承重绳数n=${PH.ropeCounts.join('/')}；理想拉力mg/n、拉绳距离=n*提升高度。手拉输入使物体提升，省力同时费距离；和原有载人电梯卷扬机分名。测速门两测面相距0.8格，开始后让玩家/物品沿朝向穿门，按真实线段越面插值读秒与格/秒。`,
+            '配置保存进physics v1的devices坐标表；读档实验回初态、弹簧无储能。关卡卡带局部配置并纳入hash。作者allowRun默认关闭，开启才允许开始/压缩/拉绳/复位；闯关仍禁改参数、桶和点TNT。作者红石上升沿可自动驱动实验。',
+        ].join('\n'),
+    },
+    {
+        id:'hydraulics',title:'局部水力（水槽/闸阀/机械泵/浮块）',
+        keywords:['水槽','实验水','水流','局部流体','水量','守恒','水闸','阀门','水泵','抽水','扬程','浮块','浮力','配重','漂浮','沉降','份水'],
+        sources:['js/config.js','js/physicsData.js','js/physicsLab.js','js/physicsUI.js','js/levelPrefabs.js'],
+        text:[
+            `实验槽q0..4对应ID[${TROUGH_IDS.join(',')}]，不是连续区间；4份=1桶，只有空槽有配方，五种含水量均可入包选回放置。普通水${BlockTypes.WATER}依旧静态，槽水不驱动原水车/灌溉，也不变成湖水。`,
+            `槽外密闭；每${PH.waterStep}秒优先流到下方或相邻低一格槽，同层均衡。水闸/阀${PB.VALVE}占中间一格，轴向两端槽相隔2格；手动open或control红石有电开，关闭不删水。`,
+            `泵${PB.PUMP}：后接轴，侧方进水，前方按lift=0..4格扬程出水。朝东时西接轴、南接进水槽、东侧上抬lift为出水槽。${WHEEL_RPM} RPM每${PH.pumpSeconds}秒搬1份，基础${PH.pumpLoad}SU；转速改变节拍和负载。无水/出口满/断动力明确停机，不凭空造水。`,
+            `满桶只对q0槽放4份，空桶只从q4取4份；q1..3请先汇满。生存先检查桶和背包容量，再一次提交。湿槽挖/覆盖（含换槽）/爆炸排入保留原q的持久掉落，水路/泵/桶内部换量只转移现有水；编辑删除视为作者弃置，不发资源。复位仅清浮块状态，水量存字节，六槽/热重载/卡片自动保留。`,
+            `槽面板放标准浮块，质量${PH.floatMass}+配重0..4，体积${PH.floatVolume}；轻载随水面浮、超过浮力能力沉底。它是有限定量槽的简化模型，不模拟真实连续压力/排水体积/泵效率，不兑换物资。`,
+            `局部最多${PH.maxTroughs}槽，全部物理配置最多${PH.maxDevices}个；没有逐帧全世界扫描。B模板包含水路闸门、抽水与浮块实验。`,
+        ].join('\n'),
+    },
+    {
+        id:'physics-motion',title:'风力与运动机关（风车/风扇/宽平台/落块TNT）',
+        keywords:['风车','风力','机械风扇','风道','推力','水平平台','移动平台','移动桥','宽平台','往返','导轨','实验落块','运动TNT','落沙','坠物'],
+        sources:['js/config.js','js/physicsLab.js','js/kinetic.js','js/piston.js','js/items.js','js/levelPrefabs.js'],
+        text:[
+            `风车${PB.WINDMILL}固定Y轴，下接轴；顶部3层、水平5×5实心遮挡全无时输出${PH.windRpm}RPM/${PH.windCapacity}SU。是明确的简化游戏风档，非空气流场。普通方块加挡/撤挡只在供能边沿重算。`,
+            `机械风扇${PB.FAN}后接轴，按朝向吹${PH.windRange}格，基础${PH.fanLoad}SU；RPM影响推力，三维风路中的墙挡风；斜坡试验体只取东西轨道方向的风力。作用于标准试验体和真掉落，不吹玩家/生物。风中暂缓磁吸/拾取，离风或断电恢复；运转中的带运输优先，停机带上的物品仍可被风吹动，不重置掉落物寿命。`,
+            `宽平台驱动${PB.CARRIAGE}后接轴，正上方摆${PLATFORM_BASE}平台1或3格宽，行程1..${PH.maxTravel}格、方向可选四向；沿路下方铺实心地板。红石有电回程、无电去程，基础${PH.carriageLoad}SU+每平台${PLATFORM_SU_LOAD}SU，${WHEEL_RPM}RPM走${PH.carriageSpeed}格/秒。`,
+            '宽平台整组先验全部目的格和乘客扫掠，再原子搬方块与去重乘客；前方旁观者/低顶/墙/边界挡停，撤障续走。断动力悬停，平台位置offset随真实方块保存，装置不被活塞推移或机器吞料。拆驱动器后平台仍是原建材。导出旗标区域必须包含当前整组平台；不足会提示扩大区域。',
+            `只有实验落块${PB.FALLING}与运动TNT${PB.MOTION_TNT}受新增重力；失支撑逐格落下，碰人停落、普通水减速交换水格，实验槽挡落。运动TNT右键面板点燃${PH.fuse}秒在当前整数格爆炸，引信随移动/普通档/快照保存；关卡禁止手动点燃，卡片拒带已点燃TNT。`,
+            '天然沙/沙砾与原TNT保持旧规则。B→物理实验含风道运输、风车动力站、三格宽往返平台、落块与运动TNT；说明→搭自己的物理实验室看图解。',
+        ].join('\n'),
+    },
     {
         id: 'ids',
         title: '方块与物品 ID 总表（含状态编码公式）',

@@ -1,4 +1,5 @@
 import { resetAdventureData } from './adventureData.js';
+import { resetPhysicsData } from './physicsData.js';
 import {resetLifeData} from './lifeData.js';
 // ==================== levelRun.js ====================
 // 关卡运行时（关卡工坊批次 W / A2 独占文件，2026-09-15）。
@@ -206,6 +207,7 @@ async function enterLevelImpl(cardOrId) {
     //    再由 levelWorkshop.embedLevelToWorld 只写 region 区（固定偏移 +80,+4,+80）
     resetLifeData();
     resetAdventureData();
+    resetPhysicsData();
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     for (let x = 0; x < WORLD_WIDTH; x++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {

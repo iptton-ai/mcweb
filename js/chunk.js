@@ -1,4 +1,6 @@
 import { isCrankId, isLargeCogId, isReverserId, reverserPowered, kineticAxisOf } from './config.js';
+import { isPhysicsId, PhysicsBlocks } from './config.js';
+import { buildPhysicsMesh } from './physicsModels.js';
 import { LADDER_BASE, isLadderId } from './config.js';
 import {LifeBlocks,isCropId} from './config.js';
 // ==================== chunk.js ====================
@@ -57,6 +59,7 @@ export function createCrossPlanes(texture) {
 }
 
 export function getPropMesh(blockType) {
+    if(pistonAtlasMat.map!==atlasTexture){pistonAtlasMat.map=atlasTexture;pistonAtlasMat.needsUpdate=true;}
     if (propMeshCache.has(blockType)) return propMeshCache.get(blockType).clone();
     let mesh = null;
     if (blockType === BlockTypes.TORCH) {
@@ -147,6 +150,8 @@ export function getPropMesh(blockType) {
         mesh = buildPistonBaseMesh(blockType);
     } else if (isObserverId(blockType)) {
         mesh = buildObserverMesh(blockType);
+    } else if (isPhysicsId(blockType)) {
+        mesh=buildPhysicsMesh(blockType);
     } else if (isKineticId(blockType)) {
         mesh = buildKineticMesh(blockType);
     }
@@ -359,7 +364,8 @@ function makeTexturedBoxGeo(w, h, d, tiles) {
     return geo;
 }
 
-const pistonAtlasMat = new THREE.MeshLambertMaterial({ map: atlasTexture });
+// 图集模块与世界/交互存在运行时循环引用，首次实际建模时才绑定，避免ESM初始化顺序依赖。
+const pistonAtlasMat = new THREE.MeshLambertMaterial();
 const pistonArmMat = new THREE.MeshLambertMaterial({ color: 0x8a6a3a }); // 中央推杆（木质，不走图集）
 
 // 把「朝上构建」的整格道具组摆到 facing 朝向：绕格中心旋转（局部原点 = 格底面中心）
@@ -417,6 +423,7 @@ function buildPistonBaseMesh(blockType) {
 // 活塞头：远端 1/4 推板 + 连回底座的推杆。粘头与否看身后底座（逐格现算，不入缓存）：
 // 粘性推板外层是粘液贴图，普通是活塞推出面。
 function buildPistonHeadMesh(blockType, x, y, z) {
+    if(pistonAtlasMat.map!==atlasTexture){pistonAtlasMat.map=atlasTexture;pistonAtlasMat.needsUpdate=true;}
     const facing = blockType - PISTON_HEAD_BASE;
     const [nx, ny, nz] = FACING_NORMALS[facing];
     const baseId = getBlock(x - nx, y - ny, z - nz);
@@ -1013,7 +1020,7 @@ export function updateChunkMeshes() {
 // 单格道具判定：返回该格是否为需要独立道具网格的方块（火把/花/门/红石元件/活塞组/动力组/旗组）。
 // 电梯平台（L2）与星辉门（关卡工坊，customMesh:false 满格普通面渲染）除外——走普通面渲染零 propMesh
 function isPropBlock(bt) {
-    return bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) || isBedId(bt) || isLadderId(bt) ||
+    return (isPhysicsId(bt)&&bt!==PhysicsBlocks.FALLING&&bt!==PhysicsBlocks.MOTION_TNT) || bt === BlockTypes.TORCH || bt === BlockTypes.FLOWER || isDoorId(bt) || isBedId(bt) || isLadderId(bt) ||
         isCropId(bt) || bt === LifeBlocks.SAPLING ||
         bt === LifeBlocks.FENCE || bt === LifeBlocks.GATE || bt === LifeBlocks.GATE_OPEN ||
         isLeverId(bt) || isDustId(bt) || isRTorchId(bt) || isButtonId(bt) || isPlateId(bt) ||

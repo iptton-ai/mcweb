@@ -1,0 +1,521 @@
+TAP version 13
+# ✅ boot.js 语法与链接 OK（仅缺浏览器全局，属预期）→ window is not defined
+# Subtest: tools/test_assistant_boot.mjs
+ok 1 - tools/test_assistant_boot.mjs
+  ---
+  duration_ms: 51.266958
+  type: 'test'
+  ...
+# Subtest: 结构：章节齐全有序，id 唯一，字段非空，单节体量可控（检索结果不爆 token）
+ok 2 - 结构：章节齐全有序，id 唯一，字段非空，单节体量可控（检索结果不爆 token）
+  ---
+  duration_ms: 0.793417
+  type: 'test'
+  ...
+# Subtest: 检索：关键词查询命中正确章节且排在首位
+ok 3 - 检索：关键词查询命中正确章节且排在首位
+  ---
+  duration_ms: 3.898791
+  type: 'test'
+  ...
+# Subtest: 检索：tnt / media 新节命中（关键词「TNT/爆炸/引爆/苦力怕」与「录像/拍摄/镜头/BGM/配乐/音量」）
+ok 4 - 检索：tnt / media 新节命中（关键词「TNT/爆炸/引爆/苦力怕」与「录像/拍摄/镜头/BGM/配乐/音量」）
+  ---
+  duration_ms: 4.187792
+  type: 'test'
+  ...
+# Subtest: 检索：口语长句（含填充词）仍能靠二字滑窗命中
+ok 5 - 检索：口语长句（含填充词）仍能靠二字滑窗命中
+  ---
+  duration_ms: 1.2385
+  type: 'test'
+  ...
+# Subtest: 检索：空查询/纯填充词/乱码 返回空而不抛错
+ok 6 - 检索：空查询/纯填充词/乱码 返回空而不抛错
+  ---
+  duration_ms: 0.327916
+  type: 'test'
+  ...
+# Subtest: 内容防漂移：正文数值来自 config.js 实际导出（抽查关键锚点）
+ok 7 - 内容防漂移：正文数值来自 config.js 实际导出（抽查关键锚点）
+  ---
+  duration_ms: 0.131291
+  type: 'test'
+  ...
+# Subtest: tile 对账：分配表自洽，knowledge.js / docs.js 的图集文案不漂移
+ok 8 - tile 对账：分配表自洽，knowledge.js / docs.js 的图集文案不漂移
+  ---
+  duration_ms: 1.980792
+  type: 'test'
+  ...
+# Subtest: sources：每节带真实 js/ 来源，全部章节覆盖（「带来源的结论」的数据基础）
+ok 9 - sources：每节带真实 js/ 来源，全部章节覆盖（「带来源的结论」的数据基础）
+  ---
+  duration_ms: 0.146709
+  type: 'test'
+  ...
+# Subtest: 目录（注入系统提示词）：覆盖全部章节且每行含 id 与标题
+ok 10 - 目录（注入系统提示词）：覆盖全部章节且每行含 id 与标题
+  ---
+  duration_ms: 0.587459
+  type: 'test'
+  ...
+# Subtest: 排序稳定性：多命中时强词（整词命中关键词表）优先于弱词（二字滑窗命中正文）
+ok 11 - 排序稳定性：多命中时强词（整词命中关键词表）优先于弱词（二字滑窗命中正文）
+  ---
+  duration_ms: 0.339958
+  type: 'test'
+  ...
+# Subtest: 清单与文件：格式正确、确定性哈希稳定、无重名
+ok 12 - 清单与文件：格式正确、确定性哈希稳定、无重名
+  ---
+  duration_ms: 5.799959
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：村口热身赛
+ok 13 - schema 校验零错误零警告：村口热身赛
+  ---
+  duration_ms: 9.434375
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：诗文书院
+ok 14 - schema 校验零错误零警告：诗文书院
+  ---
+  duration_ms: 10.725917
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：规矩小城
+ok 15 - schema 校验零错误零警告：规矩小城
+  ---
+  duration_ms: 6.353708
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：科学实验站
+ok 16 - schema 校验零错误零警告：科学实验站
+  ---
+  duration_ms: 1.356958
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：算术矿洞
+ok 17 - schema 校验零错误零警告：算术矿洞
+  ---
+  duration_ms: 5.838917
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：时光钟楼
+ok 18 - schema 校验零错误零警告：时光钟楼
+  ---
+  duration_ms: 74.19175
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：星辉城堡
+ok 19 - schema 校验零错误零警告：星辉城堡
+  ---
+  duration_ms: 32.336916
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：地牢寻宝记
+ok 20 - schema 校验零错误零警告：地牢寻宝记
+  ---
+  duration_ms: 13.092167
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：云间跳跳乐
+ok 21 - schema 校验零错误零警告：云间跳跳乐
+  ---
+  duration_ms: 5.192291
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：弹跳云梯
+ok 22 - schema 校验零错误零警告：弹跳云梯
+  ---
+  duration_ms: 23.387666
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：深海龙宫
+ok 23 - schema 校验零错误零警告：深海龙宫
+  ---
+  duration_ms: 8.379417
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：电梯工厂
+ok 24 - schema 校验零错误零警告：电梯工厂
+  ---
+  duration_ms: 16.198583
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：机关迷阵
+ok 25 - schema 校验零错误零警告：机关迷阵
+  ---
+  duration_ms: 6.344291
+  type: 'test'
+  ...
+# Subtest: schema 校验零错误零警告：全能冠军试炼
+ok 26 - schema 校验零错误零警告：全能冠军试炼
+  ---
+  duration_ms: 16.364
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：村口热身赛
+ok 27 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：村口热身赛
+  ---
+  duration_ms: 36.099833
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：诗文书院
+ok 28 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：诗文书院
+  ---
+  duration_ms: 68.77675
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：规矩小城
+ok 29 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：规矩小城
+  ---
+  duration_ms: 22.461625
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：科学实验站
+ok 30 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：科学实验站
+  ---
+  duration_ms: 75.0725
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：算术矿洞
+ok 31 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：算术矿洞
+  ---
+  duration_ms: 51.940416
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：时光钟楼
+ok 32 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：时光钟楼
+  ---
+  duration_ms: 54.511959
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：星辉城堡
+ok 33 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：星辉城堡
+  ---
+  duration_ms: 50.819375
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：地牢寻宝记
+ok 34 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：地牢寻宝记
+  ---
+  duration_ms: 72.195042
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：云间跳跳乐
+ok 35 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：云间跳跳乐
+  ---
+  duration_ms: 3.053292
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：弹跳云梯
+ok 36 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：弹跳云梯
+  ---
+  duration_ms: 7.203625
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：深海龙宫
+ok 37 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：深海龙宫
+  ---
+  duration_ms: 38.94725
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：电梯工厂
+ok 38 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：电梯工厂
+  ---
+  duration_ms: 132.487
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：机关迷阵
+ok 39 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：机关迷阵
+  ---
+  duration_ms: 63.902292
+  type: 'test'
+  ...
+# Subtest: 全封锁防绕行 + 解锁序（重力感知站格 BFS）：全能冠军试炼
+ok 40 - 全封锁防绕行 + 解锁序（重力感知站格 BFS）：全能冠军试炼
+  ---
+  duration_ms: 164.753792
+  type: 'test'
+  ...
+# Subtest: 运行时加载器：Node 无页面环境时安静降级为空数组
+ok 41 - 运行时加载器：Node 无页面环境时安静降级为空数组
+  ---
+  duration_ms: 32.824584
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：村口热身赛
+ok 42 - 锁具接线与门墙防绕行：村口热身赛
+  ---
+  duration_ms: 1.641708
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：诗文书院
+ok 43 - 锁具接线与门墙防绕行：诗文书院
+  ---
+  duration_ms: 1.5455
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：规矩小城
+ok 44 - 锁具接线与门墙防绕行：规矩小城
+  ---
+  duration_ms: 1.214125
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：科学实验站
+ok 45 - 锁具接线与门墙防绕行：科学实验站
+  ---
+  duration_ms: 1.074333
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：算术矿洞
+ok 46 - 锁具接线与门墙防绕行：算术矿洞
+  ---
+  duration_ms: 2.720458
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：时光钟楼
+ok 47 - 锁具接线与门墙防绕行：时光钟楼
+  ---
+  duration_ms: 1.694792
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：星辉城堡
+ok 48 - 锁具接线与门墙防绕行：星辉城堡
+  ---
+  duration_ms: 1.657459
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：地牢寻宝记
+ok 49 - 锁具接线与门墙防绕行：地牢寻宝记
+  ---
+  duration_ms: 1.07825
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：云间跳跳乐
+ok 50 - 锁具接线与门墙防绕行：云间跳跳乐
+  ---
+  duration_ms: 0.670959
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：弹跳云梯
+ok 51 - 锁具接线与门墙防绕行：弹跳云梯
+  ---
+  duration_ms: 0.322083
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：深海龙宫
+ok 52 - 锁具接线与门墙防绕行：深海龙宫
+  ---
+  duration_ms: 0.332
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：电梯工厂
+ok 53 - 锁具接线与门墙防绕行：电梯工厂
+  ---
+  duration_ms: 0.526541
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：机关迷阵
+ok 54 - 锁具接线与门墙防绕行：机关迷阵
+  ---
+  duration_ms: 0.309166
+  type: 'test'
+  ...
+# Subtest: 锁具接线与门墙防绕行：全能冠军试炼
+ok 55 - 锁具接线与门墙防绕行：全能冠军试炼
+  ---
+  duration_ms: 0.60275
+  type: 'test'
+  ...
+# Subtest: 旗组与卡面坐标逐格对得上（含旗类型）
+ok 56 - 旗组与卡面坐标逐格对得上（含旗类型）
+  ---
+  duration_ms: 20.347083
+  type: 'test'
+  ...
+# Subtest: 关卡清单：锁数/检查点数与设计稿一致
+ok 57 - 关卡清单：锁数/检查点数与设计稿一致
+  ---
+  duration_ms: 0.176667
+  type: 'test'
+  ...
+# Subtest: 星辉城堡：三道门墙无绕行 + 楼梯几何正确 + 星辉塔彩蛋存在
+ok 58 - 星辉城堡：三道门墙无绕行 + 楼梯几何正确 + 星辉塔彩蛋存在
+  ---
+  duration_ms: 0.340458
+  type: 'test'
+  ...
+# Subtest: 地牢寻宝记：三道门墙无绕行 + 星辉半截门存在
+ok 59 - 地牢寻宝记：三道门墙无绕行 + 星辉半截门存在
+  ---
+  duration_ms: 0.254125
+  type: 'test'
+  ...
+# Subtest: 村口热身赛：两道墙门贯穿全深防绕行
+ok 60 - 村口热身赛：两道墙门贯穿全深防绕行
+  ---
+  duration_ms: 0.436542
+  type: 'test'
+  ...
+# Subtest: 云间跳跳乐：关卡墙门无绕行 + 终点蹦床存在
+ok 61 - 云间跳跳乐：关卡墙门无绕行 + 终点蹦床存在
+  ---
+  duration_ms: 0.165875
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：村口热身赛
+ok 62 - 嵌入临时世界：村口热身赛
+  ---
+  duration_ms: 3.015625
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：诗文书院
+ok 63 - 嵌入临时世界：诗文书院
+  ---
+  duration_ms: 35.914458
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：规矩小城
+ok 64 - 嵌入临时世界：规矩小城
+  ---
+  duration_ms: 1.218
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：科学实验站
+ok 65 - 嵌入临时世界：科学实验站
+  ---
+  duration_ms: 2.335833
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：算术矿洞
+ok 66 - 嵌入临时世界：算术矿洞
+  ---
+  duration_ms: 4.946417
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：时光钟楼
+ok 67 - 嵌入临时世界：时光钟楼
+  ---
+  duration_ms: 3.224167
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：星辉城堡
+ok 68 - 嵌入临时世界：星辉城堡
+  ---
+  duration_ms: 1.089792
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：地牢寻宝记
+ok 69 - 嵌入临时世界：地牢寻宝记
+  ---
+  duration_ms: 1.72875
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：云间跳跳乐
+ok 70 - 嵌入临时世界：云间跳跳乐
+  ---
+  duration_ms: 2.326542
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：弹跳云梯
+ok 71 - 嵌入临时世界：弹跳云梯
+  ---
+  duration_ms: 0.523792
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：深海龙宫
+ok 72 - 嵌入临时世界：深海龙宫
+  ---
+  duration_ms: 0.492166
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：电梯工厂
+ok 73 - 嵌入临时世界：电梯工厂
+  ---
+  duration_ms: 0.819042
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：机关迷阵
+ok 74 - 嵌入临时世界：机关迷阵
+  ---
+  duration_ms: 1.264042
+  type: 'test'
+  ...
+# Subtest: 嵌入临时世界：全能冠军试炼
+ok 75 - 嵌入临时世界：全能冠军试炼
+  ---
+  duration_ms: 5.018292
+  type: 'test'
+  ...
+# Subtest: 组件注册表：id 唯一、尺寸为正、anchor 在界内、分类清单覆盖
+ok 76 - 组件注册表：id 唯一、尺寸为正、anchor 在界内、分类清单覆盖
+  ---
+  duration_ms: 0.576375
+  type: 'test'
+  ...
+# Subtest: 组件几何展开：全部格子界内、无重复、ID 合法；未知组件报错
+ok 77 - 组件几何展开：全部格子界内、无重复、ID 合法；未知组件报错
+  ---
+  duration_ms: 10.925541
+  type: 'test'
+  ...
+# Subtest: 答题门（贴门锁）：锁定答题机与关门下半 6 邻；答题机为锁定变体
+ok 78 - 答题门（贴门锁）：锁定答题机与关门下半 6 邻；答题机为锁定变体
+  ---
+  duration_ms: 0.2505
+  type: 'test'
+  ...
+# Subtest: 远程答题门：粉线源到尾 ≤13 级且尾与门 6 邻
+ok 79 - 远程答题门：粉线源到尾 ≤13 级且尾与门 6 邻
+  ---
+  duration_ms: 0.490792
+  type: 'test'
+  ...
+# Subtest: 答题滑轮电梯：粉线到滑轮 6 邻、井道畅通、机头水车水齐全
+ok 80 - 答题滑轮电梯：粉线到滑轮 6 邻、井道畅通、机头水车水齐全
+  ---
+  duration_ms: 0.324083
+  type: 'test'
+  ...
+# Subtest: 星辉门/旗标/弹跳垫：变体正确
+ok 81 - 星辉门/旗标/弹跳垫：变体正确
+  ---
+  duration_ms: 0.099917
+  type: 'test'
+  ...
+# Subtest: prefabOrigin：grounded 嵌地 / props 立于命中面外
+ok 82 - prefabOrigin：grounded 嵌地 / props 立于命中面外
+  ---
+  duration_ms: 0.352708
+  type: 'test'
+  ...
+# Subtest: 模板存取回环：save/list/get/delete（Node 走会话内存兜底）
+ok 83 - 模板存取回环：save/list/get/delete（Node 走会话内存兜底）
+  ---
+  duration_ms: 0.488125
+  type: 'test'
+  ...
+# Subtest: buildLevelCard：草稿容忍星辉门，正式导出仍拦截（契约回归）
+ok 84 - buildLevelCard：草稿容忍星辉门，正式导出仍拦截（契约回归）
+  ---
+  duration_ms: 152.9515
+  type: 'test'
+  ...
+# Subtest: buildLevelCard 草稿：无锚点时报错不抛异常
+ok 85 - buildLevelCard 草稿：无锚点时报错不抛异常
+  ---
+  duration_ms: 8.789291
+  type: 'test'
+  ...
+1..85
+# tests 85
+# suites 0
+# pass 85
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1312.099208

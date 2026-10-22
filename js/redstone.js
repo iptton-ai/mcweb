@@ -96,6 +96,7 @@ import { enqueuePistonAction, resetPistons, syncObserverRegistry, updatePistonTi
 // kinetic 的破坏函数（链 2）。与本模块被 piston.js 引用同构：redstone ↔ kinetic
 // 双向引用均为运行时函数调用、无模块顶层执行，循环 import 安全
 import { breakKineticAt, updateKineticNetwork } from './kinetic.js';
+import { REDSTONE_CONTEXT_LOOKUP } from './config.js';
 
 // 水平四向（红石粉布线/充能都用它），与 FACING_NORMALS 的 2..5 独立
 const HORIZ_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -103,6 +104,15 @@ const HORIZ_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const LAYER = WORLD_WIDTH * WORLD_DEPTH;
 
 const keyOf = (x, y, z) => x + z * WORLD_WIDTH + y * LAYER;
+let solvedSignalCells=new Set();
+let solvedSignalWorld=null;
+// 与既有负载同义：六邻有亮粉或活动信号源；只查询已求解集合，不扫描世界。
+export function redstoneSignalAt(x,y,z) {
+    if(solvedSignalWorld!==state.blocks||!inBounds(x,y,z))return false;
+    for(const [dx,dy,dz] of FACING_NORMALS)
+        if(inBounds(x+dx,y+dy,z+dz)&&solvedSignalCells.has(keyOf(x+dx,y+dy,z+dz)))return true;
+    return false;
+}
 
 const inBounds = (x, y, z) =>
     x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT && z >= 0 && z < WORLD_DEPTH;
@@ -346,6 +356,7 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
 
     const dusts = [], torches = [], levers = [], buttons = [], plates = [], lamps = [];
     const doors = [], tnts = [], pistons = [], observers = [], clutches = [], pulleys = [], keypads = [], reversers = [];
+    let contextCount=0;
     let idx = 0;
     for (let y = 0; y < WORLD_HEIGHT; y++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -354,6 +365,7 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
                 // 空气早退（2026-09-06 世界扩容 128 高后空气中格占 ~3/4，一次比较替掉整条
                 // else-if 链的空转；AIR 不匹配链上任何分支，语义不变）
                 if (id === 0) continue;
+                contextCount+=REDSTONE_CONTEXT_LOOKUP[id];
                 if (isRedstoneId(id)) {
                     if (isDustId(id)) dusts.push({ x, y, z, id });
                     else if (isRTorchId(id)) torches.push({ x, y, z, id });
@@ -399,6 +411,9 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
         pistons.length === 0 && observers.length === 0 && clutches.length === 0 && pulleys.length === 0 &&
         keypads.length === 0 && reversers.length === 0) {
         if (captureOnly) return { doors: new Set() };
+        solvedSignalCells.clear();solvedSignalWorld=state.blocks;
+        state.redstoneContextCount=contextCount;
+        state.redstoneContextRevision=(state.redstoneContextRevision||0)+1;
         doorPoweredPrev = new Map();
         tntPoweredPrev = new Map();
         pistonPoweredPrev = new Map();
@@ -501,6 +516,11 @@ function solveRedstoneNetwork({ captureOnly = false, releasedButtonPower = null,
                 .map(d => keyOf(d.x, d.y, d.z))),
         };
     }
+
+    solvedSignalCells=new Set([...strength.keys(),...activeSourceKeys]);
+    solvedSignalWorld=state.blocks;
+    state.redstoneContextCount=contextCount;
+    state.redstoneContextRevision=(state.redstoneContextRevision||0)+1;
 
     // ---- 红石火把：目标态 = 挂靠方块未被充能；翻转走 RTORCH_DELAY 延迟队列 ----
     for (const tc of torches) {

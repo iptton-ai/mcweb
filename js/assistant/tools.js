@@ -1,4 +1,5 @@
 import { CRANK_BASE, CRANK_ITEM_ID, LARGE_COG_BASE, LARGE_COG_ITEM_ID, REVERSER_BASE, REVERSER_ITEM_ID } from '../config.js';
+import { PhysicsBlocks, TROUGH_IDS } from '../config.js';
 import {isVoxelId} from '../config.js';
 import {canUseFreeBuild,FREE_BUILD_REASON} from '../survivalRules.js';
 // ==================== assistant/tools.js ====================
@@ -260,6 +261,7 @@ async function toolRunBuildScript({ code } = {}) {
     // 滑轮 +up*2+powered（PULLEY=垂挂·放绳，顶举=PULLEY_BASE+2）；施工完成自动重算红石+动力
     const BT = {
         ...BlockTypes,
+        ...PhysicsBlocks, TROUGH:TROUGH_IDS[0],
         CRANK: CRANK_ITEM_ID, LARGE_COG: LARGE_COG_ITEM_ID, REVERSER: REVERSER_ITEM_ID,
         CRANK_BASE, LARGE_COG_BASE, REVERSER_BASE,
         SHAFT: SHAFT_ITEM_ID, COGWHEEL: COGWHEEL_ITEM_ID, WATERWHEEL: WATERWHEEL_ITEM_ID,

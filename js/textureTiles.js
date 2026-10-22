@@ -1,4 +1,5 @@
 import { CRANK_ITEM_ID, LARGE_COG_ITEM_ID, REVERSER_ITEM_ID } from './config.js';
+import { PhysicsBlocks, TROUGH_IDS } from './config.js';
 import { AdventureItems, LADDER_BASE } from './config.js';
 import {LifeBlocks,LifeItems} from './config.js';
 // ==================== textureTiles.js ====================
@@ -145,6 +146,8 @@ for(const [i,id]of [LifeBlocks.CHEST,LifeBlocks.FARMLAND,244,245,246,247,LifeBlo
 
 for (let f=0;f<4;f++) TEXTURE_TILES.push({type:LADDER_BASE+f,top:111,side:111,bottom:111,name:'adventure_ladder'});
 for(const [i,id] of Object.values(AdventureItems).entries()) TEXTURE_TILES.push({type:id,top:112+i,side:112+i,bottom:112+i,name:'adventure_'+id});
+for(const [i,id] of [...Object.values(PhysicsBlocks),...TROUGH_IDS].entries())
+    TEXTURE_TILES.push({type:id,top:118+i,side:118+i,bottom:118+i,name:'physics_'+id});
 
 // 图集里不走方块 ID 的「孤儿 tile」：门上半（door_upper 21，门板裁取/TILE_OVERRIDES 用）
 // 与活塞内面（piston_inner 37，活塞头背面专用）——textures.js 单独注册进 tileMap，

@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-22T02:03:21.835Z",
+  "space": 137,
+  "page": "p1",
+  "origin": "http://127.0.0.1:18439",
+  "results": [
+    {
+      "name": "BR01 生存真实合成并X放置新组件",
+      "ok": true,
+      "evidence": {
+        "id": 75,
+        "stock": {
+          "11": 0,
+          "75": 0,
+          "180": 0,
+          "182": 0
+        }
+      }
+    },
+    {
+      "name": "BR02 X开面板改坡度表面、真实开始与复位",
+      "ok": false,
+      "error": "Error: page.waitForFunction timed out after 7000ms on page p1; last URL was \"http://127.0.0.1:18439/\"; last title was \"我的世界 - 网页复刻版\".",
+      "snapshot": "[p1 \"我的世界 - 网页复刻版\" | space \"物理组件补齐 2026-10-22\"(137): 1 managed, 0 untracked — p1* \"我的世界 - 网页复刻版\"]\nroot\n  container\n    heading\n      text \"⛏ 我的世界\"\n    text \"网页复刻版\"\n    text \"🏗️\"\n    text \"世界 1 · 当前\"\n    text \"上次保存：10月22日 10:02\"\n    button [ref=192]\n      text \"✕\"\n    text \"＋\"\n    text \"空槽位\"\n    text \"开一个新世界\"\n    button [ref=193]\n      text \"🏗️ 建造\"\n    button [ref=194]\n      text \"⚔️ 生存\"\n    text \"＋\"\n    text \"空槽位\"\n    text \"开一个新世界\"\n    button [ref=195]\n      text \"🏗️ 建造\"\n    button [ref=196]\n      text \"⚔️ 生存\"\n    text \"＋\"\n    text \"空槽位\"\n    text \"开一个新世界\"\n    button [ref=197]\n      text \"🏗️ 建造\"\n    button [ref=198]\n      text \"⚔️ 生存\"\n    text \"＋\"\n    text \"空槽位\"\n    text \"开一个新世界\"\n    button [ref=199]\n      text \"🏗️ 建造\"\n    button [ref=200]\n      text \"⚔️ 生存\"\n    text \"＋\"\n    text \"空槽位\"\n    text \"开一个新世界\"\n    button [ref=201]\n      text \"🏗️ 建造\"\n    button [ref=202]\n      text \"⚔️ 生存\"\n    button [ref=175]\n      text \"🏗️\"\n      text \"建造模式\"\n      text \"覆盖世界 1 · 重开新世界\"\n    button [ref=176]\n      text \"⚔️\"\n      text \"生存模式\"\n      text \"覆盖世界 1 · 重开新世界\"\n    button [ref=177]\n      text \"💾 保存进度\"\n    button [ref=178]\n      text \"⚙️ 设置（音频 / 存档）\"\n    button [ref=179]\n      text \"🗺 关卡\"\n    button [ref=180]\n      text \"📖 说明\"\n    text \"W A S D\"\n    text \"移动  | \"\n    text \"空格\"\n    text \"跳跃（创造双击 = 飞行） | \"\n    text \"Shift\"\n    text \"潜行 / 水中下沉  | \"\n    text \"Ctrl\"\n    text \"疾跑\"\n    text \"鼠标左键\"\n    text \"破坏 / 攻击  | \"\n    text \"鼠标右键\"\n    text \"放置 / 进食 / 打开工作台·熔炉  | \"\n    text \"中键\"\n    text \"吸取方块（创造）\"\n    text \"鼠标滚轮\"\n    text \"/\"\n    text \"1-9\"\n    text \"切换九格常用栏  | \"\n    text \"E\"\n    text \"背包与合成（点配方 = 合成） | \"\n    text \"Z\"\n    text \"丢弃手持\"\n    text \"F\"\n    text \"切换飞行（建造模式） | \"\n    text \"M\"\n    text \"切换游戏模式  | \"\n    text \"Esc\"\n    text \"/\"\n    text \"Q\"\n    text \"释放鼠标\"\n    text \"F5\"\n    text \"或\"\n    text \"V\"\n    text \"切换视角  | \"\n    text \"F1\"\n    text \"隐藏界面  | \"\n    text \"F2\"\n    text \"截图  | \"\n    text \"F3\"\n    text \"调试信息  | \"\n    text \"F6\"\n    text \"昼夜切换（创造）\"\n    text \"R\"\n    text \"开始录制 / 停止并保存  | \"\n    text \"Tab\"\n    text \"操作拍摄面板  | \"\n    text \"C\"\n    text \"切换镜头\"\n    text \"游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像\"\n    text \"⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。\"\n    text \"🖱 点击空白处可直接进入当前世界\"\n  text \"XYZ:\"\n  text \"30.5, 9.0, 33.3\"\n  text \"区块:\"\n  text \"1, 2\"\n  text \"FPS:\"\n  text \"55\"\n  text \"时间:\"\n  text \"02:30\"\n  text \"方向:\"\n  text \"S\"\n  text \"选中:\"\n  text \"斜坡摩擦实验台\"\n  text \"怪物:\"\n  text \"0\"\n  text \"视角:\"\n  text \"第一人称\"\n  text \"斜坡摩擦实验台\"\n  text \"❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️\"\n  text \"🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗\"\n  text \"✨ 1\"\n  text \"⚔️ 生存模式（按 M 切换为建造）\"\n  container\n    button \"1 · 木斧\" [ref=203, loc=css:button[aria-label=\"1 · 木斧\"]]\n      canvas\n      text \"1\"\n      text \"0\"\n    button \"2 · 木镐\" [ref=204, loc=css:button[aria-label=\"2 · 木镐\"]]\n      canvas\n      text \"2\"\n      text \"0\"\n    button \"3 · 木剑\" [ref=205, loc=css:button[aria-label=\"3 · 木剑\"]]\n      canvas\n      text \"3\"\n      text \"0\"\n    button \"4 · 木板\" [ref=206, loc=css:button[aria-label=\"4 · 木板\"]]\n      canvas\n      text \"4\"\n      text \"0\"\n    button \"5 · 火把\" [ref=207, loc=css:button[aria-label=\"5 · 火把\"]]\n      canvas\n      text \"5\"\n      text \"0\"\n    button \"6 · 苹果\" [ref=208, loc=css:button[aria-label=\"6 · 苹果\"]]\n      canvas\n      text \"6\"\n      text \"0\"\n    button \"7 · 橡木门\" [ref=209, loc=css:button[aria-label=\"7 · 橡木门\"]]\n      canvas\n      text \"7\"\n      text \"0\"\n    button \"8 · 小床\" [ref=210, loc=css:button[aria-label=\"8 · 小床\"]]\n      canvas\n      text \"8\"\n      text \"0\"\n    button \"9 · 工作台\" [ref=211, loc=css:button[aria-label=\"9 · 工作台\"]]\n      canvas\n      text \"9\"\n      text \"0\"\n    button [ref=212]\n      text \"斜坡摩擦实验台 · E 背包\"\n  text \"🏠 放下小床，右键设家\"\n  canvas\n  text \"J 探险手册 · 地图 / 装备 / 我的作品\"\n  button [ref=191]\n    text \"🤖\"\n"
+    },
+    {
+      "name": "BR03 面板方向键焦点、E/Q关闭与Shift+X绕过",
+      "ok": true
+    },
+    {
+      "name": "BR04 弹簧真实压缩→释放并看到上升",
+      "ok": true,
+      "evidence": {
+        "height": 0.3611023804664971,
+        "elapsed": 0.049999999999999996
+      }
+    },
+    {
+      "name": "BR05 B组件库十个新模板可见，真实选中并键盘盖章",
+      "ok": true,
+      "evidence": {
+        "newTemplates": 10
+      }
+    },
+    {
+      "name": "BR06 剩余模板盖章、真实模型显示与总览",
+      "ok": true,
+      "evidence": {
+        "props": 24,
+        "devices": 26
+      }
+    },
+    {
+      "name": "BR07 水桶连续真实X注水取水，水与库存守恒",
+      "ok": true,
+      "evidence": {
+        "water": 0,
+        "held": 260,
+        "stock": {
+          "259": 2,
+          "260": 1
+        }
+      }
+    },
+    {
+      "name": "BR08 真实水闸按钮改变水路，泵与浮块可见运行",
+      "ok": true,
+      "evidence": {
+        "rpm": 8,
+        "water": 1,
+        "floatHeight": 0.274
+      }
+    },
+    {
+      "name": "BR09 宽平台边缘真实玩家防夹、恢复载人、拉杆回程",
+      "ok": true,
+      "evidence": {
+        "startX": 70.5,
+        "carriedX": 71.5,
+        "returnOffset": 0
+      }
+    },
+    {
+      "name": "BR10 游戏内说明入口可打开新帮助",
+      "ok": true
+    },
+    {
+      "name": "BR11 真试玩关卡后，作者授权实验可玩、参数与桶不可越权",
+      "ok": true,
+      "evidence": {
+        "selects": true,
+        "start": true
+      }
+    },
+    {
+      "name": "BR12 真实WebGL预热3轮后20轮建拆/存读/清世界稳定",
+      "ok": false,
+      "error": "PageEvaluationTimeoutError: page.evaluate exceeded its 14000ms page-execution safety limit. The current JavaScript execution was stopped and the Page is ready for another command, but work scheduled earlier may still produce late side effects.",
+      "snapshot": "[p1 \"我的世界 - 网页复刻版\" | space \"物理组件补齐 2026-10-22\"(137): 1 managed, 0 untracked — p1* \"我的世界 - 网页复刻版\"]\nroot\n  container\n    heading\n      text \"⛏ 我的世界\"\n    text \"网页复刻版\"\n    button [ref=220]\n      text \"▶\"\n      text \"回到游戏\"\n      text \"回到当前世界 · 每 30 秒自动存档\"\n    container\n      button [ref=175]\n        text \"🏗️\"\n        text \"建造模式\"\n        text \"放弃当前存档 · 重开新世界\"\n      button [ref=176]\n        text \"⚔️\"\n        text \"生存模式\"\n        text \"放弃当前存档 · 重开新世界\"\n    container\n      button [ref=177]\n        text \"💾 保存进度\"\n      button [ref=178]\n        text \"⚙️ 设置（音频 / 存档）\"\n      button [ref=179]\n        text \"🗺 关卡\"\n      button [ref=180]\n        text \"📖 说明\"\n    container\n      text \"W A S D\"\n      text \"移动  | \"\n      text \"空格\"\n      text \"跳跃（创造双击 = 飞行） | \"\n      text \"Shift\"\n      text \"潜行 / 水中下沉  | \"\n      text \"Ctrl\"\n      text \"疾跑\"\n      text \"鼠标左键\"\n      text \"破坏 / 攻击  | \"\n      text \"鼠标右键\"\n      text \"放置 / 进食 / 打开工作台·熔炉  | \"\n      text \"中键\"\n      text \"吸取方块（创造）\"\n      text \"鼠标滚轮\"\n      text \"/\"\n      text \"1-9\"\n      text \"切换九格常用栏  | \"\n      text \"E\"\n      text \"背包与合成（点配方 = 合成） | \"\n      text \"Z\"\n      text \"丢弃手持\"\n      text \"F\"\n      text \"切换飞行（建造模式） | \"\n      text \"M\"\n      text \"切换游戏模式  | \"\n      text \"Esc\"\n      text \"/\"\n      text \"Q\"\n      text \"释放鼠标\"\n      text \"F5\"\n      text \"或\"\n      text \"V\"\n      text \"切换视角  | \"\n      text \"F1\"\n      text \"隐藏界面  | \"\n      text \"F2\"\n      text \"截图  | \"\n      text \"F3\"\n      text \"调试信息  | \"\n      text \"F6\"\n      text \"昼夜切换（创造）\"\n      text \"R\"\n      text \"开始录制 / 停止并保存  | \"\n      text \"Tab\"\n      text \"操作拍摄面板  | \"\n      text \"C\"\n      text \"切换镜头\"\n      text \"游戏拍摄面板：玩家视角 / 自动取景 / 手动调镜；AI 施工默认自动录制，切镜头不中断录像\"\n      text \"⚔️ 生存：撸树 → 合成工作台 → 做工具 → 挖矿 → 熔炉炼铁打钻石。饿了解决方案：打树叶捡苹果、猎猪烧猪排。\"\n    text \"🖱 点击空白处回到游戏\"\n  text \"XYZ:\"\n  text \"68.6, 9.0, 73.1\"\n  text \"区块:\"\n  text \"4, 4\"\n  text \"FPS:\"\n  text \"120\"\n  text \"时间:\"\n  text \"02:40\"\n  text \"方向:\"\n  text \"SE\"\n  text \"选中:\"\n  text \"-\"\n  text \"怪物:\"\n  text \"0\"\n  text \"视角:\"\n  text \"第一人称\"\n  text \"闯关中不能取放实验水\"\n  text \"❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️\"\n  text \"🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗\"\n  text \"✨ 1\"\n  text \"⚔️ 生存模式（按 M 切换为建造）\"\n  container\n    button \"1 · 木斧\" [ref=221, loc=css:button[aria-label=\"1 · 木斧\"]]\n      canvas\n      text \"1\"\n      text \"0\"\n    button \"2 · 木镐\" [ref=222, loc=css:button[aria-label=\"2 · 木镐\"]]\n      canvas\n      text \"2\"\n      text \"0\"\n    button \"3 · 木剑\" [ref=223, loc=css:button[aria-label=\"3 · 木剑\"]]\n      canvas\n      text \"3\"\n      text \"0\"\n    button \"4 · 木板\" [ref=224, loc=css:button[aria-label=\"4 · 木板\"]]\n      canvas\n      text \"4\"\n      text \"0\"\n    button \"5 · 火把\" [ref=225, loc=css:button[aria-label=\"5 · 火把\"]]\n      canvas\n      text \"5\"\n      text \"0\"\n    button \"6 · 苹果\" [ref=226, loc=css:button[aria-label=\"6 · 苹果\"]]\n      canvas\n      text \"6\"\n      text \"0\"\n    button \"7 · 橡木门\" [ref=227, loc=css:button[aria-label=\"7 · 橡木门\"]]\n      canvas\n      text \"7\"\n      text \"0\"\n    button \"8 · 小床\" [ref=228, loc=css:button[aria-label=\"8 · 小床\"]]\n      canvas\n      text \"8\"\n      text \"0\"\n    button \"9 · 工作台\" [ref=229, loc=css:button[aria-label=\"9 · 工作台\"]]\n      canvas\n      text \"9\"\n      text \"0\"\n    button [ref=230]\n      text \"石头 · E 背包\"\n  text \"🏠 放下小床，右键设家\"\n  canvas\n  button [ref=191]\n    text \"🤖\"\n"
+    },
+    {
+      "name": "BR13 实际Three.Box3检查坡度、杠杆极值与四绳模型边界",
+      "ok": true,
+      "evidence": {
+        "poses": 13,
+        "withinCell": true
+      }
+    }
+  ],
+  "observations": {
+    "modelBounds": [],
+    "restoration": {
+      "memoryRestored": true,
+      "slot5Restored": true,
+      "indexRestored": true
+    }
+  }
+}

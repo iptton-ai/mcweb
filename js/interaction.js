@@ -1,4 +1,5 @@
 import { isCrankId } from './config.js';
+import { isPhysicsId, isTroughId, troughWater, PhysicsBlocks } from './config.js';
 import { LADDER_BASE, isLadderId, AdventureItems } from './config.js';
 import { toggleEquipment } from './adventure.js';
 import { adventureData } from './adventureData.js';
@@ -36,6 +37,9 @@ import { interactMerchantAt } from './eduMerchant.js'; // 英语商人右键交�
 import { interactStarlightAt } from './eduStarlight.js'; // 星辉门右键答题（关卡工坊 P2）
 import { ensureHanziBank, collectHanziAt } from './eduRewards.js'; // 识字矿石记字（Edu M2）
 import { isLevelRunActive } from './levelRun.js'; // 闯关模式守卫（W11 绕过通道全闭）
+import { openPhysicsPanel } from './physicsUI.js';
+import { physicsBucketAt } from './physicsLab.js';
+import { physicsPlacementError } from './physicsData.js';
 
 ensureHanziBank(); // 预热识字表（异步，不阻塞；首次挖矿前通常已就绪，未就绪则该次只掉物不记字）
 
@@ -226,6 +230,21 @@ export function breakBlockAt(hit) {
     if (isCropId(hit.block) || hit.block===LifeBlocks.SAPLING) { const msg=harvestPlant(hit.x,hit.y,hit.z);showTooltip(msg);updateHotbar();return; }
     const bedChangeStart = state.bedDirtyCells.length;
     try {
+    if(isPhysicsId(hit.block)) {
+        const pendingStart=(state.lifePendingDrops||[]).length;
+        setBlockSafe(hit.x,hit.y,hit.z,BlockTypes.AIR);
+        if(!isCreative()) {
+            const accepted=addInventoryStack({id:hit.block,count:1});
+            // 玩家挖掘照旧直接入包；写入口排的湿槽兜底只有满包/环境拆除时保留。
+            if(accepted&&isTroughId(hit.block)&&troughWater(hit.block)>0)state.lifePendingDrops.splice(pendingStart,1);
+            if(!accepted&&!(isTroughId(hit.block)&&troughWater(hit.block)>0))
+                (state.lifePendingDrops||=[]).push({x:hit.x+.5,y:hit.y+.5,z:hit.z+.5,stack:{id:hit.block,count:1}});
+        }
+        for(const c of popUnsupportedRedstone(hit.x,hit.y,hit.z))rebuildAround(c.x,c.z);
+        updateRedstoneNetwork();updateKineticNetwork();rebuildAround(hit.x,hit.z);flushLifeDrops();
+        spawnBreakParticles(hit.x,hit.y,hit.z,hit.block);playBlockSound(false);
+        if(!isCreative()){damageHeldTool();updateHotbar();}return;
+    }
     // 红石组：破坏返还物品，失去支撑的相邻元件连锁脱落
     if (isRedstoneId(hit.block)) {
         const cells = breakRedstoneAt(hit.x, hit.y, hit.z);
@@ -353,6 +372,12 @@ export function placeBlock() {
         showTooltip(toggleEquipment(heldLife)); updateHotbar(); return;
     }
     const hit = raycastBlocks(heldLife===LifeItems.BUCKET);
+    if(hit&&isPhysicsId(hit.block)&&!keys.ShiftLeft&&!keys.ShiftRight) {
+        if(isTroughId(hit.block)&&[LifeItems.BUCKET,LifeItems.WATER_BUCKET].includes(heldLife)) {
+            const r=physicsBucketAt(hit.x,hit.y,hit.z,heldLife);showTooltip(r.error||'实验水量已交换');updateHotbar();return;
+        }
+        if(hit.block!==PhysicsBlocks.FALLING){openPhysicsPanel(hit.x,hit.y,hit.z);return;}
+    }
     if(!state.levelRun && !state.levelEdit && !keys.ShiftLeft && !keys.ShiftRight) {
         const animal=raycastFarmAnimal();
         if(animal) { openLifePanel({kind:'animal',animalId:animal.animalId,animal}); return; }
@@ -466,6 +491,8 @@ export function placeBlock() {
         const currentBlock = getBlock(bx, by, bz);
         if (currentBlock !== BlockTypes.AIR && currentBlock !== BlockTypes.WATER) return;
         const selectedType = HotbarBlocks[state.player.selectedSlot] || BlockTypes.GRASS;
+        const physicsError=physicsPlacementError(bx,by,bz,selectedType);
+        if(physicsError){showTooltip(physicsError);return;}
         // 工具/材料/食物是「物品」不是方块，不能放置（照原版：右键持物品不与世界交互；
         // 食物在入口处已按进食处理，能走到这里说明刚才吃不下——提示换成去吃）
         if (isToolId(selectedType)) {

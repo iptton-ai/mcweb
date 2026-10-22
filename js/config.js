@@ -689,10 +689,26 @@ export const reverserAxis = id => (id - REVERSER_BASE) >> 1;
 export const reverserPowered = id => (id - REVERSER_BASE) & 1;
 export const isReverserId = id => id >= REVERSER_BASE && id < REVERSER_BASE + 6;
 
+// 物理实验后续批：避开旧动力族保留洞；槽水量编码进字节，配置见physicsData。
+export const PhysicsBlocks = Object.freeze({ RAMP:75, LEVER:76, SPRING:77, TEACHING_PULLEY:78,
+    FAN:79, SENSOR:80, VALVE:81, PUMP:82, CARRIAGE:98, WINDMILL:99, FALLING:223, MOTION_TNT:227 });
+export const TROUGH_IDS = Object.freeze([176,177,178,179,189]);
+export const troughId = amount => TROUGH_IDS[amount];
+export const troughWater = id => TROUGH_IDS.indexOf(id);
+export const isTroughId = id => id===176 || id===177 || id===178 || id===179 || id===189;
+export const isPhysicsId = id => (id>=75 && id<=82) || id===98 || id===99 || id===223 || id===227 || isTroughId(id);
+export const isPhysicsKineticId = id => id===79 || id===82 || id===98 || id===99;
+export const PHYSICS = Object.freeze({ step:1/120, maxFrame:0.1, maxDevices:512, maxTroughs:256,
+    maxRunning:32, gravity:9.8, trackLength:4, rampLength:1.5, friction:[0.04,0.2,0.55], slopes:[0,15,30,45],
+    springK:128, springCompression:[0,.25,.5,.75], springLoss:.88, ropeCounts:[1,2,4],
+    windRange:6, windForce:6, fanLoad:8, pumpLoad:16, carriageLoad:32,
+    waterStep:.1, pumpSeconds:.4, windRpm:8, windCapacity:64, fuse:2.5, carriageSpeed:1,
+    maxTravel:8, floatVolume:2, floatMass:.6 });
+
 // 是否动力族任一方块（148..169 既有动力组 ∪ 202..217 物流+控制组 ∪ 218..222 电梯组，
 // 用常量判段界；动力求解器全图扫描的热路径——三次范围比较，无函数调用，成本不变）
 export function isKineticId(id) {
-    return (id >= CRANK_BASE && id < REVERSER_BASE + 6) ||
+    return isPhysicsKineticId(id) || (id >= CRANK_BASE && id < REVERSER_BASE + 6) ||
         (id >= SHAFT_BASE && id < SAW_BASE + 6) ||
         (id >= BELT_BASE && id < CLUTCH_BASE + CLUTCH_COUNT) ||
         (id >= PULLEY_BASE && id < PULLEY_BASE + PULLEY_COUNT + PLATFORM_COUNT);
@@ -806,6 +822,8 @@ export function bedFacing(id) { return (id - BED_BASE) & 3; }
 // （FACING_NORMALS：0/1=±Y→上下轴，2/4=±Z→南北轴，3/5=±X→东西轴）
 // 传送带无传动轴：返回 null——js/kinetic.js 的 neighborsOf 对带走专属分支、不读本值
 export function kineticAxisOf(id) {
+    if (id===PhysicsBlocks.WINDMILL) return AXIS_Y;
+    if (isPhysicsKineticId(id)) return AXIS_X; // 可配置朝向由kinetic扫描时覆盖。
     if (isCrankId(id)) return crankAxis(id);
     if (isLargeCogId(id)) return largeCogAxis(id);
     if (isReverserId(id)) return reverserAxis(id);
@@ -825,6 +843,7 @@ export function kineticAxisOf(id) {
 
 // 动力组物品（破坏返还/放置路由用）
 export function kineticItemId(id) {
+    if (isPhysicsKineticId(id)) return id;
     if (isCrankId(id)) return CRANK_ITEM_ID;
     if (isLargeCogId(id)) return LARGE_COG_ITEM_ID;
     if (isReverserId(id)) return REVERSER_ITEM_ID;
@@ -1645,3 +1664,28 @@ for (let axis=0;axis<3;axis++) {
 // 生物水平碰撞与移动平台共用尺寸；未分型的旧实体按人形保守处理。
 export const MOB_HALF_WIDTH = 0.35;
 export const mobCollisionHeight = entity => entity.hostile === false ? 1.1 : 1.8;
+export const REDSTONE_CONTEXT_LOOKUP=Uint8Array.from({length:256},(_,id)=>
+    isRedstoneId(id)||isDoorId(id)||isPistonGroupId(id)||isPistonHeadId(id)?1:0);
+
+const physicsNames = { RAMP:'斜坡摩擦实验台', LEVER:'杠杆平衡实验台', SPRING:'弹簧弹射台',
+    TEACHING_PULLEY:'教学滑轮台', FAN:'机械风扇', SENSOR:'测速计时门', VALVE:'实验水闸 / 阀门',
+    PUMP:'机械水泵', CARRIAGE:'宽平台驱动器', WINDMILL:'风车动力源', FALLING:'实验落块', MOTION_TNT:'运动 TNT' };
+const physicsColors = ['#4fabc1','#d0a95b','#c275a6','#b29ad5','#72b8a4','#d5dc93','#58b5b5','#568fc5','#ba874f','#ddd4a2','#ceae73','#d85d51'];
+for (const [i,[name,id]] of Object.entries(PhysicsBlocks).entries()) {
+    const cube = id===PhysicsBlocks.FALLING || id===PhysicsBlocks.MOTION_TNT;
+    BlockInfo[id]={name:physicsNames[name],solid:true,transparent:!cube,customMesh:!cube,
+        color:physicsColors[i],hardness:1,tool:'axe',drop:id,outline:[0,0,0,1,1,1]};
+    HotbarBlocks.push(id);
+    const cost = id===PhysicsBlocks.MOTION_TNT ? {[BlockTypes.TNT]:1,[ItemTypes.IRON_INGOT]:1} :
+        {[BlockTypes.PLANKS]:4,[ItemTypes.IRON_INGOT]:2,...(isPhysicsKineticId(id)?{[SHAFT_ITEM_ID]:1}:{[ItemTypes.STICK]:2})};
+    RECIPES.push(R('physics_'+name.toLowerCase(),id,1,cost,'crafting'));
+}
+for (let q=0;q<TROUGH_IDS.length;q++) {
+    const id=troughId(q);
+    BlockInfo[id]={name:q?`实验水槽（${q}/4份水）`:'实验水槽',solid:true,transparent:true,customMesh:true,
+        color:'#4eaad3',hardness:1,tool:'axe',drop:id,outline:[0,0,0,1,1,1]};
+    HotbarBlocks.push(id);
+}
+RECIPES.push(R('physics_trough',troughId(0),4,{[BlockTypes.GLASS]:4,[ItemTypes.IRON_INGOT]:1},'crafting'));
+BlockInfo[PhysicsBlocks.SENSOR].solid=false;
+// 测速门可穿过；选择轮廓保留整格，四向转动后仍能瞄准中心打开面板。

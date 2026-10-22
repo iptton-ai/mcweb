@@ -1,4 +1,6 @@
 import { invalidateKineticCell } from './kinetic.js';
+import { onPhysicsBlockChanged, physicsPlacementError } from './physicsData.js';
+import { REDSTONE_CONTEXT_LOOKUP, isPhysicsId } from './config.js';
 import { isLadderId, LADDER_BASE } from './config.js';
 import { generateLandmarks } from './landmarks.js';
 import { resetAdventureData, adventureData } from './adventureData.js';
@@ -108,13 +110,24 @@ export function getBlock(x, y, z) {
     return state.blocks[getBlockIndex(x, y, z)];
 }
 
-export function setBlockSafe(x, y, z, type) {
+const CRANK_STATE_FIELDS=['handCrankIntent','handCrankPower'];
+const LADDER_SUPPORT_NEIGHBORS=[[0,1,0],[-1,0,1],[0,-1,2],[1,0,3]];
+export function setBlockSafe(x, y, z, type, options) {
     if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT || z < 0 || z >= WORLD_DEPTH) return;
-    if (!Number.isInteger(type) || type<0 || type>255 || !BlockInfo[type] && type!==BlockTypes.AIR || BlockInfo[type]?.item || isToolId(type) || ![x,y,z].every(Number.isInteger)) return [];
-    const previous = getBlock(x, y, z);
+    if (!Number.isInteger(type) || type<0 || type>255 || !BlockInfo[type] && type!==BlockTypes.AIR || BlockInfo[type]?.item || isToolId(type) || !Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(z)) return [];
+    const index=getBlockIndex(x,y,z),previous=state.blocks[index];
     if (previous === type) return [];
+    const oldPhysics=isPhysicsId(previous),newPhysics=isPhysicsId(type);
+    if(newPhysics&&physicsPlacementError(x,y,z,type))return [];
+    if(REDSTONE_CONTEXT_LOOKUP[previous]!==REDSTONE_CONTEXT_LOOKUP[type]) {
+        state.redstoneContextCount=Math.max(0,(state.redstoneContextCount||0)+REDSTONE_CONTEXT_LOOKUP[type]-REDSTONE_CONTEXT_LOOKUP[previous]);
+        state.redstoneContextRevision=(state.redstoneContextRevision||0)+1;
+    }
+    // 没有风车、也没有物理格变化时，旧机关不承担新系统的环境/配置钩子成本。
+    if(oldPhysics||newPhysics||state.physicsWindLevels?.size)
+        onPhysicsBlockChanged(x,y,z,previous,type,options);
     invalidateKineticCell(x,y,z,previous);
-    for (const field of ['handCrankIntent','handCrankPower']) {
+    for (const field of CRANK_STATE_FIELDS) {
         const use=state[field];
         if (use && use.x===x && use.y===y && use.z===z) state[field]=null;
     }
@@ -128,13 +141,14 @@ export function setBlockSafe(x, y, z, type) {
         const cells = [{x:bx,y:by,z:bz,id}];
         if (getBlock(ox, by, oz) === bedId(1-half, f)) cells.push({x:ox,y:by,z:oz,id:bedId(1-half,f)});
         for (const c of cells) {
+            if(state.physicsWindLevels?.size)onPhysicsBlockChanged(c.x,c.y,c.z,c.id,BlockTypes.AIR);
             state.blocks[getBlockIndex(c.x,c.y,c.z)] = BlockTypes.AIR;
             removed.push(c);
             state.bedDirtyCells.push(c);
         }
     };
     if (isBedId(previous)) clearBed(x,y,z);
-    state.blocks[getBlockIndex(x, y, z)] = type;
+    state.blocks[index] = type;
     if (!BlockInfo[type]?.solid || BlockInfo[type]?.customMesh) clearBed(x,y+1,z);
     const above=getBlock(x,y+1,z);
     if(!plantHasSupport(above,type)) {
@@ -144,7 +158,7 @@ export function setBlockSafe(x, y, z, type) {
     }
     // 木梯背面贴墙：任意支撑移除路径都只清一次挂件并排入持久掉落。
     if (!BlockInfo[type]?.solid || BlockInfo[type]?.customMesh) {
-        for (const [dx,dz,f] of [[0,1,0],[-1,0,1],[0,-1,2],[1,0,3]]) {
+        for (const [dx,dz,f] of LADDER_SUPPORT_NEIGHBORS) {
             const lx=x+dx,lz=z+dz,id=getBlock(lx,y,lz);
             if(id!==LADDER_BASE+f)continue;
             state.blocks[getBlockIndex(lx,y,lz)]=BlockTypes.AIR;

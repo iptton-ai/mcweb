@@ -1,4 +1,5 @@
 import { resetAdventureData } from './adventureData.js';
+import { resetPhysicsData } from './physicsData.js';
 import {resetLifeData} from './lifeData.js';
 // ==================== levelEditor.js ====================
 // 关卡编辑器（2026-09-16「界面化建关」批次）：独立编辑会话 + 预设组件放置。
@@ -37,6 +38,7 @@ const MOD_PATHS = {
     levelWorkshop: './levelWorkshop.js', // buildLevelCard / embedLevelToWorld / localToWorld / saveLevelCard
     saveGame: './saveGame.js',           // saveGame / loadGame（进出世界切换）
     world: './world.js',                 // setBlockSafe / generateWorld（读档失败兜底）
+    physicsLab: './physicsLab.js',       // 组件模板的初始实验条件
     buildQueue: './buildQueue.js',       // clearBuildQueue（幽灵建筑防线）
     chunk: './chunk.js',                 // rebuildChunk / updateChunkMeshes
     redstone: './redstone.js',           // updateRedstoneNetwork / initRedstone
@@ -175,6 +177,7 @@ async function enterLevelEditorImpl(card = null, { name, templateName } = {}) {
     // 4) 临时编辑世界：整体清零 + 地基层（闯关世界同款清零路径）
     resetLifeData();
     resetAdventureData();
+    resetPhysicsData();
     state.blocks = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH);
     for (let x = 0; x < WORLD_WIDTH; x++) {
         for (let z = 0; z < WORLD_DEPTH; z++) {
@@ -559,6 +562,11 @@ export async function stampPrefabAt(prefabId, hit) {
         const bz = origin.z + c.z;
         w.setBlockSafe(bx, by, bz, c.id);
         dirty.add(`${Math.floor(bx / 16)},${Math.floor(bz / 16)}`);
+    }
+    if(pf.physics?.length) {
+        const physics=await modPromise('physicsLab');
+        if(state.blocks!==blocks||state.levelEdit!==editSession)return false;
+        for(const c of pf.physics)physics?.configurePhysicsAt?.(origin.x+c.x,origin.y+c.y,origin.z+c.z,c.config);
     }
     const chunk = await modPromise('chunk');
     if (chunk?.rebuildChunk) {

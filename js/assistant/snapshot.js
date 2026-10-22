@@ -1,4 +1,5 @@
 import {captureLifeState,validateLifeState,restoreLifeState} from '../lifeData.js';
+import { validatePhysicsState } from '../physicsData.js';
 import {restoreLivestock} from '../entities.js';
 import {flushLifeDrops} from '../homestead.js';
 import { captureHomeState, restoreHomeState } from '../homeSurvival.js';
@@ -121,7 +122,7 @@ export function restoreSnapshotIfAny() {
             return false;
         }
     }
-    const lifeError=validateLifeState(snap.life,u8,undefined,snap.player||{});
+    const lifeError=validatePhysicsState(snap.physics,u8)||validateLifeState(snap.life,u8,undefined,snap.player||{});
     if(lifeError){console.error(lifeError);return false;}
     if (state.blocks && u8.length === state.blocks.length) {
         if (!snap.v) migrateLegacyGears(u8); // 旧快照：齿轮 ID 区间已改作红石组，清为空气

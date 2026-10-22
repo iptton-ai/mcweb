@@ -125,7 +125,7 @@ export function setupInput() {
             else if (isLevelListOpen()) closeLevelList(); // 首屏关卡列表浮层：关闭（B1 关闭钮 title 承诺的行为）
             else if (st === 'settings') closeSettingsState(); // 设置浮层：回到进入前（首屏/暂停菜单）
             else if (st === 'result') exitLevelRun({ toTitle: true }); // 结算浮层：退出关卡回首屏
-            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure') setState('playing'); // 再按 Esc 回到游戏
+            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure' || st === 'physics') setState('playing'); // 再按 Esc 回到游戏
             else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁定，Esc 能到达页面 = 暂停
             return;
         }
@@ -139,7 +139,7 @@ export function setupInput() {
             else if (isLevelListOpen()) closeLevelList();
             else if (st === 'settings') closeSettingsState();
             else if (st === 'result') exitLevelRun({ toTitle: true });
-            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure') setState('playing');
+            else if (st === 'pause' || st === 'inventory' || st === 'container' || st === 'adventure' || st === 'physics') setState('playing');
             else if (st === 'playing' && state.inputMode === 'keyboard') setState('pause'); // 纯键盘模式没锁可放，直接弹暂停
             else if (st === 'playing' && mouseLocked) releasePointerToPause();
             return;
@@ -163,7 +163,7 @@ export function setupInput() {
         // 背包开着时按 E 收起（点选物品也会自动收起，无需再按）。
         // 闯关模式禁开背包（W11）——物品栏能摸到全部方块与工具，等于作弊入口
         if(e.code==='KeyJ' && !e.repeat && (st==='playing'||st==='adventure')){if(st==='adventure')closeAdventurePanel();else openAdventurePanel();return;}
-        if(e.code==='KeyE' && st==='container'){setState('playing');return;}
+        if(e.code==='KeyE' && (st==='container'||st==='physics')){setState('playing');return;}
         if (e.code === 'KeyE' && (st === 'playing' || st === 'inventory')) {
             if (st === 'playing') {
                 if (isLevelRunActive()) {

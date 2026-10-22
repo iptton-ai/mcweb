@@ -2,6 +2,8 @@ import { CRANK_ITEM_ID, LARGE_COG_ITEM_ID, REVERSER_ITEM_ID, CRANK_RPM, CRANK_SU
     KINETIC_MIN_RPM, KINETIC_MAX_RPM, crankId, largeCogId, reverserId,
     isCrankId, isLargeCogId, isReverserId, reverserPowered } from './config.js';
 import { solveKineticGraph } from './kineticGraph.js';
+import { PhysicsBlocks, PHYSICS, isPhysicsId, isPhysicsKineticId, BELT_DIRS } from './config.js';
+import { physicsDeviceAt, physicsPlacementError } from './physicsData.js';
 import { recordLiftMovement } from './adventureData.js';
 import { isContainerId } from './config.js';
 // ==================== kinetic.js ====================
@@ -120,6 +122,7 @@ import { playBlockSound, playCrushSound, playSawSound } from './audio.js';
 import { spawnItemDrop } from './items.js';
 import { facingFromYaw } from './door.js';
 import { scene } from './engine.js'; // 消耗物品实体时 scene.remove（items.js 的 removeDrop 未导出，等价公开操作）
+import { initPhysicsLab, physicsDirectionAt, physicsWindOpenAt } from './physicsLab.js';
 
 const keyOf = (x, y, z) => `${x},${y},${z}`;
 let activeCrank = null;
@@ -223,8 +226,12 @@ export function placeKinetic(bx, by, bz, itemId, face) {
     if (bx < 0 || bx >= WORLD_WIDTH || by < 0 || by >= WORLD_HEIGHT || bz < 0 || bz >= WORLD_DEPTH) {
         return '❌ 超出世界边界';
     }
+    const physicsError=physicsPlacementError(bx,by,bz,itemId);
+    if(physicsError)return physicsError;
     let id;
-    if (itemId === BELT_ITEM_ID) {
+    if (isPhysicsKineticId(itemId)) {
+        id=itemId;
+    } else if (itemId === BELT_ITEM_ID) {
         if (!isSolid(getBlock(bx, by - 1, bz))) return '❌ 传送带需要放在实心方块的顶面';
         id = beltId(facingFromYaw(state.player.yaw));
     } else if (itemId === SAW_ITEM_ID) {
@@ -251,6 +258,10 @@ export function placeKinetic(bx, by, bz, itemId, face) {
                                     : crusherId(axis);
     }
     setBlockSafe(bx, by, bz, id);
+    if (isPhysicsKineticId(id) && id!==PhysicsBlocks.WINDMILL) {
+        const entry=physicsDeviceAt(bx,by,bz,id);
+        if(entry)entry.config.dir=face.dy ? facingFromYaw(state.player.yaw) : face.dx>0?1:face.dx<0?3:face.dz>0?2:0;
+    }
     refreshPropAt(bx, by, bz);
     // 离合器：先重算红石建立 engaged 电平基线（放进充能位会在同一次重算中翻到断开；
     // 翻转时红石侧的电平写出门会带起一次动力重算），再常规重算动力拓扑。
@@ -294,7 +305,13 @@ export function updateKineticNetwork() {
                 // 空气早退（2026-09-06 世界扩容后空气中格占大头，一次比较替掉 isKineticId 多区间判断）
                 if (id === 0) continue;
                 if (!isKineticId(id)) continue;
-                cells.push({ x, y, z, id, axis: kineticAxisOf(id), saw: isSawId(id), front: frontNormalOf(id) });
+                const c={ x, y, z, id, key:keyOf(x,y,z), axis: kineticAxisOf(id), saw: isSawId(id), front: frontNormalOf(id) };
+                if(isPhysicsKineticId(id)) {
+                    const dir=physicsDirectionAt(x,y,z,id);
+                    c.axis=dir[1]?AXIS_Y:dir[0]?AXIS_X:AXIS_Z;
+                    c.front=id===PhysicsBlocks.WINDMILL?null:dir;
+                }
+                cells.push(c);
             }
         }
     }
@@ -303,6 +320,7 @@ export function updateKineticNetwork() {
     for (const c of cells) {
         if (isWaterwheelId(c.id)) c.powered = getBlock(c.x, c.y + 1, c.z) === BlockTypes.WATER;
         if (isCrankId(c.id)) c.powered = !!validCrank() && activeCrank.key === keyOf(c.x,c.y,c.z);
+        if (c.id===PhysicsBlocks.WINDMILL) c.powered=physicsWindOpenAt(c.x,c.y,c.z);
     }
 
     // 粉碎轮配对：水平相邻两轮、轴向相同、连线方向垂直于该轴（单只不成对 = 无功能不计负载）
@@ -355,7 +373,9 @@ export function updateKineticNetwork() {
     for (const c of cells) {
         const key = keyOf(c.x,c.y,c.z);
         if (isPlatformId(c.id) && !boundPlatforms.has(key)) continue;
-        const load = isBeltId(c.id) ? BELT_SU_LOAD : isPlatformId(c.id) ? PLATFORM_SU_LOAD
+        const load = c.id===PhysicsBlocks.FAN ? PHYSICS.fanLoad : c.id===PhysicsBlocks.PUMP ? PHYSICS.pumpLoad
+            : c.id===PhysicsBlocks.CARRIAGE ? PHYSICS.carriageLoad+PLATFORM_SU_LOAD*(physicsDeviceAt(c.x,c.y,c.z,c.id)?.config.width||3)
+            : isBeltId(c.id) ? BELT_SU_LOAD : isPlatformId(c.id) ? PLATFORM_SU_LOAD
             : isCrusherId(c.id) && crusherPaired.has(key) ? CRUSHER_SU_LOAD
                 : isSawId(c.id) ? SAW_SU_LOAD : isDeployerId(c.id) ? DEPLOYER_SU_LOAD
                     : isPulleyId(c.id) && pulleyBinds.has(key) ? PULLEY_SU_LOAD : 0;
@@ -367,6 +387,8 @@ export function updateKineticNetwork() {
         const from = keyOf(c.x,c.y,c.z);
         if (!nodes.has(from)) continue;
         for (const e of neighborsOf(c, byKey)) {
+            // 新机械只有声明的后接口（风车为下接口）；带/滑轮的补充邻边也必须服从。
+            if(!physicsPortAllows(c,e.other)||!physicsPortAllows(e.other,c))continue;
             const to = keyOf(e.other.x,e.other.y,e.other.z);
             if (!nodes.has(to)) continue;
             const ratio = (e.ratio ?? (e.mesh ? -1 : 1)) * (e.beltEdge ? 1 :
@@ -412,6 +434,11 @@ function portSign(c, other) {
 }
 const isGear = id => isCogId(id) || isLargeCogId(id);
 const disconnected = c => !c || isPlatformId(c.id) || (isClutchId(c.id) && !clutchEngaged(c.id));
+function physicsPortAllows(c,other) {
+    if(!isPhysicsKineticId(c.id))return true;
+    const dir=c.id===PhysicsBlocks.WINDMILL?[0,1,0]:c.front;
+    return other.x===c.x-dir[0]&&other.y===c.y-dir[1]&&other.z===c.z-dir[2];
+}
 function* neighborsOf(c, byKey) {
     if (isPlatformId(c.id)) {
         // 电梯平台（L2）：被动载荷，不外延任何传动边——只被滑轮侧的绳绑定边单向枚举
@@ -514,6 +541,7 @@ function* neighborsOf(c, byKey) {
 // 旋转动画（零区块重建）+ 终端机器计时（粉碎/锯切/投料，见文末）。
 export function updateKineticTick(dt) {
     if (!state.blocks) return;
+    if(state.kineticRiderOwners)state.kineticRiderOwners.clear();else state.kineticRiderOwners=new Map();
     if (activeCrank && !validCrank()) setCrankActive(0,0,0,false);
     for (const it of state.droppedItems) {
         if (!it.prop || !it.mesh.userData.kinetic) continue;
@@ -727,7 +755,7 @@ function updateSaws(dt) {
 // 可锯目标：普通实心立方体（customMesh 的门/红石/活塞/动力道具走各自破坏逻辑，锯不动），
 // 硬度 < 0（基岩）不可锯
 function isSawable(id) {
-    if(isContainerId(id))return false;
+    if(isContainerId(id)||isPhysicsId(id))return false;
     if (id === BlockTypes.AIR || id === BlockTypes.WATER) return false;
     const info = BlockInfo[id];
     if (!info) return false;
@@ -834,17 +862,19 @@ function updateDeployers(dt) {
 // 【不变量】迭代循环内不调 updateKineticNetwork/updateRedstoneNetwork/rebuildChunk（同 updateDeployers）。
 function updatePulleys(dt) {
     if (!pulleyCells.length) return;
-    const owners = new Map();
+    const owners = state.kineticRiderOwners||new Map();
     for (const c of pulleyCells) {
-        const k=keyOf(c.x,c.y,c.z), comp=componentAt(k), bind=pulleyBinds.get(k);
+        const k=c.key, entry=kineticMap.get(k), comp=entry&&components[entry.compId], bind=pulleyBinds.get(k);
         if (!comp?.running || !bind) continue;
         const curId=getBlock(c.x,c.y,c.z);
         if (!isPulleyId(curId)) continue;
         const up=pulleyUp(curId), dirY=pulleyPowered(curId) ? (up?-1:1) : (up?1:-1);
         let st=pulleyState.get(k);
         if (!st) { st={phase:0,blocked:false}; pulleyState.set(k,st); }
-        st.phase=Math.min(4,st.phase+dt*LIFT_SPEED*rateAt(k));
+        st.phase=Math.min(4,st.phase+dt*LIFT_SPEED*entry.rpm/WHEEL_RPM);
         for (let step=0;step<4;step++) {
+            // 空闲节拍不查目的格；已受阻的平台仍每帧复查，撤障/切向语义保持。
+            if(st.phase<1-1e-9&&!st.blocked)break;
             const ny=bind.py+dirY;
             const front=getBlock(bind.px,ny,bind.pz);
             if (ny<0 || ny>=WORLD_HEIGHT || (front!==BlockTypes.AIR && front!==BlockTypes.WATER) ||
@@ -894,6 +924,7 @@ function updateRopeVisual(c) {
 // 可放置方块域（差异 11）：普通方块（石/圆石/沙砾/沙/木板/原木/玻璃/TNT/水/羊毛…）。
 // customMesh 的门/红石元件/火把/花/动力族一律排除；工具与材料/食物（item: true）排除
 function isDeployableItem(id) {
+    if(isPhysicsId(id))return false;
     const info = BlockInfo[id];
     if (!info || info.item) return false;
     if (isToolId(id)) return false;
@@ -919,7 +950,16 @@ function cellOverlapsEntity(tx, ty, tz) {
 
 // T 的切比雪夫距离 2 内（5×5×5）是否存在红石网络关心的方块（红石元件/门/活塞组——
 // 观察者的侦测走 updatePistonTick 每帧 diff 不依赖重算，一并纳入保守正确且成本可忽略）
-function hasRedstoneNear(x, y, z) {
+const nearbyRedstoneCache=new Map();
+export function hasRedstoneNear(x,y,z) {
+    if(state.redstoneContextCount===0)return false;
+    const key=keyOf(x,y,z),version=state.redstoneContextRevision,cached=nearbyRedstoneCache.get(key);
+    if(cached&&cached.version===version&&cached.world===state.blocks)return cached.value;
+    const value=scanRedstoneNear(x,y,z);
+    if(nearbyRedstoneCache.size>=4096)nearbyRedstoneCache.clear();
+    nearbyRedstoneCache.set(key,{value,version,world:state.blocks});return value;
+}
+function scanRedstoneNear(x, y, z) {
     for (let dy = -2; dy <= 2; dy++) {
         const yy = y + dy;
         if (yy < 0 || yy >= WORLD_HEIGHT) continue;
@@ -1004,10 +1044,12 @@ function dropMachineProgressAt(x, y, z) {
 // 读档/开新世界后调用：清机器进度并重算全网（派生态不存档，现场恢复）
 export function initKinetic() {
     activeCrank = null;
+    nearbyRedstoneCache.clear();
     machineWatch = new Map();
     state.handCrankPower = null;
     state.handCrankIntent = null;
     dropAllMachineProgress();
+    initPhysicsLab();
     updateKineticNetwork();
 }
 

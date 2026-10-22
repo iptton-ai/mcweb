@@ -11,6 +11,7 @@ import { KNOWLEDGE_SECTIONS, searchKnowledge, knowledgeIndexText } from '../js/a
 import { TEXTURE_TILES, atlasSize, occupiedTiles, freeTileRanges } from '../js/textureTiles.js';
 
 const EXPECTED_IDS = [
+    'physics','hydraulics','physics-motion',
     'ids', 'mining', 'world', 'redstone', 'piston', 'kinetic', 'logistics', 'elevator',
     'home', 'homestead', 'adventure', 'survival', 'mobs', 'tnt', 'saves', 'modules', 'recipes', 'keys', 'media', 'edu',
 ];

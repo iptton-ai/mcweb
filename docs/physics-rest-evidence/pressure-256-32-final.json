@@ -1,0 +1,66 @@
+{
+  "schema": "mcweb.physics.rest-perf.v1",
+  "timestamp": "2026-10-22T02:21:50.554Z",
+  "sourceSha256": {
+    "config": "db75ab952578f5076606248dd647df6f0fe501d213edc63a422901cc3529bf6a",
+    "physicsData": "21cc7863100b18b12ff75598c1947979d95347d996fade95f03528f38d508fb6",
+    "physicsLab": "b0ea941cdb7c819b20acf0f58dc0d21a68b783b5b9f0270dc1964017eda0190a",
+    "physicsModels": "b32accaf4040c9b42b27e992e6338304298814adf147d26d319a39fd6c475654",
+    "world": "22f87a9a32c7a9892385610fc57dc1ed8b695a50a60f1ddad1e34f1c8f4343f8",
+    "kinetic": "c6dff9550ce72b147edbbcd91cfa26157bf5262375afc9601da1f064c4a33788",
+    "redstone": "b9f038c5cd960f0447e6504d45616fae6a8b545bc476d895ddd28e26a33090e6",
+    "piston": "fe09dcd25a248768a31a4739335176ec0d0af902db30f3a08bbbed0078deb387",
+    "items": "6c49ed8f0e42667196833c37f13511c35bbcf2683927904134d238b22db5a9f5"
+  },
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "timingScope": "Node真实tickPhysicsLab，渲染桩；不包含搭建、复位、公开读数及断言耗时；不推导浏览器FPS",
+  "dt": 0.008333333333333333,
+  "warmSteps": 120,
+  "sampleSteps": 1000,
+  "waterCells": 256,
+  "experimentDevices": 32,
+  "initialWater": 512,
+  "finalWater": 512,
+  "minRunning": 32,
+  "actualMovingUpdates": 32000,
+  "restarts": 224,
+  "waterPatternResets": 9,
+  "waterTransfersDelta": 2430,
+  "measured": {
+    "n": 1000,
+    "meanMs": 0.09232493800000009,
+    "p95Ms": 0.6188329999999951,
+    "maxMs": 1.0948329999999942
+  },
+  "diagnosticsBefore": {
+    "steps": 120,
+    "waterTransfers": 494,
+    "platformSteps": 0,
+    "fullScans": 2,
+    "cells": 288,
+    "runtime": 288,
+    "windLevels": 0
+  },
+  "diagnosticsAfter": {
+    "steps": 1120,
+    "waterTransfers": 2924,
+    "platformSteps": 0,
+    "fullScans": 2,
+    "cells": 288,
+    "runtime": 288,
+    "windLevels": 0
+  },
+  "fullScansDelta": 0,
+  "gates": {
+    "p95Ms": 5,
+    "p95Pass": true,
+    "fullScansPass": true,
+    "activeUpdatesPass": true
+  },
+  "pass": true
+}

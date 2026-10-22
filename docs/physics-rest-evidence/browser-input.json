@@ -1,0 +1,185 @@
+{
+  "date": "2026-10-22T02:12:12.088Z",
+  "space": 137,
+  "page": "p1",
+  "origin": "http://127.0.0.1:18439",
+  "results": [
+    {
+      "name": "BR01 生存真实合成并X放置新组件",
+      "ok": true,
+      "evidence": {
+        "id": 75,
+        "stock": {
+          "11": 0,
+          "75": 0,
+          "180": 0,
+          "182": 0
+        }
+      }
+    },
+    {
+      "name": "BR02 X开面板改坡度表面、真实开始与复位",
+      "ok": true,
+      "evidence": {
+        "distance": 0.13853271162381137,
+        "surface": 0,
+        "slope": 1,
+        "reset": 0
+      }
+    },
+    {
+      "name": "BR03 面板方向键焦点、E/Q关闭与Shift+X绕过",
+      "ok": true
+    },
+    {
+      "name": "BR04 弹簧真实压缩→释放并看到上升",
+      "ok": true,
+      "evidence": {
+        "height": 0.4189041660998022,
+        "elapsed": 0.05833333333333333
+      }
+    },
+    {
+      "name": "BR05 B组件库十个新模板可见，真实选中并键盘盖章",
+      "ok": true,
+      "evidence": {
+        "newTemplates": 10
+      }
+    },
+    {
+      "name": "BR06 剩余模板盖章、真实模型显示与总览",
+      "ok": true,
+      "evidence": {
+        "props": 24,
+        "devices": 26
+      }
+    },
+    {
+      "name": "BR07 水桶连续真实X注水取水，水与库存守恒",
+      "ok": true,
+      "evidence": {
+        "water": 0,
+        "held": 260,
+        "stock": {
+          "259": 2,
+          "260": 1
+        }
+      }
+    },
+    {
+      "name": "BR08 真实水闸按钮改变水路，泵与浮块可见运行",
+      "ok": true,
+      "evidence": {
+        "rpm": 8,
+        "water": 1,
+        "floatHeight": 0.274
+      }
+    },
+    {
+      "name": "BR09 宽平台边缘真实玩家防夹、恢复载人、拉杆回程",
+      "ok": true,
+      "evidence": {
+        "startX": 70.5,
+        "carriedX": 71.5,
+        "returnOffset": 0
+      }
+    },
+    {
+      "name": "BR10 游戏内说明入口可打开新帮助",
+      "ok": true
+    },
+    {
+      "name": "BR11 真试玩关卡后，作者授权实验可玩、参数与桶不可越权",
+      "ok": true,
+      "evidence": {
+        "selects": true,
+        "start": true
+      }
+    },
+    {
+      "name": "BR12 真实WebGL预热3轮后20轮建拆/存读/清世界稳定",
+      "ok": true,
+      "evidence": {
+        "models": 17,
+        "cycles": 20,
+        "final": {
+          "geometries": 67,
+          "textures": 3,
+          "programs": 18,
+          "materials": 13,
+          "scene": 11,
+          "props": 0,
+          "drops": 0,
+          "cells": 0,
+          "runtime": 0,
+          "windLevels": 0
+        }
+      }
+    },
+    {
+      "name": "BR13 实际Three.Box3检查坡度、杠杆极值与四绳模型边界",
+      "ok": true,
+      "evidence": {
+        "poses": 13,
+        "withinCell": true
+      }
+    }
+  ],
+  "observations": {
+    "rampBeforeStart": {
+      "id": 75,
+      "config": {
+        "allowRun": false,
+        "slope": 1,
+        "surface": 0,
+        "mass": 1
+      },
+      "running": false,
+      "elapsed": 0,
+      "distance": 0,
+      "velocity": 0,
+      "height": 0.3882285676537811,
+      "angle": 0,
+      "torque": 0,
+      "force": 0,
+      "ropeDistance": 0,
+      "stored": 0,
+      "blocked": false,
+      "status": "就绪"
+    },
+    "rampAfterStart": {
+      "info": {
+        "id": 75,
+        "config": {
+          "allowRun": false,
+          "slope": 1,
+          "surface": 0,
+          "mass": 1
+        },
+        "running": true,
+        "elapsed": 0.049999999999999996,
+        "distance": 0.0026972296476242357,
+        "velocity": 0.10788918590496942,
+        "height": 0.3875304732519608,
+        "angle": 0,
+        "torque": 0,
+        "force": 0,
+        "ropeDistance": 0,
+        "stored": 0,
+        "blocked": false,
+        "status": "运行中"
+      },
+      "ui": "playing",
+      "paused": false,
+      "active": "BODY",
+      "focused": true,
+      "windowUnfocused": false
+    },
+    "modelBounds": [],
+    "restoration": {
+      "memoryRestored": true,
+      "slot5Restored": true,
+      "indexRestored": true
+    }
+  }
+}

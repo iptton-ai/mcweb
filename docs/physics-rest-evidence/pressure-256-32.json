@@ -1,0 +1,53 @@
+{
+  "schema": "mcweb.physics.rest-perf.v1",
+  "timestamp": "2026-10-22T01:54:11.589Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "timingScope": "Node真实tickPhysicsLab，渲染桩；不包含搭建、复位、公开读数及断言耗时；不推导浏览器FPS",
+  "dt": 0.008333333333333333,
+  "warmSteps": 120,
+  "sampleSteps": 1000,
+  "waterCells": 256,
+  "experimentDevices": 32,
+  "initialWater": 512,
+  "finalWater": 512,
+  "minRunning": 32,
+  "actualMovingUpdates": 32000,
+  "restarts": 224,
+  "waterPatternResets": 9,
+  "waterTransfersDelta": 2430,
+  "measured": {
+    "n": 1000,
+    "meanMs": 0.13424873600000006,
+    "p95Ms": 0.612583000000086,
+    "maxMs": 6.949999999999989
+  },
+  "diagnosticsBefore": {
+    "steps": 120,
+    "waterTransfers": 494,
+    "platformSteps": 0,
+    "fullScans": 2,
+    "cells": 288,
+    "runtime": 288
+  },
+  "diagnosticsAfter": {
+    "steps": 1120,
+    "waterTransfers": 2924,
+    "platformSteps": 0,
+    "fullScans": 2,
+    "cells": 288,
+    "runtime": 288
+  },
+  "fullScansDelta": 0,
+  "gates": {
+    "p95Ms": 5,
+    "p95Pass": true,
+    "fullScansPass": true,
+    "activeUpdatesPass": true
+  },
+  "pass": true
+}

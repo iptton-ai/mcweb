@@ -61,6 +61,7 @@ import { updateKineticNetwork } from './kinetic.js';
 import { breakDoorAt } from './door.js';
 import { spawnBreakParticles } from './particles.js';
 import { playPistonSound } from './audio.js';
+import { isPhysicsId } from './config.js';
 
 const CHUNKS_X = Math.ceil(WORLD_WIDTH / CHUNK_SIZE);
 const CHUNKS_Z = Math.ceil(WORLD_DEPTH / CHUNK_SIZE);
@@ -138,7 +139,7 @@ const PUSH_EMPTY = 0, PUSH_POP = 1, PUSH_MOVE = 2, PUSH_FIXED = 3;
 
 function pushKind(bt) {
     if (bt === BlockTypes.AIR || bt === BlockTypes.WATER) return PUSH_EMPTY;
-    if (bt === BlockTypes.BEDROCK || isBedId(bt) || isContainerId(bt)) return PUSH_FIXED;
+    if (bt === BlockTypes.BEDROCK || isBedId(bt) || isContainerId(bt) || isPhysicsId(bt)) return PUSH_FIXED;
     if (isPistonHeadId(bt)) return PUSH_FIXED;
     if (isPistonId(bt)) return pistonExtended(bt) === 1 ? PUSH_FIXED : PUSH_MOVE;
     if (isCrankId(bt) || isLargeCogId(bt) || isReverserId(bt)) return PUSH_POP;
@@ -273,6 +274,31 @@ export function commitRiderMove(plan) {
         if ('py' in e) e.py=e.y;
         plan.owners.set(e,plan.owner);
     }
+}
+
+// 宽平台一次试算整组；原平台站顶者载运，目的格旁观者阻挡，所有实体只提交一次。
+export function planStructureRiderMove(oldCells,newCells,n,owners=new Map(),owner='') {
+    const eps=1e-6,moves=[],ignored=new Set([...oldCells,...newCells].map(c=>`${c.x},${c.y},${c.z}`));
+    const entities=[];
+    if(!state.player.dead)entities.push({e:state.player,half:PLAYER_WIDTH/2,height:PLAYER_HEIGHT,offset:0});
+    for(const e of state.enemies)entities.push({e,half:MOB_HALF_WIDTH,height:mobCollisionHeight(e),offset:0});
+    for(const e of state.itemDrops)entities.push({e,half:.125,height:.25,offset:-.125});
+    for(const {e,half,height,offset} of entities) {
+        const feet=e.y+offset;
+        const rider=oldCells.some(c=>e.x+half>c.x+eps&&e.x-half<c.x+1-eps&&e.z+half>c.z+eps&&e.z-half<c.z+1-eps&&Math.abs(feet-c.y-1)<.1);
+        const occupies=newCells.some(c=>e.x+half>c.x+eps&&e.x-half<c.x+1-eps&&e.z+half>c.z+eps&&e.z-half<c.z+1-eps&&feet+height>c.y+eps&&feet<c.y+1-eps);
+        if(!rider){if(occupies)return null;continue;}
+        if(owners.has(e)&&owners.get(e)!==owner)return null;
+        const bx=[Math.min(e.x,e.x+n[0])-half,Math.min(feet,feet+n[1]),Math.min(e.z,e.z+n[2])-half,
+            Math.max(e.x,e.x+n[0])+half,Math.max(feet,feet+n[1])+height,Math.max(e.z,e.z+n[2])+half];
+        if(bx[0]<0||bx[1]<0||bx[2]<0||bx[3]>WORLD_WIDTH||bx[4]>WORLD_HEIGHT||bx[5]>WORLD_DEPTH)return null;
+        for(let y=Math.floor(bx[1])-1;y<=Math.floor(bx[4]-eps);y++)for(let z=Math.floor(bx[2]+eps);z<=Math.floor(bx[5]-eps);z++)for(let x=Math.floor(bx[0]+eps);x<=Math.floor(bx[3]-eps);x++) {
+            if(ignored.has(`${x},${y},${z}`))continue;
+            const h=collisionHeight(getBlock(x,y,z));if(h&&y+h>bx[1]+eps&&y<bx[4]-eps)return null;
+        }
+        moves.push({entity:e,x:e.x+n[0],y:e.y+n[1],z:e.z+n[2]});
+    }
+    return {moves,owners,owner};
 }
 
 // ==================== 伸出（推动）====================

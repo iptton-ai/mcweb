@@ -23,6 +23,7 @@
 import { isCreative, state } from './state.js';
 import { canvas } from './engine.js';
 import { hideItemInfo } from './itemInfo.js';
+import { isWorldPausedAt } from './worldPause.js';
 
 // 指针是否锁定（活绑定导出，main.js 每帧读取）
 export let mouseLocked = false;
@@ -44,13 +45,7 @@ export function getUIState() {
 
 // 普通单人生存的安全阅读门；创造施工和关卡计时保持原来的行为。
 export function isWorldPaused() {
-    if(isCreative() || state.levelRun || state.levelEdit) return false;
-    const el = typeof document === 'undefined' ? null : document.activeElement;
-    const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable === true);
-    return uiState !== 'playing' || !!state.windowUnfocused || !!document.hidden || !!typing ||
-        !!state.helpDocOpen || !!state.questionBankOpen || !!state.authorPanelOpen ||
-        !!state.prefabPickerOpen || !!state.levelExportOpen || !!state.recordingControlsOpen ||
-        Object.values(state.readingPanels || {}).some(Boolean);
+    return isWorldPausedAt(uiState);
 }
 
 // 指针锁期望策略：playing 且面板关闭时才要鼠标；面板打开时鼠标归面板。
@@ -99,6 +94,7 @@ export function onUIStateChange(cb) {
 // ==================== 状态切换（唯一入口） ====================
 export function setState(next) {
     if (next === 'playing' && state.player.dead) next = 'dead'; // 死亡时不可能回到 playing
+    state.uiState=next;
     if (next !== 'playing') {
         state.recordingControlsOpen = false;
         state.levelExportOpen = false;
@@ -211,6 +207,8 @@ function syncOverlays() {
     document.getElementById('life-panel')?.classList.toggle('open',uiState==='container');
     if(uiState!=='container') state.lifePanel=null;
     document.getElementById('adventure-panel')?.classList.toggle('open',uiState==='adventure');
+    document.getElementById('physics-panel')?.classList.toggle('open',uiState==='physics');
+    if(uiState!=='physics')state.physicsPanel=null;
     const inv = document.getElementById('inventory-panel');
     if (inv) inv.classList.toggle('open', uiState === 'inventory');
     // 离开背包态时兜底隐藏物品说明条（面板 display:none 不一定触发 mouseleave）

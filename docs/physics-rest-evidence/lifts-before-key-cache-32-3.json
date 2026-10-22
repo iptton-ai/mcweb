@@ -1,0 +1,74 @@
+{
+  "schema": "mcweb.physics.perf.v1",
+  "timestamp": "2026-10-22T02:00:58.693Z",
+  "mode": "32",
+  "nativeRpm": 32,
+  "substepsPerMeasuredFrame": 1,
+  "particleMode": "historical",
+  "particleRandomSeed": null,
+  "timingScope": "Node: real gameplay logic; rendering stubbed; setup, refill and assertions excluded; particle lifecycle not advanced (historical)",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.0",
+    "cpu": "Apple M4 Max"
+  },
+  "sourceSha256": {
+    "config": "3013d1c9bef7b1f653ccb72ea8371b6a43f88a5f9ddf3d1214ebed6932546b6c",
+    "kinetic": "bfe1f33513e4890a896301f6f4afdb557debf07738145eb96bf3920a489f08a2",
+    "kineticGraph": "8544da144eb5963c5515b0ead1e240773695239d07825cb7376a60dccb04cfc2",
+    "items": "6c49ed8f0e42667196833c37f13511c35bbcf2683927904134d238b22db5a9f5",
+    "piston": "fe09dcd25a248768a31a4739335176ec0d0af902db30f3a08bbbed0078deb387",
+    "world": "a3ce6a552bd384f5374d78d3880d61214c58ebf4ad48b21ea82046beab1365f4",
+    "particles": "16be896d608c64f947655503f942037a054271460cf5d73c371e33e491ffe3eb"
+  },
+  "scenes": {
+    "lifts": {
+      "lifts": 16,
+      "passengers": 16,
+      "stroke": 16,
+      "warmFrames": 120,
+      "sampleFrames": 600,
+      "simulatedSeconds": 10,
+      "crossedCells": 960,
+      "passengerCells": 960,
+      "directionChanges": 64,
+      "allFrames": {
+        "n": 600,
+        "meanMs": 0.014281274999999927,
+        "p95Ms": 0.09312499999998636,
+        "maxMs": 0.4860829999999794
+      },
+      "movementFrames": {
+        "n": 60,
+        "meanMs": 0.1063847833333303,
+        "p95Ms": 0.13445899999999256,
+        "maxMs": 0.4860829999999794
+      },
+      "msPerCrossing": 0.006649048958333144,
+      "diagnostics": {
+        "networkRebuilds": 0,
+        "machineCompletions": 0,
+        "pulleySteps": 960,
+        "components": 0,
+        "cells": 0,
+        "progress": 0
+      }
+    }
+  },
+  "gates": [
+    {
+      "key": "lifts/allFrames",
+      "meanBudgetMs": 0.02163103,
+      "p95BudgetMs": 0.1296012,
+      "pass": true
+    },
+    {
+      "key": "lifts/movementFrames",
+      "meanBudgetMs": 0.11231756,
+      "p95BudgetMs": 0.1561992,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

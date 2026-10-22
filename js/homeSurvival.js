@@ -1,4 +1,5 @@
 import { captureAdventureState, restoreAdventureState } from './adventureData.js';
+import { capturePhysicsState, restorePhysicsState } from './physicsData.js';
 import {resetLifeData} from './lifeData.js';
 // 安家规则与存档字段：纯数据，无 DOM/渲染依赖。
 import { BED_ITEM_ID, BlockInfo, BlockTypes, DOOR_ITEM_ID, FIRST_DAY_SECONDS, GameModes, HotbarBlocks, ItemTypes, ToolTypes, WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH } from './config.js';
@@ -28,12 +29,14 @@ export function assignQuickbar(i, id) {
     return true;
 }
 export function captureHomeState() {
-    return { adventure: captureAdventureState(), generationVersion: state.generationVersion, homeBed: state.homeBed ? { ...state.homeBed } : null,
+    const physics=capturePhysicsState();
+    return { ...(Object.keys(physics.devices).length?{physics}:{}), adventure: captureAdventureState(), generationVersion: state.generationVersion, homeBed: state.homeBed ? { ...state.homeBed } : null,
         survivalDifficulty: state.survivalDifficulty, survivalStarted: state.survivalStarted,
         firstDayRemaining: state.firstDayRemaining, starterWorkshopClaimed: state.starterWorkshopClaimed,
         homeGuideEnabled: state.homeGuideEnabled };
 }
 export function restoreHomeState(data = {}) {
+    restorePhysicsState(data.physics);
     restoreAdventureState(data.adventure);
     state.generationVersion = [2,3].includes(data.generationVersion) ? data.generationVersion : 1;
     state.survivalDifficulty = data.survivalDifficulty === 'gentle' ? 'gentle' : 'adventure';

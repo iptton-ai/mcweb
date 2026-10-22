@@ -19,6 +19,8 @@ import { initAudio } from './audio.js';
 import { initBGM, updateBGM } from './bgm.js';
 import { initRedstone, updateRedstoneTick } from './redstone.js';
 import { initKinetic, updateKineticTick } from './kinetic.js';
+import { tickPhysicsLab, samplePhysicsSensors } from './physicsLab.js';
+import { syncPhysicsPanel } from './physicsUI.js';
 import { clearItemDrops, updateItemDrops } from './items.js';
 import { createPlayerMesh, initPlayerMesh, killEnemySilent, updateEnemies } from './entities.js';
 import { updateTnt } from './tnt.js';
@@ -136,12 +138,14 @@ function gameLoop(timestamp) {
 
     // 动力组（旋转动画 + 粉碎轮/机械锯计时，见 js/kinetic.js）
     updateKineticTick(dt);
+    tickPhysicsLab(dt,{deferSensors:true});
     tickHomestead(dt);
     tickAdventure();
     flushLifeDrops();
 
     // 机器产出的物品实体（磁吸/拾取，见 js/items.js）
     updateItemDrops(dt);
+    samplePhysicsSensors(dt);
 
     // 闯关运行时（关卡工坊批次 W）：计时/旗踩踏/掉界/限时结算；非闯关时内部直接跳过
     tickLevelRun(dt);
@@ -160,6 +164,7 @@ function gameLoop(timestamp) {
     } else { updateMining(0,false); updateDayNightCycle(0); }
     flushBedChanges();
     syncLifePanel();
+    syncPhysicsPanel();
     uiNS.updateHomeHud?.();
 
     // 高亮更新

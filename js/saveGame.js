@@ -1,4 +1,5 @@
 import {captureLifeState,validateLifeState,restoreLifeState} from './lifeData.js';
+import { validatePhysicsState } from './physicsData.js';
 import {restoreLivestock, clearAllEnemies} from './entities.js';
 import {clearItemDrops} from './items.js';
 import {flushLifeDrops} from './homestead.js';
@@ -224,7 +225,7 @@ export function saveGame() {
             ...captureHomeState(),
             life: captureLifeState(),
         };
-        const lifeError=validateLifeState(save.life,state.blocks,save.dims,save.player);
+        const lifeError=validatePhysicsState(save.physics,state.blocks,save.dims)||validateLifeState(save.life,state.blocks,save.dims,save.player);
         if(lifeError){console.error(lifeError);return false;}
         localStorage.setItem(SLOT_KEY_PREFIX + state.saveSlot, JSON.stringify(save));
         // 同步索引（失败不影响存档本身：索引可由扫描重建）
@@ -286,7 +287,7 @@ export function loadGame(slot = state.saveSlot) {
             console.error('存档数据长度与尺寸不符，放弃恢复');
             return false;
         }
-        const lifeError=validateLifeState(save.life,u8,dims,save.player||{});
+        const lifeError=validatePhysicsState(save.physics,u8,dims)||validateLifeState(save.life,u8,dims,save.player||{});
         if(lifeError){console.error(lifeError);return false;}
         // 旧版存档：齿轮 ID 区间已改作红石组，清为空气（拉杆/红石灯/门不受影响）
         if (save.version === 1) migrateLegacyGears(u8);
@@ -387,7 +388,7 @@ export function importSlotJson(text, slot = state.saveSlot) {
         } else if (bytes.length !== total) {
             return '存档方块数据长度与尺寸不符';
         }
-        const lifeError=validateLifeState(save.life,decoded,dims,save.player||{});
+        const lifeError=validatePhysicsState(save.physics,decoded,dims)||validateLifeState(save.life,decoded,dims,save.player||{});
         if(lifeError)return lifeError;
     } catch {
         return '存档方块编码无效';
